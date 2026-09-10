@@ -2,18 +2,18 @@ name: Mise à jour Kindle
 
 on:
   schedule:
-    - cron: '0 4 * * *' # S'exécute tous les jours à 6h00 (heure de Paris / 4h00 UTC)
-  workflow_dispatch: # Permet de lancer l'action manuellement depuis GitHub
+    - cron: '0 4 * * *'
+  workflow_dispatch:
 
 jobs:
   update-dashboard:
     runs-on: ubuntu-latest
     steps:
       - name: Récupérer le code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # Mise à jour ici (v4)
 
       - name: Installer Python et les librairies
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5 # Mise à jour ici (v5)
         with:
           python-version: '3.10'
       - run: pip install requests pillow
@@ -36,9 +36,6 @@ jobs:
 
       - name: Envoyer et afficher l'image sur la Kindle
         run: |
-          # Créer le dossier dashboard si besoin
           ssh -o StrictHostKeyChecking=no root@100.79.221.11 "mkdir -p /mnt/us/dashboard"
-          # Envoyer l'image
           scp -o StrictHostKeyChecking=no meteo.png root@100.79.221.11:/mnt/us/dashboard/
-          # Rafraîchir l'écran
           ssh -o StrictHostKeyChecking=no root@100.79.221.11 "eips -f -g /mnt/us/dashboard/meteo.png"
