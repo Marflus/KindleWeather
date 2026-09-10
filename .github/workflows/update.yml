@@ -36,4 +36,4 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no root@100.79.221.11 "mkdir -p /mnt/us/dashboard"
           scp -o StrictHostKeyChecking=no meteo.png root@100.79.221.11:/mnt/us/dashboard/
-          ssh -o StrictHostKeyChecking=no root@100.79.221.11 "/usr/sbin/eips -f -g /mnt/us/dashboard/meteo.png"
+          ssh -o StrictHostKeyChecking=no root@100.79.221.11 "/usr/sbin/eips -f -g /mnt/us/dashboard/meteo.png && lipc-set-prop com.lab126.powerd flIntensity 0"
