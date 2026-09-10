@@ -34,6 +34,6 @@ jobs:
 
       - name: Envoyer et afficher l'image sur la Kindle
         run: |
-          ssh -o StrictHostKeyChecking=no root@100.79.221.11 "mkdir -p /mnt/us/dashboard"
-          scp -o StrictHostKeyChecking=no meteo.png root@100.79.221.11:/mnt/us/dashboard/
-          ssh -o StrictHostKeyChecking=no root@100.79.221.11 "/usr/sbin/eips -f -g /mnt/us/dashboard/meteo.png && lipc-set-prop com.lab126.powerd flIntensity 0 && echo -n 0 > /sys/class/backlight/max77696-bl/brightness"
+          ssh -o StrictHostKeyChecking=no root@100.74.176.86 "mkdir -p /mnt/us/dashboard"
+          scp -o StrictHostKeyChecking=no meteo.png root@100.74.176.86:/mnt/us/dashboard/
+          ssh -o StrictHostKeyChecking=no root@100.74.176.86 "/usr/sbin/eips -f -g /mnt/us/dashboard/meteo.png && lipc-set-prop com.lab126.powerd flIntensity 0 && echo -n 0 > /sys/class/backlight/max77696-bl/brightness"
