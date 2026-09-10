@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Récupérer le code
-        uses: actions/checkout@v4 # Mise à jour ici (v4)
+        uses: actions/checkout@v4
 
       - name: Installer Python et les librairies
-        uses: actions/setup-python@v5 # Mise à jour ici (v5)
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       - run: pip install requests pillow
@@ -24,9 +24,7 @@ jobs:
       - name: Connexion au réseau Tailscale
         uses: tailscale/github-action@v2
         with:
-          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
-          tags: tag:github
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
       - name: Configurer la clé SSH
         run: |
