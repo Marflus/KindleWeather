@@ -72,7 +72,16 @@ def load_font(path, size):
 
 
 def text_w(draw, text, font):
-    return draw.textbbox((0, 0), text, font=font)[2]
+    bbox = draw.textbbox((0, 0), text, font=font)
+    return bbox[2] - bbox[0]
+
+
+def draw_centered_text(draw, cx, y, text, font, fill):
+    """Dessine `text` parfaitement centré horizontalement sur cx (compense
+    le petit décalage de calage gauche que certaines polices introduisent)."""
+    bbox = draw.textbbox((0, 0), text, font=font)
+    w = bbox[2] - bbox[0]
+    draw.text((cx - w / 2 - bbox[0], y), text, font=font, fill=fill)
 
 
 # ============================================================
@@ -83,7 +92,7 @@ def get_weather():
         "https://api.open-meteo.com/v1/forecast"
         f"?latitude={LATITUDE}&longitude={LONGITUDE}"
         "&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset"
-        "&hourly=temperature_2m,weathercode,relativehumidity_2m,windspeed_10m"
+        "&hourly=temperature_2m,apparent_temperature,weathercode,relativehumidity_2m,windspeed_10m"
         "&timezone=auto"
     )
     headers = {"User-Agent": "KindleDashboard-GitHubActions/4.0"}
@@ -200,6 +209,14 @@ def draw_sun_horizon(draw, cx, cy, r, rising, fill=INK):
         draw.polygon([(cx - d, tip - d), (cx + d, tip - d), (cx, tip + d)], fill=fill)
 
 
+def draw_thermometer(draw, cx, cy, r, fill=INK):
+    stem_w = r * 0.32
+    top = cy - r * 1.3
+    bottom = cy + r * 0.35
+    draw.rounded_rectangle([cx - stem_w, top, cx + stem_w, bottom], radius=stem_w, fill=fill)
+    draw.ellipse([cx - r * 0.55, cy - r * 0.05, cx + r * 0.55, cy + r * 1.05], fill=fill)
+
+
 WEATHER_LABELS = {
     0: "Ciel dégagé", 1: "Plutôt ensoleillé", 2: "Partiellement nuageux",
     3: "Ciel couvert", 45: "Brouillard", 48: "Brouillard givrant",
@@ -269,8 +286,14 @@ def create_image(data, out_path="meteo.png"):
     day_idx = [i for i, t in enumerate(hourly_times) if t.startswith(today_str)]
     if not day_idx:
         day_idx = list(range(min(24, len(hourly_times))))
+    # premier point du lendemain (00h), pour boucler la courbe/le tableau jusqu'à minuit
+    next_idx = day_idx[-1] + 1 if day_idx[-1] + 1 < len(hourly_times) else None
 
-    temps = [data["hourly"]["temperature_2m"][i] for i in day_idx]
+    def hour_of(i):
+        return int(hourly_times[i].split("T")[1][:2])
+
+    hour_to_index = {hour_of(i): i for i in day_idx}
+
     codes_today = [data["hourly"]["weathercode"][i] for i in day_idx]
     humid_today = [data["hourly"]["relativehumidity_2m"][i] for i in day_idx]
     wind_today = [data["hourly"]["windspeed_10m"][i] for i in day_idx]
@@ -278,18 +301,20 @@ def create_image(data, out_path="meteo.png"):
     avg_wind = round(sum(wind_today) / len(wind_today)) if wind_today else 0
     has_rain = any(c in RAIN_CODES for c in codes_today)
 
-    current_hour = datetime.now().hour
-    now_pos = current_hour if current_hour < len(day_idx) else None
-
     # ============== EN-TÊTE ==============
+    # Centré : l'horloge et la batterie de la liseuse recouvrent les coins,
+    # on garde donc le centre de l'écran libre de toute info utile.
     jour, date_str = french_date_parts()
-    draw.text((M, S(38)), f"{jour} {date_str}", font=f_date, fill=INK)
-    loc_w = text_w(draw, LOCATION_NAME.upper(), f_location)
-    draw.text((WIDTH - M - loc_w, S(44)), LOCATION_NAME.upper(), font=f_location, fill=GRAY_DARK)
-    draw.line([(M, S(96)), (WIDTH - M, S(96))], fill=GRAY_LIGHT, width=S(2))
+    top_y = S(56)
+    date_line = f"{jour} {date_str}"
+    draw_centered_text(draw, WIDTH // 2, top_y, date_line, f_date, INK)
+    loc_line = LOCATION_NAME.upper()
+    draw_centered_text(draw, WIDTH // 2, top_y + S(48), loc_line, f_location, GRAY_DARK)
+    rule_y = top_y + S(96)
+    draw.line([(M, rule_y), (WIDTH - M, rule_y)], fill=GRAY_LIGHT, width=S(2))
 
     # ============== BLOC PRINCIPAL (icône + température + panneau) ==============
-    hero_top, hero_h = S(126), S(230)
+    hero_top, hero_h = rule_y + S(18), S(220)
     panel_w = S(340)
     draw.rounded_rectangle([M, hero_top, WIDTH - M, hero_top + hero_h],
                             radius=S(22), fill=GRAY_PALE)
@@ -304,9 +329,13 @@ def create_image(data, out_path="meteo.png"):
                f"Min {t_min}°   ·   Max {t_max}°", font=f_minmax, fill=GRAY_DARK)
 
     # -- panneau lever/coucher + humidité/vent, à droite --
-    panel_x0 = WIDTH - M - panel_w
-    px, py = panel_x0 + S(18), hero_top + S(24)
-    cell_h = S(88)
+    right_margin = S(24)
+    region_right = WIDTH - M - right_margin
+    region_left = region_right - panel_w
+    col_w = panel_w // 2
+    cell_h = S(80)
+    content_h = cell_h * 2
+    panel_top = hero_top + (hero_h - content_h) // 2
     cells = [
         ("Lever", hhmm(sunrise) if sunrise else "—", "sunrise"),
         ("Coucher", hhmm(sunset) if sunset else "—", "sunset"),
@@ -315,9 +344,17 @@ def create_image(data, out_path="meteo.png"):
     ]
     for i, (label, value, kind) in enumerate(cells):
         row, col = divmod(i, 2)
-        cx = px + col * (panel_w // 2)
-        cy = py + row * cell_h
-        icon_cx, icon_cy = cx + S(20), cy + S(24)
+        col_left = region_left + col * col_w
+        cy = panel_top + row * cell_h
+        icon_d = S(34)
+        label_w = text_w(draw, label, f_panel_label)
+        value_w = text_w(draw, value, f_panel_value)
+        text_w_max = max(label_w, value_w)
+        gap = S(12)
+        group_w = icon_d + gap + text_w_max
+        start_x = col_left + (col_w - group_w) // 2
+        icon_cx, icon_cy = start_x + icon_d // 2, cy + S(24)
+        text_x = start_x + icon_d + gap
         if kind == "sunrise":
             draw_sun_horizon(draw, icon_cx, icon_cy, S(15), rising=True)
         elif kind == "sunset":
@@ -326,30 +363,38 @@ def create_image(data, out_path="meteo.png"):
             draw_droplet(draw, icon_cx, icon_cy, S(14))
         else:
             draw_wind_icon(draw, icon_cx, icon_cy, S(16))
-        draw.text((cx + S(44), cy + S(2)), label, font=f_panel_label, fill=GRAY_DARK)
-        draw.text((cx + S(44), cy + S(24)), value, font=f_panel_value, fill=INK)
+        draw.text((text_x, cy + S(2)), label, font=f_panel_label, fill=GRAY_DARK)
+        draw.text((text_x, cy + S(24)), value, font=f_panel_value, fill=INK)
 
     # ============== BANDEAU ALERTE ==============
-    alert_top = hero_top + hero_h + S(16)
-    alert_h = S(48)
+    alert_top = hero_top + hero_h + S(12)
+    alert_h = S(46)
     if has_rain:
         alert_text = "Pluie prévue dans la journée"
     else:
         alert_text = "Aucune précipitation prévue aujourd'hui"
     draw.rounded_rectangle([M, alert_top, WIDTH - M, alert_top + alert_h],
                             radius=alert_h // 2, outline=INK, width=S(3))
-    aw = text_w(draw, alert_text, f_alert)
-    draw.text(((WIDTH - aw) // 2, alert_top + S(14)), alert_text, font=f_alert, fill=INK)
+    draw_centered_text(draw, WIDTH // 2, alert_top + S(14), alert_text, f_alert, INK)
 
-    # ============== COURBE DE TEMPÉRATURE 24H ==============
-    chart_title_y = alert_top + alert_h + S(24)
-    draw.text((M, chart_title_y), "TEMPÉRATURES — 24 HEURES", font=f_section, fill=INK)
+    # ============== COURBE DE TEMPÉRATURE (00h → 00h) ==============
+    sep1_y = alert_top + alert_h + S(22)
+    draw.line([(M, sep1_y), (WIDTH - M, sep1_y)], fill=GRAY_LIGHT, width=S(2))
 
     gx0, gx1 = M + S(50), WIDTH - M - S(10)
-    gy0, gy1 = chart_title_y + S(44), chart_title_y + S(268)
+    gy0, gy1 = sep1_y + S(30), sep1_y + S(226)
 
-    if temps:
-        tmin_c, tmax_c = min(temps), max(temps)
+    # Points de la courbe positionnés par heure réelle (0 à 24) afin que le
+    # tracé couvre toute la journée, du premier point (00h) jusqu'à minuit.
+    chart_idx = list(day_idx)
+    chart_frac = [hour_of(i) / 24.0 for i in chart_idx]
+    if next_idx is not None:
+        chart_idx.append(next_idx)
+        chart_frac.append(1.0)
+    chart_temps = [data["hourly"]["temperature_2m"][i] for i in chart_idx]
+
+    if chart_temps:
+        tmin_c, tmax_c = min(chart_temps), max(chart_temps)
         rng = max(tmax_c - tmin_c, 1)
 
         for frac in (0, 0.5, 1):
@@ -358,75 +403,77 @@ def create_image(data, out_path="meteo.png"):
         draw.text((M, gy0 - S(12)), f"{round(tmax_c)}°", font=f_axis, fill=GRAY_DARK)
         draw.text((M, gy1 - S(12)), f"{round(tmin_c)}°", font=f_axis, fill=GRAY_DARK)
 
-        step = (gx1 - gx0) / max(len(temps) - 1, 1)
-        points = []
-        for i, t in enumerate(temps):
-            px_ = gx0 + i * step
-            py_ = gy1 - (t - tmin_c) / rng * (gy1 - gy0)
-            points.append((px_, py_))
+        points = [
+            (gx0 + f * (gx1 - gx0), gy1 - (t - tmin_c) / rng * (gy1 - gy0))
+            for f, t in zip(chart_frac, chart_temps)
+        ]
 
         area = [(gx0, gy1)] + points + [(gx1, gy1)]
         draw.polygon(area, fill=GRAY_PALE)
         draw.line(points, fill=INK, width=S(4), joint="curve")
 
-        for i, (px_, py_) in enumerate(points):
-            if i % 3 == 0:
-                draw.ellipse([px_ - S(4), py_ - S(4), px_ + S(4), py_ + S(4)], fill=INK)
-                label = hhmm(hourly_times[day_idx[i]])[:5]
-                lw = text_w(draw, label, f_axis)
-                draw.text((px_ - lw / 2, gy1 + S(12)), label, font=f_axis, fill=GRAY_DARK)
-
-        if now_pos is not None and now_pos < len(points):
-            nx, ny = points[now_pos]
-            for y in range(int(gy0), int(gy1), S(14)):
-                draw.line([nx, y, nx, min(y + S(7), gy1)], fill=GRAY_DARK, width=S(2))
-            draw.ellipse([nx - S(7), ny - S(7), nx + S(7), ny + S(7)], outline=INK, width=S(3))
-            label = "maintenant"
+        # Repères toutes les 3h + point final à 00h (minuit)
+        tick_hours = [0, 3, 6, 9, 12, 15, 18, 21]
+        for th in tick_hours:
+            if th not in hour_to_index:
+                continue
+            f = th / 24.0
+            x = gx0 + f * (gx1 - gx0)
+            t = data["hourly"]["temperature_2m"][hour_to_index[th]]
+            y = gy1 - (t - tmin_c) / rng * (gy1 - gy0)
+            draw.ellipse([x - S(4), y - S(4), x + S(4), y + S(4)], fill=INK)
+            label = f"{th:02d}:00"
             lw = text_w(draw, label, f_axis)
-            label_x = min(nx + S(10), gx1 - lw)
-            draw.text((label_x, gy0 - S(4)), label, font=f_axis, fill=GRAY_DARK)
+            draw.text((x - lw / 2, gy1 + S(12)), label, font=f_axis, fill=GRAY_DARK)
+        if next_idx is not None:
+            x, y = points[-1]
+            draw.ellipse([x - S(4), y - S(4), x + S(4), y + S(4)], fill=INK)
+            label = "00:00"
+            lw = text_w(draw, label, f_axis)
+            draw.text((min(x - lw / 2, gx1 - lw), gy1 + S(12)), label, font=f_axis, fill=GRAY_DARK)
 
-    # ============== TABLEAU DÉTAIL HORAIRE ==============
-    table_title_y = gy1 + S(44)
-    draw.text((M, table_title_y), "DÉTAIL PAR TRANCHE HORAIRE", font=f_section, fill=INK)
+    # ============== TABLEAU DÉTAIL HORAIRE (00h → 00h) ==============
+    sep2_y = gy1 + S(36)
+    draw.line([(M, sep2_y), (WIDTH - M, sep2_y)], fill=GRAY_LIGHT, width=S(2))
 
-    row_top = table_title_y + S(36)
-    row_h = S(72)
-    hours_to_show = [0, 3, 6, 9, 12, 15, 18, 21]
+    row_top = sep2_y + S(18)
+    row_h = S(66)
 
-    for n, h in enumerate(hours_to_show):
-        if h >= len(day_idx):
-            continue
-        abs_i = day_idx[h]
-        hour_str = hhmm(hourly_times[abs_i])[:5]
+    row_specs = [(f"{h:02d}:00", hour_to_index[h]) for h in (0, 3, 6, 9, 12, 15, 18, 21)
+                 if h in hour_to_index]
+    if next_idx is not None:
+        row_specs.append(("00:00", next_idx))
+
+    for n, (hour_str, abs_i) in enumerate(row_specs):
         temp = round(data["hourly"]["temperature_2m"][abs_i])
         code = data["hourly"]["weathercode"][abs_i]
         humidity = data["hourly"]["relativehumidity_2m"][abs_i]
         wind = round(data["hourly"]["windspeed_10m"][abs_i])
+        feels = round(data["hourly"].get("apparent_temperature", data["hourly"]["temperature_2m"])[abs_i])
 
         y = row_top + n * row_h
         if n % 2 == 1:
             draw.rectangle([M, y, WIDTH - M, y + row_h], fill=GRAY_PALE)
-        if h == now_pos:
-            draw.rectangle([M, y, S(6) + M, y + row_h], fill=INK)
 
         icon_cx = M + S(46)
         draw_icon(draw, code, icon_cx, y + row_h // 2, S(22))
 
-        draw.text((M + S(100), y + S(22)), hour_str, font=f_row_hour, fill=INK)
-        draw.text((M + S(210), y + S(22)), f"{temp}°C", font=f_row_temp, fill=INK)
+        draw.text((M + S(100), y + S(21)), hour_str, font=f_row_hour, fill=INK)
+        draw.text((M + S(210), y + S(21)), f"{temp}°C", font=f_row_temp, fill=INK)
 
         draw_droplet(draw, M + S(400), y + row_h // 2, S(11), fill=GRAY_DARK)
-        draw.text((M + S(420), y + S(24)), f"{humidity} %", font=f_row_small, fill=GRAY_DARK)
+        draw.text((M + S(420), y + S(23)), f"{humidity} %", font=f_row_small, fill=GRAY_DARK)
 
         draw_wind_icon(draw, M + S(560), y + row_h // 2, S(13), fill=GRAY_DARK)
-        draw.text((M + S(590), y + S(24)), f"{wind} km/h", font=f_row_small, fill=GRAY_DARK)
+        draw.text((M + S(590), y + S(23)), f"{wind} km/h", font=f_row_small, fill=GRAY_DARK)
+
+        draw_thermometer(draw, M + S(770), y + row_h // 2, S(13), fill=GRAY_DARK)
+        draw.text((M + S(795), y + S(23)), f"Ressenti {feels}°C", font=f_row_small, fill=GRAY_DARK)
 
     # ============== PIED DE PAGE ==============
-    footer_y = row_top + len(hours_to_show) * row_h + S(14)
-    footer = f"Mis à jour le {datetime.now().strftime('%d/%m/%Y à %H:%M')} — données Open-Meteo"
-    fw = text_w(draw, footer, f_footer)
-    draw.text(((WIDTH - fw) // 2, footer_y), footer, font=f_footer, fill=GRAY_MID)
+    footer_y = row_top + len(row_specs) * row_h + S(14)
+    footer = f"Mis à jour le {datetime.now().strftime('%d/%m/%Y à %H:%M')}"
+    draw_centered_text(draw, WIDTH // 2, footer_y, footer, f_footer, GRAY_MID)
 
     # ---------- Réduction finale (anticrénelage) ----------
     final = img.resize((BASE_W, BASE_H), Image.LANCZOS)
