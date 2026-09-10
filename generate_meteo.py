@@ -23,10 +23,21 @@ if not os.path.exists("Roboto-Bold.ttf"):
     urllib.request.urlretrieve(FONT_BOLD_URL, "Roboto-Bold.ttf")
 
 def get_weather():
-    # Récupération de la météo (moyenne, min, max et horaire)
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={LATITUDE}&longitude={LONGITUDE}&daily=weathercode,temperature_2m_max,temperature_2m_min,temperature_2m_mean&hourly=temperature_2m,weathercode&timezone=auto"
-    response = requests.get(url)
-    return response.json()
+    # URL sans le mean, pour éviter les erreurs de paramètre
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={LATITUDE}&longitude={LONGITUDE}&daily=weathercode,temperature_2m_max,temperature_2m_min&hourly=temperature_2m,weathercode&timezone=auto"
+    
+    # Ajout d'un User-Agent pour que l'API ne bloque pas GitHub
+    headers = {"User-Agent": "KindleDashboard-GitHubActions/1.0"}
+    
+    response = requests.get(url, headers=headers)
+    data = response.json()
+    
+    # Affichage du message d'erreur dans les logs en cas de nouveau problème
+    if "error" in data:
+        print("ERREUR API Open-Meteo :", data)
+        exit(1)
+        
+    return data
 
 def weather_text(code):
     # Correspondance des codes météo de l'Organisation Météorologique Mondiale
@@ -62,9 +73,9 @@ def create_image():
 
     # --- BLOC PRINCIPAL : Météo du jour ---
     daily_code = data["daily"]["weathercode"][0]
-    t_mean = round(data["daily"]["temperature_2m_mean"][0])
     t_max = round(data["daily"]["temperature_2m_max"][0])
     t_min = round(data["daily"]["temperature_2m_min"][0])
+    t_mean = (t_max + t_min) // 2
     
     w_label, w_type = weather_text(daily_code)
 
