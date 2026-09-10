@@ -1,0 +1,44 @@
+name: Mise à jour Kindle
+
+on:
+  schedule:
+    - cron: '0 4 * * *' # S'exécute tous les jours à 6h00 (heure de Paris / 4h00 UTC)
+  workflow_dispatch: # Permet de lancer l'action manuellement depuis GitHub
+
+jobs:
+  update-dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v3
+
+      - name: Installer Python et les librairies
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - run: pip install requests pillow
+
+      - name: Générer l'image météo
+        run: python generate_meteo.py
+
+      - name: Connexion au réseau Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:github
+
+      - name: Configurer la clé SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.KINDLE_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Envoyer et afficher l'image sur la Kindle
+        run: |
+          # Créer le dossier dashboard si besoin
+          ssh -o StrictHostKeyChecking=no root@100.79.221.11 "mkdir -p /mnt/us/dashboard"
+          # Envoyer l'image
+          scp -o StrictHostKeyChecking=no meteo.png root@100.79.221.11:/mnt/us/dashboard/
+          # Rafraîchir l'écran
+          ssh -o StrictHostKeyChecking=no root@100.79.221.11 "eips -f -g /mnt/us/dashboard/meteo.png"
