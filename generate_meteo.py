@@ -21,39 +21,39 @@ if not os.path.exists("Roboto-Bold.ttf"):
 
 def get_weather():
     url = f"https://api.open-meteo.com/v1/forecast?latitude={LATITUDE}&longitude={LONGITUDE}&daily=weathercode,temperature_2m_max,temperature_2m_min&hourly=temperature_2m,weathercode,relativehumidity_2m,windspeed_10m&timezone=auto"
-    headers = {"User-Agent": "KindleDashboard-GitHubActions/3.1"}
+    headers = {"User-Agent": "KindleDashboard-GitHubActions/3.2"}
     response = requests.get(url, headers=headers)
     return response.json()
 
 def draw_sun(draw, x, y, size):
     r = size // 3
-    draw.ellipse([x - r, y - r, x + r, y + r], outline=0, width=3)
+    draw.ellipse([x - r, y - r, x + r, y + r], outline=0, width=4)
     for i in range(8):
         angle = i * 3.14159 / 4
         import math
-        x1 = x + int((r + 4) * math.cos(angle))
-        y1 = y + int((r + 4) * math.sin(angle))
-        x2 = x + int((r + 12) * math.cos(angle))
-        y2 = y + int((r + 12) * math.sin(angle))
-        draw.line([x1, y1, x2, y2], fill=0, width=3)
+        x1 = x + int((r + 5) * math.cos(angle))
+        y1 = y + int((r + 5) * math.sin(angle))
+        x2 = x + int((r + 15) * math.cos(angle))
+        y2 = y + int((r + 15) * math.sin(angle))
+        draw.line([x1, y1, x2, y2], fill=0, width=4)
 
 def draw_cloud(draw, x, y, size):
-    draw.arc([x - size//2, y - size//4, x, y + size//4], 180, 360, fill=0, width=3)
-    draw.arc([x - size//3, y - size//2, x + size//3, y], 180, 360, fill=0, width=3)
-    draw.arc([x, y - size//4, x + size//2, y + size//4], 180, 360, fill=0, width=3)
-    draw.line([x - size//2, y + size//4, x + size//2, y + size//4], fill=0, width=3)
+    draw.arc([x - size//2, y - size//4, x, y + size//4], 180, 360, fill=0, width=4)
+    draw.arc([x - size//3, y - size//2, x + size//3, y], 180, 360, fill=0, width=4)
+    draw.arc([x, y - size//4, x + size//2, y + size//4], 180, 360, fill=0, width=4)
+    draw.line([x - size//2, y + size//4, x + size//2, y + size//4], fill=0, width=4)
 
 def draw_rain(draw, x, y, size):
     draw_cloud(draw, x, y - 5, size)
     for i in range(3):
         gx = x - size//3 + i * (size//3)
-        draw.line([gx, y + size//4 + 5, gx - 4, y + size//4 + 15], fill=0, width=3)
+        draw.line([gx, y + size//4 + 5, gx - 5, y + size//4 + 18], fill=0, width=4)
 
 def draw_snow(draw, x, y, size):
     draw_cloud(draw, x, y - 5, size)
     for i in range(3):
         sx = x - size//3 + i * (size//3)
-        draw.ellipse([sx-2, y + size//4 + 5, sx+2, y + size//4 + 9], fill=0)
+        draw.ellipse([sx-3, y + size//4 + 5, sx+3, y + size//4 + 11], fill=0)
 
 def draw_weather_icon(draw, code, x, y, size):
     if code == 0:
@@ -87,7 +87,7 @@ def create_image():
 
     font_title = ImageFont.truetype("Roboto-Bold.ttf", 60)
     font_huge = ImageFont.truetype("Roboto-Bold.ttf", 95)
-    font_large = ImageFont.truetype("Roboto-Bold.ttf", 38)
+    font_large = ImageFont.truetype("Roboto-Bold.ttf", 36)
     font_med = ImageFont.truetype("Roboto-Regular.ttf", 32)
     font_small = ImageFont.truetype("Roboto-Regular.ttf", 22)
 
@@ -95,6 +95,8 @@ def create_image():
     date_str = get_french_date()
     draw.text((60, 45), LOCATION_NAME.upper(), font=font_title, fill=0)
     draw.text((WIDTH - 450, 65), date_str, font=font_med, fill=0)
+    
+    # Ligne de démarqualification nette sous l'en-tête
     draw.line([(60, 130), (WIDTH - 60, 130)], fill=0, width=4)
 
     # --- BLOC PRINCIPAL MÉTÉO DU JOUR ---
@@ -104,14 +106,14 @@ def create_image():
     t_mean = (t_max + t_min) // 2
     w_desc = weather_label(daily_code)
 
-    # Positionnement parfait du grand logo à gauche
-    draw_weather_icon(draw, daily_code, 120, 230, 80)
+    # Grand logo bien visible et bien positionné à gauche
+    draw_weather_icon(draw, daily_code, 130, 240, 100)
     
-    draw.text((250, 175), f"{t_mean}°C", font=font_huge, fill=0)
-    draw.text((250, 280), w_desc, font=font_large, fill=0)
-    draw.text((250, 335), f"Min : {t_min}°C   •   Max : {t_max}°C", font=font_med, fill=0)
+    draw.text((270, 175), f"{t_mean}°C", font=font_huge, fill=0)
+    draw.text((270, 285), w_desc, font=font_large, fill=0)
+    draw.text((270, 340), f"Min : {t_min}°C   •   Max : {t_max}°C", font=font_med, fill=0)
 
-    # --- ALERTE PLUIE À DROITE ---
+    # --- ALERTE PLUIE PROPRE (Boîte élargie à droite) ---
     hourly_codes = data["hourly"]["weathercode"]
     has_rain = any(c in [51, 53, 55, 61, 63, 65, 80, 81, 82] for c in hourly_codes[:24])
     
@@ -120,33 +122,37 @@ def create_image():
     else:
         alert_text = "✨ Temps calme et dégagé"
 
-    # Boîte d'alerte positionnée élégamment à droite de la météo principale
-    draw.rounded_rectangle([(680, 210), (WIDTH - 60, 310)], radius=15, outline=0, width=3)
-    draw.text((710, 242), alert_text, font=font_large, fill=0)
+    # Boîte élargie pour éviter que le texte ne dépasse
+    draw.rounded_rectangle([(630, 210), (WIDTH - 60, 310)], radius=15, outline=0, width=3)
+    draw.text((660, 242), alert_text, font=font_large, fill=0)
 
-    # --- GRAPHIQUE DE TEMPÉRATURE 24H AVEC ÉCHELLE ---
+    # --- LIGNE DE DÉMARCATION AVEC LE GRAPHIQUE ---
+    draw.line([(60, 410), (WIDTH - 60, 410)], fill=0, width=3)
+
+    # --- GRAPHIQUE DE TEMPÉRATURE 24H (00h à 00h) ---
     today_date_str = datetime.now().strftime("%Y-%m-%d")
     hourly_times = data["hourly"]["time"]
     day_indices = [i for i, t in enumerate(hourly_times) if t.startswith(today_date_str)]
     if not day_indices:
         day_indices = list(range(24))
 
-    temps = [data["hourly"]["temperature_2m"][i] for i in day_indices[:24]]
+    # On prend toutes les heures disponibles de la journée (jusqu'à 24 points)
+    day_indices = day_indices[:24]
+    temps = [data["hourly"]["temperature_2m"][i] for i in day_indices]
 
-    gx_start, gx_end = 100, WIDTH - 80
-    gy_top, gy_bottom = 440, 580
+    gx_start, gx_end = 110, WIDTH - 80
+    gy_top, gy_bottom = 460, 600
 
     if temps:
         min_t, max_t = min(temps), max(temps)
         t_range = max(max_t - min_t, 1)
         
-        # Dessin des lignes d'échelle horizontales (min, moyen, max)
+        # Échelle horizontale discrète
         draw.line([gx_start, gy_top, gx_end, gy_top], fill=200, width=1)
-        draw.line([gx_start, (gy_top + gy_bottom)//2, gx_end, (gy_top + gy_bottom)//2], fill=200, width=1)
         draw.line([gx_start, gy_bottom, gx_end, gy_bottom], fill=200, width=1)
         
-        draw.text((gx_start - 70, gy_top - 10), f"{max_t}°", font=font_small, fill=0)
-        draw.text((gx_start - 70, gy_bottom - 10), f"{min_t}°", font=font_small, fill=0)
+        draw.text((gx_start - 85, gy_top - 10), f"{max_t}°", font=font_small, fill=0)
+        draw.text((gx_start - 85, gy_bottom - 10), f"{min_t}°", font=font_small, fill=0)
 
         points = []
         step_x = (gx_end - gx_start) / max(len(temps) - 1, 1)
@@ -159,51 +165,50 @@ def create_image():
         if len(points) > 1:
             draw.line(points, fill=0, width=4)
             for idx, (px, py) in enumerate(points):
-                # Affichage des repères horaires toutes les 3 heures sur l'axe
+                # Repères sur l'axe toutes les 3 heures (00h, 03h, 06h... jusqu'à 00h)
                 if idx % 3 == 0:
                     draw.ellipse([px-3, py-3, px+3, py+3], fill=0)
                     hour_label = hourly_times[day_indices[idx]].split("T")[1]
                     draw.text((px - 22, gy_bottom + 12), hour_label, font=font_small, fill=0)
 
-    # --- TABLEAU DÉTAIL HORAIRE (00h à 00h) ---
-    y_offset = 660
-    row_h = 75
+    # --- LIGNE DE DÉMARCATION AVEC LES DÉTAILS ---
+    draw.line([(60, 660), (WIDTH - 60, 660)], fill=0, width=3)
 
-    # On couvre toute la journée de 00h à 21h/00h par pas de 3h (8 à 9 lignes)
-    hours_to_show = [0, 3, 6, 9, 12, 15, 18, 21]
+    # --- TABLEAU DÉTAIL HORAIRE (00h jusqu'à 00h) ---
+    y_offset = 690
+    row_h = 68
+
+    # On couvre toute la journée de 00h à 00h par pas de 3h (9 lignes : 00, 03, 06, 09, 12, 15, 18, 21, 00)
+    hours_to_show = [0, 3, 6, 9, 12, 15, 18, 21, 23]
     
     for h in hours_to_show:
         if h < len(day_indices):
             abs_idx = day_indices[h]
             time_iso = hourly_times[abs_idx]
             hour_str = time_iso.split("T")[1]
+            if hour_str == "00:00" and h > 0:
+                hour_str = "00:00" # Fin de journée
+                
             temp = round(data["hourly"]["temperature_2m"][abs_idx])
             code = data["hourly"]["weathercode"][abs_idx]
             humidity = data["hourly"]["relativehumidity_2m"][abs_idx]
             wind = data["hourly"]["windspeed_10m"][abs_idx]
 
-            # Highlight noir spécifique à 06h ou en cas de pluie/neige
-            is_highlight = (h == 6) or (code in [51, 53, 55, 61, 63, 65, 71, 73, 75, 80, 81, 82])
-            bg_color = 0 if is_highlight else 255
-            txt_color = 255 if is_highlight else 0
-
-            if is_highlight:
-                draw.rounded_rectangle([(60, y_offset - 4), (WIDTH - 60, y_offset + row_h - 8)], radius=10, fill=bg_color)
-            else:
-                draw.rectangle([(60, y_offset - 4), (WIDTH - 60, y_offset + row_h - 8)], outline=200)
+            # Plus de bloc noir forcé à 06h, uniquement propre et alterné / encadré
+            draw.rectangle([(60, y_offset - 2), (WIDTH - 60, y_offset + row_h - 6)], outline=200, width=1)
 
             # Petite icône vectorielle à gauche de chaque ligne
-            draw_weather_icon(draw, code, 110, y_offset + 28, 22)
+            draw_weather_icon(draw, code, 100, y_offset + 25, 20)
 
-            draw.text((170, y_offset + 14), hour_str, font=font_med, fill=txt_color)
-            draw.text((360, y_offset + 14), f"{temp}°C", font=font_med, fill=txt_color)
-            draw.text((580, y_offset + 14), f"Humidité : {humidity}%", font=font_small, fill=txt_color)
-            draw.text((820, y_offset + 14), f"Vent : {wind} km/h", font=font_small, fill=txt_color)
+            draw.text((150, y_offset + 12), hour_str, font=font_med, fill=0)
+            draw.text((340, y_offset + 12), f"{temp}°C", font=font_med, fill=0)
+            draw.text((560, y_offset + 12), f"Humidité : {humidity}%", font=font_small, fill=0)
+            draw.text((800, y_offset + 12), f"Vent : {wind} km/h", font=font_small, fill=0)
 
             y_offset += row_h
 
     img.save("meteo.png")
-    print("Dashboard HD optimisé généré avec succès !")
+    print("Dashboard HD final généré avec succès !")
 
 if __name__ == "__main__":
     create_image()
