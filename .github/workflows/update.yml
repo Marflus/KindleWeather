@@ -7,8 +7,11 @@
 #   2. Se connecter à la liseuse via Tailscale (VPN reliant le runner
 #      GitHub à la Kindle, jailbreakée et joignable en SSH).
 #   3. Envoyer l'image et l'afficher avec un seul rafraîchissement
-#      d'écran, tout en s'assurant que la liseuse reste éveillée et
-#      joignable jusqu'à la prochaine mise à jour (voir kindle/keep_awake.sh).
+#      d'écran. La liseuse dort normalement le reste de la journée pour
+#      préserver sa batterie : c'est elle qui se réveille brièvement
+#      chaque matin autour de 6h grâce à une tâche cron installée sur
+#      l'appareil (voir kindle/dashboard_watchdog.sh), plutôt que d'être
+#      maintenue éveillée en permanence.
 #
 # Déclenchement : tous les jours à 6h heure de Paris. GitHub Actions ne
 # planifie qu'en UTC et ne suit pas les changements d'heure : on déclenche
@@ -95,24 +98,32 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
 
       # ------------------------------------------------------------
-      # 3) S'assurer que le démon anti-veille tourne sur la Kindle, puis
+      # 3) S'assurer que le watchdog cron est installé sur la Kindle, puis
       #    envoyer et afficher le dashboard avec un seul rafraîchissement
       #    d'écran, luminosité au minimum.
       #
-      #    Le démon (kindle/keep_awake.sh) empêche la liseuse de
-      #    s'endormir et d'afficher son écran de veille par défaut entre
-      #    deux mises à jour, afin qu'elle reste joignable en SSH et que
-      #    le dashboard reste affiché en permanence. Il est idempotent :
-      #    s'il tourne déjà, cette étape ne fait rien.
+      #    Le watchdog (kindle/dashboard_watchdog.sh) est exécuté toutes
+      #    les 5 minutes par le cron de la liseuse. Il ne l'empêche de
+      #    s'endormir que dans une courte fenêtre autour de 6h (heure
+      #    locale de la Kindle) — le reste de la journée, elle dort
+      #    normalement pour préserver sa batterie. Cette étape est
+      #    idempotente : elle n'ajoute la tâche cron que si elle est
+      #    absente.
       # ------------------------------------------------------------
-      - name: Démarrer le démon anti-veille sur la Kindle (si besoin)
+      - name: Installer le watchdog de réveil sur la Kindle (si besoin)
         if: steps.check_time.outputs.should_run == 'true'
         run: |
           ssh -o StrictHostKeyChecking=no "root@${KINDLE_HOST}" "mkdir -p /mnt/us/dashboard"
-          scp -o StrictHostKeyChecking=no kindle/keep_awake.sh "root@${KINDLE_HOST}:/mnt/us/dashboard/keep_awake.sh"
+          scp -o StrictHostKeyChecking=no kindle/dashboard_watchdog.sh "root@${KINDLE_HOST}:/mnt/us/dashboard/dashboard_watchdog.sh"
           ssh -o StrictHostKeyChecking=no "root@${KINDLE_HOST}" "
-            chmod +x /mnt/us/dashboard/keep_awake.sh
-            nohup /mnt/us/dashboard/keep_awake.sh >/mnt/us/dashboard/keep_awake.log 2>&1 &
+            chmod +x /mnt/us/dashboard/dashboard_watchdog.sh
+            touch /etc/crontab
+            grep -qF 'dashboard_watchdog.sh' /etc/crontab || \
+              echo '*/5 * * * * /mnt/us/dashboard/dashboard_watchdog.sh' >> /etc/crontab
+            killall -HUP crond 2>/dev/null || /etc/init.d/crond restart 2>/dev/null || true
+            if ! ps | grep -q '[c]rond'; then
+              echo 'ATTENTION : crond ne semble pas actif sur cette liseuse -- le reveil programme ne fonctionnera pas.'
+            fi
           "
 
       - name: Envoyer et afficher le dashboard (un seul rafraîchissement)

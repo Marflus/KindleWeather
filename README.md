@@ -19,8 +19,9 @@ l'envoie et l'affiche sur la Kindle via SSH, à travers un tunnel
         ├─ 2. Connexion Tailscale ── rejoint le réseau privé de la Kindle
         │
         └─ 3. SSH / SCP vers la Kindle
-                 ├─ démarre kindle/keep_awake.sh (démon anti-veille,
-                 │  s'il ne tourne pas déjà)
+                 ├─ installe kindle/dashboard_watchdog.sh en tâche cron
+                 │  (si absente) — réveil ciblé autour de 6h, pas de
+                 │  veille permanente (préserve la batterie)
                  ├─ envoie meteo.png sur la liseuse
                  └─ eips -f -g meteo.png  ── un seul rafraîchissement écran
 ```
@@ -47,11 +48,13 @@ Orchestre la mise à jour quotidienne : génère l'image, se connecte à la
 Kindle, et l'affiche. Voir la section [Planification](#planification-le-pourquoi-de-deux-cron)
 ci-dessous pour le détail du déclenchement à 6h.
 
-### `kindle/keep_awake.sh`
+### `kindle/dashboard_watchdog.sh`
 
-Petit démon shell déployé automatiquement sur la Kindle par le workflow (pas
-d'installation manuelle nécessaire). Voir
-[Pourquoi un démon anti-veille ?](#pourquoi-un-démon-anti-veille-) ci-dessous.
+Petit script shell déployé automatiquement sur la Kindle par le workflow et
+exécuté toutes les 5 minutes via cron (pas d'installation manuelle
+nécessaire). Voir [Pourquoi un réveil programmé plutôt qu'une veille
+permanente ?](#pourquoi-un-réveil-programmé-plutôt-quune-veille-permanente-)
+ci-dessous.
 
 ## Prérequis
 
@@ -89,45 +92,54 @@ ignoré silencieusement. Un déclenchement manuel (`workflow_dispatch`, via
 l'onglet *Actions*) passe toujours cette vérification, pour pouvoir tester
 à n'importe quelle heure.
 
-## Pourquoi un démon anti-veille ?
+## Pourquoi un réveil programmé plutôt qu'une veille permanente ?
 
-Une Kindle laissée à elle-même pose trois problèmes pour cet usage :
+Une première version de ce projet empêchait la Kindle de s'endormir en
+permanence (démon tournant 24h/24). Ça réglait la connectivité, mais ça
+**vide la batterie en une journée ou deux** : le Wi-Fi et le processeur
+restent actifs en continu au lieu de se mettre en veille entre les mises
+à jour.
 
-1. **Perte de connexion** : après quelques minutes d'inactivité, la Kindle
-   part en veille profonde et coupe le Wi-Fi — le job GitHub Actions ne
-   peut alors plus s'y connecter en SSH au moment de la mise à jour.
-2. **Écran de veille qui remplace le dashboard** : en s'endormant, la
-   Kindle affiche son propre écran de veille (image Amazon par défaut),
-   qui recouvre visuellement le dashboard.
-3. **Rafraîchissements inutiles** : le réveil de l'écran (sortie de veille)
-   provoque un rafraîchissement e-ink en plus de celui utilisé pour
-   afficher le nouveau dashboard — deux flashs d'écran au lieu d'un, pour
-   rien.
+Le compromis retenu ici est différent : la Kindle **dort normalement** le
+reste de la journée (donc économise sa batterie), et c'est **elle-même**
+qui se réveille brièvement chaque matin autour de 6h, plutôt que de
+compter sur GitHub Actions pour la « pousser » depuis l'extérieur pendant
+qu'elle dort (une fois le Wi-Fi coupé par la mise en veille, plus aucune
+connexion entrante n'est possible, quelle que soit la fréquence des
+tentatives côté serveur).
 
-`kindle/keep_awake.sh` répond aux trois à la fois : c'est un démon shell
-très léger qui tourne en continu sur la Kindle et, toutes les 60 secondes :
+`kindle/dashboard_watchdog.sh` est installé comme tâche cron sur la
+liseuse (toutes les 5 minutes, via `/etc/crontab`) et, à chaque
+exécution :
 
-- désactive l'affichage de l'écran de veille par défaut
-  (`lipc-set-prop com.lab126.powerd preventScreenSaver 1`) ;
-- repousse la minuterie de mise en veille profonde
-  (`lipc-send-event com.lab126.powerd resetAutoSuspendTimeout 0`) ;
-- garde le rétro-éclairage à zéro (`flIntensity 0`).
+- si l'heure locale de la Kindle est dans la fenêtre **05:50–06:20** :
+  désactive l'écran de veille (`lipc-set-prop com.lab126.powerd
+  preventScreenSaver 1`) et repousse la mise en veille profonde
+  (`lipc-send-event com.lab126.powerd resetAutoSuspendTimeout 0`), le
+  temps que le workflow GitHub Actions s'y connecte et pousse le
+  dashboard ;
+- en dehors de cette fenêtre : réautorise l'écran de veille normal, pour
+  que la liseuse s'endorme le reste du temps.
 
-Résultat : la liseuse reste allumée et joignable en permanence, le
-dashboard reste affiché entre deux mises à jour, et un **seul**
-rafraîchissement d'écran a lieu par jour (celui qui applique le nouveau
-dashboard) — l'écran e-ink ne consommant quasiment rien tant qu'il n'est
-pas rafraîchi, l'essentiel de la batterie restante est utilisé par le
-Wi-Fi maintenu actif.
+Le reste de la journée (~23h30 sur 24h), la Kindle dort donc normalement.
+C'est un compromis assumé : l'écran de veille par défaut d'Amazon peut
+réapparaître pendant cette période (contrairement à l'ancienne version
+« toujours éveillée » qui gardait le dashboard affiché en permanence),
+mais la batterie est largement préservée puisque le Wi-Fi/CPU ne sont
+forcés actifs que ~30 minutes par jour.
 
-Le workflow déploie et démarre ce démon à chaque exécution s'il ne tourne
-pas déjà (fichier de PID dans `/mnt/us/dashboard/keep_awake.pid`) : il
-survit donc à un redémarrage de la liseuse sans intervention manuelle.
-
-> Les noms de propriétés `lipc-set-prop`/`lipc-send-event` ci-dessus sont
-> ceux couramment utilisés par la communauté de jailbreak Kindle ; selon le
-> modèle et la version du firmware, il peut être nécessaire de les ajuster
-> (voir [MobileRead Wiki](https://www.mobileread.com/forums/forumdisplay.php?f=150)).
+> **Prérequis non garanti sur tous les firmwares** : ce mécanisme suppose
+> que (1) l'horloge de la Kindle est réglée sur l'heure locale (celle
+> affichée à l'écran), et (2) `crond` (busybox) tourne en arrière-plan et
+> continue à exécuter les tâches planifiées même quand l'écran est en
+> veille — ce qui est le cas sur la plupart des jailbreaks Kindle, mais
+> n'a pas pu être vérifié sur du matériel réel depuis cet environnement.
+> Si la mise à jour de 6h ne fonctionne pas de façon fiable, voir
+> [Dépannage](#dépannage) ci-dessous. Les noms de propriétés
+> `lipc-set-prop`/`lipc-send-event` sont ceux couramment utilisés par la
+> communauté de jailbreak Kindle ; selon le modèle et la version du
+> firmware, il peut être nécessaire de les ajuster (voir [MobileRead
+> Wiki](https://www.mobileread.com/forums/forumdisplay.php?f=150)).
 
 ## Développement local
 
@@ -138,13 +150,27 @@ python generate_meteo.py   # génère meteo.png dans le dossier courant
 
 ## Dépannage
 
-- **L'écran de veille Amazon réapparaît quand même** : vérifier que
-  `keep_awake.sh` tourne bien sur la Kindle
-  (`ps | grep keep_awake` en SSH) et consulter
-  `/mnt/us/dashboard/keep_awake.log`.
-- **Le job échoue à se connecter en SSH** : vérifier que la Kindle est bien
-  visible sur le réseau Tailscale (`tailscale status`) et que
-  `KINDLE_TAILSCALE_IP` correspond à son IP actuelle.
+- **Le job échoue à se connecter en SSH à 6h (la Kindle dormait)** :
+  - vérifier en SSH (pendant que la Kindle est réveillée, ou après l'avoir
+    réveillée manuellement) que la tâche cron est bien installée :
+    `cat /etc/crontab | grep dashboard_watchdog` ;
+  - vérifier que `crond` tourne : `ps | grep crond` — s'il est absent, le
+    watchdog ne peut pas s'exécuter (voir le message d'avertissement
+    affiché par l'étape *Installer le watchdog de réveil* dans les logs
+    GitHub Actions) ;
+  - vérifier que l'heure système de la Kindle correspond à l'heure locale
+    réelle : `date` en SSH. Si elle est décalée, ajuster la fenêtre
+    `WINDOW_START`/`WINDOW_END` dans `kindle/dashboard_watchdog.sh` ou
+    corriger l'horloge de la liseuse.
+- **L'écran de veille Amazon apparaît en dehors de la fenêtre de 6h** :
+  c'est le comportement attendu (voir [Pourquoi un réveil programmé
+  plutôt qu'une veille permanente
+  ?](#pourquoi-un-réveil-programmé-plutôt-quune-veille-permanente-)) — la
+  liseuse dort normalement le reste de la journée pour préserver sa
+  batterie.
+- **Le job échoue à se connecter en SSH en général** : vérifier que la
+  Kindle est bien visible sur le réseau Tailscale (`tailscale status`) et
+  que `KINDLE_TAILSCALE_IP` correspond à son IP actuelle.
 - **Le dashboard ne se met pas à jour à 6h pile** : vérifier dans l'onglet
   *Actions* que le job du bon horaire (4h ou 5h UTC selon la saison) est
   bien celui qui a exécuté toutes les étapes (l'autre doit s'arrêter dès
