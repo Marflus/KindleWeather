@@ -270,13 +270,13 @@ def create_image(data, out_path="meteo.png"):
     f_temp_huge = load_font(FONT_BOLD_PATH, S(100))
     f_desc = load_font(FONT_REGULAR_PATH, S(30))
     f_minmax = load_font(FONT_BOLD_PATH, S(22))
-    f_panel_label = load_font(FONT_REGULAR_PATH, S(19))
+    f_panel_label = load_font(FONT_REGULAR_PATH, S(20))
     f_panel_value = load_font(FONT_BOLD_PATH, S(24))
     f_section = load_font(FONT_BOLD_PATH, S(24))
     f_axis = load_font(FONT_REGULAR_PATH, S(18))
     f_row_hour = load_font(FONT_BOLD_PATH, S(26))
     f_row_temp = load_font(FONT_BOLD_PATH, S(26))
-    f_row_small = load_font(FONT_REGULAR_PATH, S(18))
+    f_row_small = load_font(FONT_REGULAR_PATH, S(19))
     f_alert = load_font(FONT_BOLD_PATH, S(24))
     f_footer = load_font(FONT_REGULAR_PATH, S(16))
 
@@ -323,28 +323,51 @@ def create_image(data, out_path="meteo.png"):
     draw.line([(M, rule_y), (WIDTH - M, rule_y)], fill=GRAY_LIGHT, width=S(2))
 
     # ============== BLOC PRINCIPAL (icône + température + panneau) ==============
+    # La carte est divisée en deux zones séparées par un fin séparateur
+    # vertical : à gauche l'icône + la température (centrées comme un seul
+    # groupe, quelle que soit la longueur de la description), à droite le
+    # panneau lever/coucher/humidité/vent. Cela évite le "trou" visuel qui
+    # apparaissait entre les deux blocs avec un positionnement à offsets fixes.
     hero_top, hero_h = rule_y + S(18), S(220)
     panel_w = S(340)
+    zone_pad = S(20)  # marge interne de chaque côté du séparateur
     draw.rounded_rectangle([M, hero_top, WIDTH - M, hero_top + hero_h],
                             radius=S(22), fill=GRAY_PALE)
 
-    draw_icon(draw, daily_code, M + S(110), hero_top + hero_h // 2, S(72))
-    temp_x = M + S(210)
-    draw.text((temp_x, hero_top + S(28)), f"{t_mean}°", font=f_temp_huge, fill=INK)
-    tw = text_w(draw, f"{t_mean}°", f_temp_huge)
-    desc = weather_label(daily_code)
-    draw.text((temp_x, hero_top + S(150)), desc, font=f_desc, fill=INK)
-    draw.text((temp_x, hero_top + S(190)),
-               f"Min {t_min}°   ·   Max {t_max}°", font=f_minmax, fill=GRAY_DARK)
+    divider_x = (WIDTH - M) - panel_w - 2 * zone_pad
+    draw.line([(divider_x, hero_top + S(24)), (divider_x, hero_top + hero_h - S(24))],
+              fill=GRAY_LIGHT, width=S(2))
 
-    # -- panneau lever/coucher + humidité/vent, à droite --
-    right_margin = S(24)
-    region_right = WIDTH - M - right_margin
-    region_left = region_right - panel_w
+    # -- icône + température + description, centrées dans la zone de gauche --
+    icon_r = S(72)
+    gap_icon_text = S(38)
+    desc = weather_label(daily_code)
+    temp_str = f"{t_mean}°"
+    minmax_str = f"Min {t_min}°   ·   Max {t_max}°"
+    text_block_w = max(
+        text_w(draw, temp_str, f_temp_huge),
+        text_w(draw, desc, f_desc),
+        text_w(draw, minmax_str, f_minmax),
+    )
+    group_w = icon_r * 2 + gap_icon_text + text_block_w
+    left_zone_left, left_zone_right = M + zone_pad, divider_x - zone_pad
+    group_start = left_zone_left + max(0, (left_zone_right - left_zone_left - group_w) // 2)
+
+    icon_cx, icon_cy = group_start + icon_r, hero_top + hero_h // 2
+    text_x = group_start + icon_r * 2 + gap_icon_text
+    draw_icon(draw, daily_code, icon_cx, icon_cy, icon_r)
+    draw.text((text_x, hero_top + S(28)), temp_str, font=f_temp_huge, fill=INK)
+    draw.text((text_x, hero_top + S(150)), desc, font=f_desc, fill=INK)
+    draw.text((text_x, hero_top + S(190)), minmax_str, font=f_minmax, fill=GRAY_DARK)
+
+    # -- panneau lever/coucher + humidité/vent, à droite du séparateur --
+    region_left = divider_x + zone_pad
+    region_right = region_left + panel_w
     col_w = panel_w // 2
     cell_h = S(80)
     content_h = cell_h * 2
     panel_top = hero_top + (hero_h - content_h) // 2
+    mini_icon_r = S(16)  # même taille pour les 4 icônes du panneau
     cells = [
         ("Lever", hhmm(sunrise) if sunrise else "—", "sunrise"),
         ("Coucher", hhmm(sunset) if sunset else "—", "sunset"),
@@ -355,25 +378,25 @@ def create_image(data, out_path="meteo.png"):
         row, col = divmod(i, 2)
         col_left = region_left + col * col_w
         cy = panel_top + row * cell_h
-        icon_d = S(34)
+        icon_d = mini_icon_r * 2
         label_w = text_w(draw, label, f_panel_label)
         value_w = text_w(draw, value, f_panel_value)
         text_w_max = max(label_w, value_w)
         gap = S(12)
-        group_w = icon_d + gap + text_w_max
-        start_x = col_left + (col_w - group_w) // 2
-        icon_cx, icon_cy = start_x + icon_d // 2, cy + S(24)
-        text_x = start_x + icon_d + gap
+        group_w2 = icon_d + gap + text_w_max
+        start_x = col_left + (col_w - group_w2) // 2
+        icon_cx2, icon_cy2 = start_x + icon_d // 2, cy + S(24)
+        text_x2 = start_x + icon_d + gap
         if kind == "sunrise":
-            draw_sun_horizon(draw, icon_cx, icon_cy, S(15), rising=True)
+            draw_sun_horizon(draw, icon_cx2, icon_cy2, mini_icon_r, rising=True)
         elif kind == "sunset":
-            draw_sun_horizon(draw, icon_cx, icon_cy, S(15), rising=False)
+            draw_sun_horizon(draw, icon_cx2, icon_cy2, mini_icon_r, rising=False)
         elif kind == "humidity":
-            draw_droplet(draw, icon_cx, icon_cy, S(14))
+            draw_droplet(draw, icon_cx2, icon_cy2, mini_icon_r)
         else:
-            draw_wind_icon(draw, icon_cx, icon_cy, S(16))
-        draw.text((text_x, cy + S(2)), label, font=f_panel_label, fill=GRAY_DARK)
-        draw.text((text_x, cy + S(24)), value, font=f_panel_value, fill=INK)
+            draw_wind_icon(draw, icon_cx2, icon_cy2, mini_icon_r)
+        draw.text((text_x2, cy + S(2)), label, font=f_panel_label, fill=GRAY_DARK)
+        draw.text((text_x2, cy + S(24)), value, font=f_panel_value, fill=INK)
 
     # ============== BANDEAU ALERTE ==============
     alert_top = hero_top + hero_h + S(12)
@@ -470,7 +493,7 @@ def create_image(data, out_path="meteo.png"):
         draw.text((M + S(100), y + S(21)), hour_str, font=f_row_hour, fill=INK)
         draw.text((M + S(210), y + S(21)), f"{temp}°C", font=f_row_temp, fill=INK)
 
-        draw_droplet(draw, M + S(400), y + row_h // 2, S(11), fill=GRAY_DARK)
+        draw_droplet(draw, M + S(400), y + row_h // 2, S(13), fill=GRAY_DARK)
         draw.text((M + S(420), y + S(23)), f"{humidity} %", font=f_row_small, fill=GRAY_DARK)
 
         draw_wind_icon(draw, M + S(560), y + row_h // 2, S(13), fill=GRAY_DARK)
