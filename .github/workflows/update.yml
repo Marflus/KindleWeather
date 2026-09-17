@@ -130,6 +130,7 @@ jobs:
             echo -n 0 > /sys/class/backlight/max77696-bl/brightness
 
             # Un seul rafraîchissement plein écran (-f) pour appliquer le
-            # nouveau dashboard.
-            eips -f -g /mnt/us/dashboard/meteo.png
+            # nouveau dashboard. Chemin complet nécessaire : /usr/sbin n'est
+            # pas dans le PATH d'un shell SSH non-interactif sur la Kindle.
+            /usr/sbin/eips -f -g /mnt/us/dashboard/meteo.png
           "
