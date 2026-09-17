@@ -1,51 +1,47 @@
 # ============================================================
 # Mise à jour quotidienne du dashboard météo affiché sur la Kindle
 # ------------------------------------------------------------
-# Pipeline en 3 temps :
-#   1. Générer l'image du dashboard (generate_meteo.py) à partir des
-#      données Open-Meteo.
-#   2. Se connecter à la liseuse via Tailscale (VPN reliant le runner
-#      GitHub à la Kindle, jailbreakée et joignable en SSH).
-#   3. Envoyer l'image et l'afficher avec un seul rafraîchissement
-#      d'écran. La liseuse dort normalement le reste de la journée pour
-#      préserver sa batterie : c'est elle qui se réveille brièvement
-#      chaque matin autour de 6h grâce à une tâche cron installée sur
-#      l'appareil (voir kindle/dashboard_watchdog.sh), plutôt que d'être
-#      maintenue éveillée en permanence.
+# Architecture (voir le README pour le détail) :
+#   - la Kindle dort normalement toute la journée pour préserver sa
+#     batterie ; c'est ELLE qui se réveille brièvement chaque matin
+#     autour de 6h (heure locale), via une tâche cron embarquée
+#     (kindle/dashboard_watchdog.sh) ;
+#   - ce workflow se contente de générer l'image météo puis de la
+#     pousser sur la liseuse pendant cette fenêtre de réveil, à travers
+#     un tunnel Tailscale (VPN reliant le runner GitHub à la Kindle,
+#     jailbreakée et joignable en SSH).
 #
-# Déclenchement : tous les jours à 6h heure de Paris. GitHub Actions ne
-# planifie qu'en UTC et ne suit pas les changements d'heure : on déclenche
-# donc le job à 4h ET 5h UTC (couvrant heure d'été / heure d'hiver), puis
-# la première étape vérifie l'heure locale réelle et n'exécute la suite
-# qu'au bon horaire.
+# Deux jobs :
+#   1. check-time   : détermine s'il est bien 6h à Paris (déclenchement
+#                     manuel toujours accepté, pour tester).
+#   2. update-dashboard : générer + pousser + afficher, seulement si
+#                     check-time l'autorise.
+#
+# /!\ L'heure cible (6h) est définie à DEUX endroits qui doivent rester
+# cohérents si on la change : le job check-time ci-dessous, et la
+# fenêtre WINDOW_START/WINDOW_END dans kindle/dashboard_watchdog.sh.
 # ============================================================
 
 name: Mise à jour Kindle
 
 on:
   schedule:
+    # GitHub Actions ne planifie qu'en UTC et ne suit pas les
+    # changements d'heure d'été/hiver : on déclenche donc le job à 4h
+    # ET 5h UTC (couvrant les deux cas), et check-time filtre pour ne
+    # garder que celui qui correspond réellement à 6h à Paris ce jour-là.
     - cron: '0 4 * * *'   # 6h à Paris en heure d'été (UTC+2)
     - cron: '0 5 * * *'   # 6h à Paris en heure d'hiver (UTC+1)
   workflow_dispatch:        # permet de lancer une mise à jour manuellement
 
 jobs:
-  update-dashboard:
+  check-time:
     runs-on: ubuntu-latest
-    env:
-      # IP Tailscale de la Kindle. Peut être surchargée sans toucher au
-      # code via une variable de dépôt "KINDLE_TAILSCALE_IP"
-      # (Settings > Secrets and variables > Actions > Variables).
-      KINDLE_HOST: ${{ vars.KINDLE_TAILSCALE_IP != '' && vars.KINDLE_TAILSCALE_IP || '100.74.176.86' }}
-
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
     steps:
-      # ------------------------------------------------------------
-      # 1) N'exécuter la mise à jour qu'à 6h heure de Paris, quel que
-      #    soit le décalage horaire du jour (été/hiver). Un déclenchement
-      #    manuel (workflow_dispatch) passe toujours ce contrôle, pour
-      #    faciliter les tests.
-      # ------------------------------------------------------------
       - name: Vérifier qu'il est bien 6h à Paris
-        id: check_time
+        id: check
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "Déclenchement manuel : on continue sans vérifier l'heure."
@@ -62,56 +58,64 @@ jobs:
             echo "should_run=false" >> "$GITHUB_OUTPUT"
           fi
 
+  update-dashboard:
+    needs: check-time
+    if: needs.check-time.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    env:
+      # IP Tailscale de la Kindle. Peut être surchargée sans toucher au
+      # code via une variable de dépôt "KINDLE_TAILSCALE_IP"
+      # (Settings > Secrets and variables > Actions > Variables).
+      KINDLE_HOST: ${{ vars.KINDLE_TAILSCALE_IP != '' && vars.KINDLE_TAILSCALE_IP || '100.74.176.86' }}
+
+    steps:
+      # ------------------------------------------------------------
+      # 1) Générer l'image du dashboard à partir des données Open-Meteo.
+      # ------------------------------------------------------------
       - name: Récupérer le code
-        if: steps.check_time.outputs.should_run == 'true'
         uses: actions/checkout@v4
 
       - name: Installer Python et les dépendances
-        if: steps.check_time.outputs.should_run == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
       - name: Installer les librairies Python
-        if: steps.check_time.outputs.should_run == 'true'
         run: pip install -r requirements.txt
 
       - name: Générer l'image du dashboard météo
-        if: steps.check_time.outputs.should_run == 'true'
         run: python generate_meteo.py
 
       # ------------------------------------------------------------
       # 2) Rejoindre le réseau privé Tailscale pour atteindre la Kindle,
       #    puis préparer la clé SSH utilisée pour s'y connecter.
+      #    À ce stade, la liseuse doit être dans sa fenêtre de réveil
+      #    quotidienne (voir kindle/dashboard_watchdog.sh) : si ce job
+      #    tourne bien à 6h à Paris et que le watchdog est installé sur
+      #    la Kindle, elle est joignable.
       # ------------------------------------------------------------
       - name: Connexion au réseau Tailscale
-        if: steps.check_time.outputs.should_run == 'true'
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
       - name: Configurer la clé SSH
-        if: steps.check_time.outputs.should_run == 'true'
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.KINDLE_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
 
       # ------------------------------------------------------------
-      # 3) S'assurer que le watchdog cron est installé sur la Kindle, puis
-      #    envoyer et afficher le dashboard avec un seul rafraîchissement
-      #    d'écran, luminosité au minimum.
-      #
-      #    Le watchdog (kindle/dashboard_watchdog.sh) est exécuté toutes
-      #    les 5 minutes par le cron de la liseuse. Il ne l'empêche de
-      #    s'endormir que dans une courte fenêtre autour de 6h (heure
-      #    locale de la Kindle) — le reste de la journée, elle dort
-      #    normalement pour préserver sa batterie. Cette étape est
-      #    idempotente : elle n'ajoute la tâche cron que si elle est
-      #    absente.
+      # 3) S'assurer que le watchdog de réveil est installé sur la
+      #    Kindle (voir kindle/dashboard_watchdog.sh) : une tâche cron,
+      #    exécutée toutes les 5 minutes sur la liseuse, qui ne
+      #    l'empêche de s'endormir que dans une courte fenêtre autour de
+      #    6h — le reste de la journée, elle dort normalement pour
+      #    préserver sa batterie. Cette étape est idempotente (n'ajoute
+      #    la tâche que si elle est absente) et sert aussi de
+      #    "réparation automatique" si la Kindle a été réinitialisée.
       # ------------------------------------------------------------
       - name: Installer le watchdog de réveil sur la Kindle (si besoin)
-        if: steps.check_time.outputs.should_run == 'true'
         run: |
           ssh -o StrictHostKeyChecking=no "root@${KINDLE_HOST}" "mkdir -p /mnt/us/dashboard"
           scp -o StrictHostKeyChecking=no kindle/dashboard_watchdog.sh "root@${KINDLE_HOST}:/mnt/us/dashboard/dashboard_watchdog.sh"
@@ -126,15 +130,17 @@ jobs:
             fi
           "
 
+      # ------------------------------------------------------------
+      # 4) Envoyer et afficher le dashboard avec un seul rafraîchissement
+      #    d'écran, luminosité au minimum. On ne force PAS la liseuse à
+      #    rester éveillée après cette étape : c'est le watchdog qui
+      #    décide, sur son propre cycle de 5 minutes, quand la laisser
+      #    se rendormir (voir kindle/dashboard_watchdog.sh).
+      # ------------------------------------------------------------
       - name: Envoyer et afficher le dashboard (un seul rafraîchissement)
-        if: steps.check_time.outputs.should_run == 'true'
         run: |
           scp -o StrictHostKeyChecking=no meteo.png "root@${KINDLE_HOST}:/mnt/us/dashboard/meteo.png"
           ssh -o StrictHostKeyChecking=no "root@${KINDLE_HOST}" "
-            # Écran de veille désactivé et minuterie de mise en veille repoussée :
-            # la liseuse reste allumée et joignable jusqu'à la prochaine mise à jour.
-            lipc-set-prop com.lab126.powerd preventScreenSaver 1
-
             # Rétro-éclairage coupé pour économiser la batterie (écran e-ink
             # lisible sans lumière).
             lipc-set-prop com.lab126.powerd flIntensity 0

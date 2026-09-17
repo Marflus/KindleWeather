@@ -11,17 +11,27 @@ l'envoie et l'affiche sur la Kindle via SSH, à travers un tunnel
 ## Comment ça marche
 
 ```
- GitHub Actions (cron 6h Paris)
+ Kindle (dort ~23h30/24, watchdog cron toutes les 5 min)
         │
+        └─ vers 05:50–06:20 heure locale : reste éveillée et joignable
+           (kindle/dashboard_watchdog.sh), puis se rendort après la fenêtre
+
+ GitHub Actions — job "check-time" (cron 4h ET 5h UTC)
+        │
+        └─ 6h à Paris aujourd'hui ? ── non ──▶ rien d'autre ne s'exécute
+                    │
+                   oui
+                    ▼
+ GitHub Actions — job "update-dashboard"
         ├─ 1. generate_meteo.py  ─── télécharge la météo (Open-Meteo)
         │                            et dessine meteo.png (1072×1448, gris)
         │
-        ├─ 2. Connexion Tailscale ── rejoint le réseau privé de la Kindle
+        ├─ 2. Connexion Tailscale ── rejoint le réseau privé de la Kindle,
+        │                            réveillée par son propre watchdog
         │
         └─ 3. SSH / SCP vers la Kindle
-                 ├─ installe kindle/dashboard_watchdog.sh en tâche cron
-                 │  (si absente) — réveil ciblé autour de 6h, pas de
-                 │  veille permanente (préserve la batterie)
+                 ├─ (ré)installe kindle/dashboard_watchdog.sh en tâche
+                 │  cron si absente (auto-réparation)
                  ├─ envoie meteo.png sur la liseuse
                  └─ eips -f -g meteo.png  ── un seul rafraîchissement écran
 ```
@@ -44,9 +54,11 @@ Pour changer de ville, modifier les constantes `LATITUDE`, `LONGITUDE` et
 
 ### `.github/workflows/update.yml`
 
-Orchestre la mise à jour quotidienne : génère l'image, se connecte à la
-Kindle, et l'affiche. Voir la section [Planification](#planification-le-pourquoi-de-deux-cron)
-ci-dessous pour le détail du déclenchement à 6h.
+Orchestre la mise à jour quotidienne, en deux jobs : `check-time` (est-ce
+bien 6h à Paris ?) puis `update-dashboard` (génère l'image, se connecte à
+la Kindle, et l'affiche) si c'est le cas. Voir la section
+[Planification](#planification-le-pourquoi-de-deux-cron) ci-dessous pour
+le détail du déclenchement à 6h.
 
 ### `kindle/dashboard_watchdog.sh`
 
@@ -85,12 +97,19 @@ toute l'année, le workflow se déclenche à **4h ET 5h UTC** :
 - 4h UTC = 6h à Paris en heure d'été (UTC+2)
 - 5h UTC = 6h à Paris en heure d'hiver (UTC+1)
 
-La première étape du job (`Vérifier qu'il est bien 6h à Paris`) calcule
-l'heure locale réelle avec `TZ='Europe/Paris' date` et n'exécute la suite
-du job que si elle correspond à 6h — l'autre déclenchement de la journée est
-ignoré silencieusement. Un déclenchement manuel (`workflow_dispatch`, via
-l'onglet *Actions*) passe toujours cette vérification, pour pouvoir tester
-à n'importe quelle heure.
+Le job `check-time` calcule l'heure locale réelle avec `TZ='Europe/Paris'
+date` : le job `update-dashboard` ne se déclenche que s'il est bien 6h à
+Paris — l'autre déclenchement de la journée n'exécute que `check-time`
+(quasi instantané) et s'arrête là. Un déclenchement manuel
+(`workflow_dispatch`, via l'onglet *Actions*) passe toujours cette
+vérification, pour pouvoir tester à n'importe quelle heure.
+
+> Si tu changes l'heure cible (6h), pense à mettre à jour **les deux**
+> côtés : la comparaison `"$current_hour" = "06"` dans le job
+> `check-time` du workflow, et la fenêtre `WINDOW_START`/`WINDOW_END`
+> dans `kindle/dashboard_watchdog.sh`. Ce sont deux horloges
+> indépendantes (le runner GitHub et la Kindle) qui doivent rester
+> synchronisées sur la même heure cible.
 
 ## Pourquoi un réveil programmé plutôt qu'une veille permanente ?
 
@@ -172,6 +191,7 @@ python generate_meteo.py   # génère meteo.png dans le dossier courant
   Kindle est bien visible sur le réseau Tailscale (`tailscale status`) et
   que `KINDLE_TAILSCALE_IP` correspond à son IP actuelle.
 - **Le dashboard ne se met pas à jour à 6h pile** : vérifier dans l'onglet
-  *Actions* que le job du bon horaire (4h ou 5h UTC selon la saison) est
-  bien celui qui a exécuté toutes les étapes (l'autre doit s'arrêter dès
-  la première étape).
+  *Actions* que le job `update-dashboard` s'est bien déclenché à
+  l'horaire correspondant à 6h à Paris (4h ou 5h UTC selon la saison) —
+  l'autre horaire de la journée ne doit exécuter que `check-time`, qui
+  se termine immédiatement sans lancer `update-dashboard`.
