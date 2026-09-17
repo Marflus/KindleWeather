@@ -2,14 +2,21 @@
 Dashboard météo pour liseuse Kindle (écran e-ink, niveaux de gris)
 Ville : Varsovie — Source des données : Open-Meteo
 
-Idée reprise du script d'origine :
+Ce script est la seule brique "métier" du projet : il télécharge les
+prévisions du jour puis dessine une image PNG prête à être affichée sur
+l'écran e-ink de la Kindle. Il est appelé une fois par jour par le
+workflow GitHub Actions (.github/workflows/update.yml), qui se charge
+ensuite d'envoyer l'image sur la liseuse via SSH/Tailscale et de
+l'afficher — voir le README pour le fonctionnement d'ensemble.
+
+Contenu du dashboard :
   - en-tête (lieu + date)
   - bloc météo du jour (icône + température + description)
   - alerte pluie / temps calme
   - courbe de température sur 24h
   - tableau détaillé par tranche horaire
 
-Ce qui change :
+Choix de rendu :
   - rendu 2x puis réduction -> anticrénelage propre sur l'écran e-ink
   - icônes redessinées en silhouettes pleines (plus lisibles en gris)
   - mise en page en "cartes" avec un vrai fond, un panneau lever/coucher
@@ -29,6 +36,8 @@ from PIL import Image, ImageDraw, ImageFont
 # ============================================================
 # CONFIGURATION
 # ============================================================
+# Pour changer de ville : mettre à jour ces trois constantes (coordonnées
+# GPS à récupérer par ex. sur https://open-meteo.com/en/docs).
 LATITUDE = 52.2297
 LONGITUDE = 21.0122
 LOCATION_NAME = "Varsovie"
@@ -482,7 +491,9 @@ def create_image(data, out_path="meteo.png"):
 
 
 def main():
+    print(f"Récupération des prévisions météo pour {LOCATION_NAME}...")
     data = get_weather()
+    print("Génération de l'image du dashboard...")
     path = create_image(data)
     print(f"Dashboard généré avec succès : {path}")
 

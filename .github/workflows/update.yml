@@ -1,39 +1,135 @@
+# ============================================================
+# Mise à jour quotidienne du dashboard météo affiché sur la Kindle
+# ------------------------------------------------------------
+# Pipeline en 3 temps :
+#   1. Générer l'image du dashboard (generate_meteo.py) à partir des
+#      données Open-Meteo.
+#   2. Se connecter à la liseuse via Tailscale (VPN reliant le runner
+#      GitHub à la Kindle, jailbreakée et joignable en SSH).
+#   3. Envoyer l'image et l'afficher avec un seul rafraîchissement
+#      d'écran, tout en s'assurant que la liseuse reste éveillée et
+#      joignable jusqu'à la prochaine mise à jour (voir kindle/keep_awake.sh).
+#
+# Déclenchement : tous les jours à 6h heure de Paris. GitHub Actions ne
+# planifie qu'en UTC et ne suit pas les changements d'heure : on déclenche
+# donc le job à 4h ET 5h UTC (couvrant heure d'été / heure d'hiver), puis
+# la première étape vérifie l'heure locale réelle et n'exécute la suite
+# qu'au bon horaire.
+# ============================================================
+
 name: Mise à jour Kindle
 
 on:
   schedule:
-    - cron: '0 4 * * *'
-  workflow_dispatch:
+    - cron: '0 4 * * *'   # 6h à Paris en heure d'été (UTC+2)
+    - cron: '0 5 * * *'   # 6h à Paris en heure d'hiver (UTC+1)
+  workflow_dispatch:        # permet de lancer une mise à jour manuellement
 
 jobs:
   update-dashboard:
     runs-on: ubuntu-latest
+    env:
+      # IP Tailscale de la Kindle. Peut être surchargée sans toucher au
+      # code via une variable de dépôt "KINDLE_TAILSCALE_IP"
+      # (Settings > Secrets and variables > Actions > Variables).
+      KINDLE_HOST: ${{ vars.KINDLE_TAILSCALE_IP != '' && vars.KINDLE_TAILSCALE_IP || '100.74.176.86' }}
+
     steps:
+      # ------------------------------------------------------------
+      # 1) N'exécuter la mise à jour qu'à 6h heure de Paris, quel que
+      #    soit le décalage horaire du jour (été/hiver). Un déclenchement
+      #    manuel (workflow_dispatch) passe toujours ce contrôle, pour
+      #    faciliter les tests.
+      # ------------------------------------------------------------
+      - name: Vérifier qu'il est bien 6h à Paris
+        id: check_time
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Déclenchement manuel : on continue sans vérifier l'heure."
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          current_hour="$(TZ='Europe/Paris' date +%H)"
+          echo "Heure locale actuelle à Paris : ${current_hour}h"
+          if [ "$current_hour" = "06" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Pas encore 6h à Paris (déclenchement dû au décalage été/hiver) : on ignore ce run."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Récupérer le code
+        if: steps.check_time.outputs.should_run == 'true'
         uses: actions/checkout@v4
 
-      - name: Installer Python et les librairies
+      - name: Installer Python et les dépendances
+        if: steps.check_time.outputs.should_run == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - run: pip install requests pillow
 
-      - name: Générer l'image météo
+      - name: Installer les librairies Python
+        if: steps.check_time.outputs.should_run == 'true'
+        run: pip install -r requirements.txt
+
+      - name: Générer l'image du dashboard météo
+        if: steps.check_time.outputs.should_run == 'true'
         run: python generate_meteo.py
 
+      # ------------------------------------------------------------
+      # 2) Rejoindre le réseau privé Tailscale pour atteindre la Kindle,
+      #    puis préparer la clé SSH utilisée pour s'y connecter.
+      # ------------------------------------------------------------
       - name: Connexion au réseau Tailscale
+        if: steps.check_time.outputs.should_run == 'true'
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
       - name: Configurer la clé SSH
+        if: steps.check_time.outputs.should_run == 'true'
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.KINDLE_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
 
-      - name: Envoyer et afficher l'image sur la Kindle
+      # ------------------------------------------------------------
+      # 3) S'assurer que le démon anti-veille tourne sur la Kindle, puis
+      #    envoyer et afficher le dashboard avec un seul rafraîchissement
+      #    d'écran, luminosité au minimum.
+      #
+      #    Le démon (kindle/keep_awake.sh) empêche la liseuse de
+      #    s'endormir et d'afficher son écran de veille par défaut entre
+      #    deux mises à jour, afin qu'elle reste joignable en SSH et que
+      #    le dashboard reste affiché en permanence. Il est idempotent :
+      #    s'il tourne déjà, cette étape ne fait rien.
+      # ------------------------------------------------------------
+      - name: Démarrer le démon anti-veille sur la Kindle (si besoin)
+        if: steps.check_time.outputs.should_run == 'true'
         run: |
-          ssh -o StrictHostKeyChecking=no root@100.74.176.86 "mkdir -p /mnt/us/dashboard"
-          scp -o StrictHostKeyChecking=no meteo.png root@100.74.176.86:/mnt/us/dashboard/
-          ssh -o StrictHostKeyChecking=no root@100.74.176.86 "/usr/sbin/eips -f -g /mnt/us/dashboard/meteo.png && lipc-set-prop com.lab126.powerd flIntensity 0 && echo -n 0 > /sys/class/backlight/max77696-bl/brightness"
+          ssh -o StrictHostKeyChecking=no "root@${KINDLE_HOST}" "mkdir -p /mnt/us/dashboard"
+          scp -o StrictHostKeyChecking=no kindle/keep_awake.sh "root@${KINDLE_HOST}:/mnt/us/dashboard/keep_awake.sh"
+          ssh -o StrictHostKeyChecking=no "root@${KINDLE_HOST}" "
+            chmod +x /mnt/us/dashboard/keep_awake.sh
+            nohup /mnt/us/dashboard/keep_awake.sh >/mnt/us/dashboard/keep_awake.log 2>&1 &
+          "
+
+      - name: Envoyer et afficher le dashboard (un seul rafraîchissement)
+        if: steps.check_time.outputs.should_run == 'true'
+        run: |
+          scp -o StrictHostKeyChecking=no meteo.png "root@${KINDLE_HOST}:/mnt/us/dashboard/meteo.png"
+          ssh -o StrictHostKeyChecking=no "root@${KINDLE_HOST}" "
+            # Écran de veille désactivé et minuterie de mise en veille repoussée :
+            # la liseuse reste allumée et joignable jusqu'à la prochaine mise à jour.
+            lipc-set-prop com.lab126.powerd preventScreenSaver 1
+
+            # Rétro-éclairage coupé pour économiser la batterie (écran e-ink
+            # lisible sans lumière).
+            lipc-set-prop com.lab126.powerd flIntensity 0
+            echo -n 0 > /sys/class/backlight/max77696-bl/brightness
+
+            # Un seul rafraîchissement plein écran (-f) pour appliquer le
+            # nouveau dashboard.
+            eips -f -g /mnt/us/dashboard/meteo.png
+          "
