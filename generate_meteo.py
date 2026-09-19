@@ -29,6 +29,7 @@ import os
 import math
 import urllib.request
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import requests
 from PIL import Image, ImageDraw, ImageFont
@@ -245,11 +246,10 @@ def weather_label(code):
     return WEATHER_LABELS.get(code, "Temps variable")
 
 
-def french_date_parts():
+def french_date_parts(now):
     jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
     mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
             "août", "septembre", "octobre", "novembre", "décembre"]
-    now = datetime.now()
     return jours[now.weekday()], f"{now.day} {mois[now.month - 1]} {now.year}"
 
 
@@ -264,6 +264,12 @@ def create_image(data, out_path="meteo.png"):
     ensure_fonts()
     img = Image.new("L", (WIDTH, HEIGHT), WHITE)
     draw = ImageDraw.Draw(img)
+
+    # "Maintenant" dans le fuseau horaire du lieu affiché (celui que l'API
+    # a résolu via timezone=auto), pas celui du serveur qui exécute ce
+    # script (le runner GitHub Actions tourne en UTC) : sinon la date du
+    # jour et l'heure du pied de page seraient fausses pour l'utilisateur.
+    now_local = datetime.now(ZoneInfo(data.get("timezone", "UTC")))
 
     f_date = load_font(FONT_BOLD_PATH, S(34))
     f_location = load_font(FONT_BOLD_PATH, S(26))
@@ -291,7 +297,7 @@ def create_image(data, out_path="meteo.png"):
     sunset = data["daily"].get("sunset", [None])[0]
 
     hourly_times = data["hourly"]["time"]
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    today_str = now_local.strftime("%Y-%m-%d")
     day_idx = [i for i, t in enumerate(hourly_times) if t.startswith(today_str)]
     if not day_idx:
         day_idx = list(range(min(24, len(hourly_times))))
@@ -313,7 +319,7 @@ def create_image(data, out_path="meteo.png"):
     # ============== EN-TÊTE ==============
     # Centré : l'horloge et la batterie de la liseuse recouvrent les coins,
     # on garde donc le centre de l'écran libre de toute info utile.
-    jour, date_str = french_date_parts()
+    jour, date_str = french_date_parts(now_local)
     top_y = S(56)
     date_line = f"{jour} {date_str}"
     draw_centered_text(draw, WIDTH // 2, top_y, date_line, f_date, INK)
@@ -504,7 +510,7 @@ def create_image(data, out_path="meteo.png"):
 
     # ============== PIED DE PAGE ==============
     footer_y = row_top + len(row_specs) * row_h + S(14)
-    footer = f"Mis à jour le {datetime.now().strftime('%d/%m/%Y à %H:%M')}"
+    footer = f"Mis à jour le {now_local.strftime('%d/%m/%Y à %H:%M')}"
     draw_centered_text(draw, WIDTH // 2, footer_y, footer, f_footer, GRAY_MID)
 
     # ---------- Réduction finale (anticrénelage) ----------

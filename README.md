@@ -29,7 +29,8 @@ l'envoie et l'affiche sur la Kindle via SSH, à travers un tunnel
         ├─ 2. Connexion Tailscale ── rejoint le réseau privé de la Kindle,
         │                            réveillée par son propre watchdog
         │
-        └─ 3. SSH / SCP vers la Kindle
+        └─ 3. SSH / SCP vers la Kindle (avec quelques tentatives si la
+              liseuse n'a pas encore fini de se reconnecter)
                  ├─ (ré)installe kindle/dashboard_watchdog.sh en tâche
                  │  cron si absente (auto-réparation)
                  ├─ envoie meteo.png sur la liseuse
@@ -51,6 +52,11 @@ section par section.
 
 Pour changer de ville, modifier les constantes `LATITUDE`, `LONGITUDE` et
 `LOCATION_NAME` en haut du fichier.
+
+La date affichée et l'heure du pied de page ("Mis à jour le...") utilisent
+le fuseau horaire renvoyé par l'API Open-Meteo pour ces coordonnées (champ
+`timezone` de la réponse), pas celui du serveur qui exécute le script —
+important car le workflow tourne sur un runner GitHub Actions en UTC.
 
 ### `.github/workflows/update.yml`
 
@@ -133,12 +139,20 @@ exécution :
 
 - si l'heure locale de la Kindle est dans la fenêtre **05:50–06:20** :
   désactive l'écran de veille (`lipc-set-prop com.lab126.powerd
-  preventScreenSaver 1`) et repousse la mise en veille profonde
-  (`lipc-send-event com.lab126.powerd resetAutoSuspendTimeout 0`), le
-  temps que le workflow GitHub Actions s'y connecte et pousse le
-  dashboard ;
+  preventScreenSaver 1`), repousse la mise en veille profonde
+  (`lipc-send-event com.lab126.powerd resetAutoSuspendTimeout 0`) et
+  force la réactivation du Wi-Fi (`lipc-set-prop com.lab126.wifid enable
+  1` — le Wi-Fi a sa propre gestion d'énergie, indépendante de l'écran :
+  un écran resté allumé ne garantit pas à lui seul que le Wi-Fi soit
+  toujours associé), le temps que le workflow GitHub Actions s'y
+  connecte et pousse le dashboard ;
 - en dehors de cette fenêtre : réautorise l'écran de veille normal, pour
   que la liseuse s'endorme le reste du temps.
+
+Côté GitHub Actions, l'étape *Attendre que la Kindle soit joignable*
+réessaie la connexion SSH pendant jusqu'à 3 minutes avant d'abandonner,
+pour absorber le délai éventuel entre le déclenchement du job et le
+prochain cycle de 5 minutes du watchdog.
 
 Le reste de la journée (~23h30 sur 24h), la Kindle dort donc normalement.
 C'est un compromis assumé : l'écran de veille par défaut d'Amazon peut
@@ -169,9 +183,10 @@ python generate_meteo.py   # génère meteo.png dans le dossier courant
 
 ## Dépannage
 
-- **Le job échoue à se connecter en SSH à 6h (la Kindle dormait)** :
-  - vérifier en SSH (pendant que la Kindle est réveillée, ou après l'avoir
-    réveillée manuellement) que la tâche cron est bien installée :
+- **Le job échoue à se connecter en SSH à 6h** :
+  - vérifier en SSH direct (pendant que la Kindle est réveillée, ou après
+    l'avoir réveillée manuellement en appuyant sur le bouton/l'écran) que
+    la tâche cron est bien installée :
     `cat /etc/crontab | grep dashboard_watchdog` ;
   - vérifier que `crond` tourne : `ps | grep crond` — s'il est absent, le
     watchdog ne peut pas s'exécuter (voir le message d'avertissement
@@ -180,7 +195,15 @@ python generate_meteo.py   # génère meteo.png dans le dossier courant
   - vérifier que l'heure système de la Kindle correspond à l'heure locale
     réelle : `date` en SSH. Si elle est décalée, ajuster la fenêtre
     `WINDOW_START`/`WINDOW_END` dans `kindle/dashboard_watchdog.sh` ou
-    corriger l'horloge de la liseuse.
+    corriger l'horloge de la liseuse ;
+  - **si la Kindle est visiblement éveillée (écran allumé) et que la
+    connexion échoue quand même** : le Wi-Fi peut être coupé
+    indépendamment de l'écran par la gestion d'énergie de la Kindle.
+    Vérifier avec `tailscale status` et `ps | grep tailscaled` en SSH
+    direct que Tailscale tourne et annonce la bonne IP (elle a pu changer
+    — mettre à jour la variable de dépôt `KINDLE_TAILSCALE_IP` le cas
+    échéant), et que le Wi-Fi est bien actif
+    (`lipc-get-prop com.lab126.wifid enable` doit renvoyer `1`).
 - **L'écran de veille Amazon apparaît en dehors de la fenêtre de 6h** :
   c'est le comportement attendu (voir [Pourquoi un réveil programmé
   plutôt qu'une veille permanente

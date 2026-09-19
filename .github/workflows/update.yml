@@ -67,6 +67,10 @@ jobs:
       # code via une variable de dépôt "KINDLE_TAILSCALE_IP"
       # (Settings > Secrets and variables > Actions > Variables).
       KINDLE_HOST: ${{ vars.KINDLE_TAILSCALE_IP != '' && vars.KINDLE_TAILSCALE_IP || '100.74.176.86' }}
+      # ConnectTimeout court : en cas de liseuse injoignable, on échoue
+      # vite avec un message clair plutôt que d'attendre le timeout TCP
+      # par défaut (plusieurs minutes).
+      SSH_OPTS: -o StrictHostKeyChecking=no -o ConnectTimeout=10
 
     steps:
       # ------------------------------------------------------------
@@ -106,7 +110,27 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
 
       # ------------------------------------------------------------
-      # 3) S'assurer que le watchdog de réveil est installé sur la
+      # 3) Attendre que la Kindle soit joignable. Le watchdog ne
+      #    (ré)active le Wi-Fi que par cycles de 5 minutes : la première
+      #    tentative peut donc arriver un peu avant que la liseuse ait
+      #    fini de se reconnecter. On réessaie pendant jusqu'à 3 minutes
+      #    avant d'abandonner, plutôt que d'échouer sur un seul essai.
+      # ------------------------------------------------------------
+      - name: Attendre que la Kindle soit joignable
+        run: |
+          for i in $(seq 1 18); do
+            if ssh $SSH_OPTS "root@${KINDLE_HOST}" true 2>/dev/null; then
+              echo "Kindle joignable (tentative $i)."
+              exit 0
+            fi
+            echo "Tentative $i/18 : Kindle injoignable, nouvel essai dans 10s..."
+            sleep 10
+          done
+          echo "La Kindle reste injoignable après plusieurs tentatives -- abandon."
+          exit 1
+
+      # ------------------------------------------------------------
+      # 4) S'assurer que le watchdog de réveil est installé sur la
       #    Kindle (voir kindle/dashboard_watchdog.sh) : une tâche cron,
       #    exécutée toutes les 5 minutes sur la liseuse, qui ne
       #    l'empêche de s'endormir que dans une courte fenêtre autour de
@@ -117,9 +141,9 @@ jobs:
       # ------------------------------------------------------------
       - name: Installer le watchdog de réveil sur la Kindle (si besoin)
         run: |
-          ssh -o StrictHostKeyChecking=no "root@${KINDLE_HOST}" "mkdir -p /mnt/us/dashboard"
-          scp -o StrictHostKeyChecking=no kindle/dashboard_watchdog.sh "root@${KINDLE_HOST}:/mnt/us/dashboard/dashboard_watchdog.sh"
-          ssh -o StrictHostKeyChecking=no "root@${KINDLE_HOST}" "
+          ssh $SSH_OPTS "root@${KINDLE_HOST}" "mkdir -p /mnt/us/dashboard"
+          scp $SSH_OPTS kindle/dashboard_watchdog.sh "root@${KINDLE_HOST}:/mnt/us/dashboard/dashboard_watchdog.sh"
+          ssh $SSH_OPTS "root@${KINDLE_HOST}" "
             chmod +x /mnt/us/dashboard/dashboard_watchdog.sh
             touch /etc/crontab
             grep -qF 'dashboard_watchdog.sh' /etc/crontab || \
@@ -131,7 +155,7 @@ jobs:
           "
 
       # ------------------------------------------------------------
-      # 4) Envoyer et afficher le dashboard avec un seul rafraîchissement
+      # 5) Envoyer et afficher le dashboard avec un seul rafraîchissement
       #    d'écran, luminosité au minimum. On ne force PAS la liseuse à
       #    rester éveillée après cette étape : c'est le watchdog qui
       #    décide, sur son propre cycle de 5 minutes, quand la laisser
@@ -139,8 +163,8 @@ jobs:
       # ------------------------------------------------------------
       - name: Envoyer et afficher le dashboard (un seul rafraîchissement)
         run: |
-          scp -o StrictHostKeyChecking=no meteo.png "root@${KINDLE_HOST}:/mnt/us/dashboard/meteo.png"
-          ssh -o StrictHostKeyChecking=no "root@${KINDLE_HOST}" "
+          scp $SSH_OPTS meteo.png "root@${KINDLE_HOST}:/mnt/us/dashboard/meteo.png"
+          ssh $SSH_OPTS "root@${KINDLE_HOST}" "
             # Rétro-éclairage coupé pour économiser la batterie (écran e-ink
             # lisible sans lumière).
             lipc-set-prop com.lab126.powerd flIntensity 0

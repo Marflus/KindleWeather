@@ -39,6 +39,12 @@ now_minutes=$((10#$hour * 60 + 10#$minute))
 if [ "$now_minutes" -ge "$WINDOW_START" ] && [ "$now_minutes" -le "$WINDOW_END" ]; then
     lipc-set-prop com.lab126.powerd preventScreenSaver 1 2>/dev/null
     lipc-send-event com.lab126.powerd resetAutoSuspendTimeout 0 2>/dev/null
+
+    # Le Wi-Fi a sa propre gestion d'énergie, indépendante de l'écran et
+    # de la mise en veille : un écran resté allumé ne garantit pas que le
+    # Wi-Fi soit toujours associé. On force explicitement sa réactivation
+    # pour que la liseuse soit bien joignable en SSH pendant la fenêtre.
+    lipc-set-prop com.lab126.wifid enable 1 2>/dev/null
 else
     lipc-set-prop com.lab126.powerd preventScreenSaver 0 2>/dev/null
 fi
