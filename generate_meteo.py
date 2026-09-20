@@ -336,34 +336,47 @@ def create_image(data, out_path="meteo.png"):
     draw.line([(divider_x, hero_top + S(24)), (divider_x, hero_top + hero_h - S(24))],
               fill=GRAY_LIGHT, width=S(2))
 
-    # -- icône + température + description, centrées dans la zone de gauche --
+    # -- icône (ancrée à gauche) + température + min/max à droite du
+    #    nombre + description en dessous --
     icon_r = S(72)
     gap_icon_text = S(38)
     desc = weather_label(daily_code)
     temp_str = f"{t_mean}°"
-    minmax_str = f"Min {t_min}°   ·   Max {t_max}°"
-    text_block_w = max(
-        text_w(draw, temp_str, f_temp_huge),
-        text_w(draw, desc, f_desc),
-        text_w(draw, minmax_str, f_minmax),
-    )
-    group_w = icon_r * 2 + gap_icon_text + text_block_w
-    left_zone_left, left_zone_right = M + zone_pad, divider_x - zone_pad
-    group_start = left_zone_left + max(0, (left_zone_right - left_zone_left - group_w) // 2)
+    left_zone_left = M + zone_pad
 
-    icon_cx, icon_cy = group_start + icon_r, hero_top + hero_h // 2
-    text_x = group_start + icon_r * 2 + gap_icon_text
+    icon_cx, icon_cy = left_zone_left + icon_r, hero_top + hero_h // 2
     draw_icon(draw, daily_code, icon_cx, icon_cy, icon_r)
-    draw.text((text_x, hero_top + S(28)), temp_str, font=f_temp_huge, fill=INK)
+
+    text_x = left_zone_left + icon_r * 2 + gap_icon_text
+    temp_y = hero_top + S(28)
+    draw.text((text_x, temp_y), temp_str, font=f_temp_huge, fill=INK)
+
+    # Min/max empilés et centrés verticalement sur le nombre de
+    # température (calculé à partir des boîtes englobantes réelles, pas
+    # d'un décalage fixe, pour un alignement propre quelle que soit la
+    # police).
+    temp_bbox = draw.textbbox((0, 0), temp_str, font=f_temp_huge)
+    temp_center_y = temp_y + (temp_bbox[1] + temp_bbox[3]) / 2
+    max_str, min_str = f"Max {t_max}°", f"Min {t_min}°"
+    max_bbox = draw.textbbox((0, 0), max_str, font=f_minmax)
+    min_bbox = draw.textbbox((0, 0), min_str, font=f_minmax)
+    max_h, min_h = max_bbox[3] - max_bbox[1], min_bbox[3] - min_bbox[1]
+    line_gap = S(10)
+    stack_top = temp_center_y - (max_h + line_gap + min_h) / 2
+    minmax_x = text_x + text_w(draw, temp_str, f_temp_huge) + S(28)
+    draw.text((minmax_x, stack_top - max_bbox[1]), max_str, font=f_minmax, fill=INK)
+    draw.text((minmax_x, stack_top + max_h + line_gap - min_bbox[1]), min_str,
+              font=f_minmax, fill=GRAY_DARK)
+
     draw.text((text_x, hero_top + S(150)), desc, font=f_desc, fill=INK)
-    draw.text((text_x, hero_top + S(190)), minmax_str, font=f_minmax, fill=GRAY_DARK)
 
     # -- panneau lever/coucher + humidité/vent, à droite du séparateur --
-    # cell_h resserré pour coller au contenu réel (icône + 2 lignes de
-    # texte) : avec une cellule trop haute, le contenu (centré dans sa
-    # moitié haute) semblait décalé vers le haut du cadre une fois
-    # l'ensemble centré dans la carte.
-    panel_shift_x, panel_shift_y = S(8), S(10)  # recentrage fin : un peu à droite et vers le bas
+    # Grille à positions fixes (icône et texte à la même abscisse pour les
+    # deux lignes d'une même colonne) plutôt qu'un centrage par cellule :
+    # sinon des libellés de largeurs différentes ("Lever" vs "Humidité")
+    # décalent l'icône d'une ligne à l'autre et cassent l'alignement
+    # vertical entre les 4 éléments.
+    panel_shift_x, panel_shift_y = S(8), S(20)  # recentrage fin : un peu à droite et vers le bas
     region_left = divider_x + zone_pad + panel_shift_x
     region_right = region_left + panel_w
     col_w = panel_w // 2
@@ -371,6 +384,9 @@ def create_image(data, out_path="meteo.png"):
     content_h = cell_h * 2
     panel_top = hero_top + (hero_h - content_h) // 2 + panel_shift_y
     mini_icon_r = S(16)  # même taille pour les 4 icônes du panneau
+    icon_d = mini_icon_r * 2
+    icon_inset = S(14)   # même abscisse d'icône pour les 2 lignes d'une colonne
+    gap = S(12)
     cells = [
         ("Lever", hhmm(sunrise) if sunrise else "—", "sunrise"),
         ("Coucher", hhmm(sunset) if sunset else "—", "sunset"),
@@ -381,15 +397,8 @@ def create_image(data, out_path="meteo.png"):
         row, col = divmod(i, 2)
         col_left = region_left + col * col_w
         cy = panel_top + row * cell_h
-        icon_d = mini_icon_r * 2
-        label_w = text_w(draw, label, f_panel_label)
-        value_w = text_w(draw, value, f_panel_value)
-        text_w_max = max(label_w, value_w)
-        gap = S(12)
-        group_w2 = icon_d + gap + text_w_max
-        start_x = col_left + (col_w - group_w2) // 2
-        icon_cx2, icon_cy2 = start_x + icon_d // 2, cy + S(20)
-        text_x2 = start_x + icon_d + gap
+        icon_cx2, icon_cy2 = col_left + icon_inset + mini_icon_r, cy + S(20)
+        text_x2 = col_left + icon_inset + icon_d + gap
         if kind == "sunrise":
             draw_sun_horizon(draw, icon_cx2, icon_cy2, mini_icon_r, rising=True)
         elif kind == "sunset":
@@ -423,7 +432,7 @@ def create_image(data, out_path="meteo.png"):
     draw.line([(M, sep1_y), (WIDTH - M, sep1_y)], fill=GRAY_LIGHT, width=S(2))
 
     gx0, gx1 = M + S(50), WIDTH - M - S(10)
-    gy0, gy1 = sep1_y + S(30), sep1_y + S(226)
+    gy0, gy1 = sep1_y + S(30), sep1_y + S(366)
 
     # Points de la courbe positionnés par heure réelle (0 à 24) afin que le
     # tracé couvre toute la journée, du premier point (00h) jusqu'à minuit.
