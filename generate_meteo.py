@@ -559,7 +559,7 @@ def create_image(data, out_path="meteo.png"):
               fill=GRAY_LIGHT, width=S(2))
 
     # ============== PIED DE PAGE ==============
-    footer_y = row_top + n_rows * row_h + S(14)
+    footer_y = row_top + n_rows * row_h + S(54)
     footer = f"Mis à jour le {now_local.strftime('%d/%m/%Y à %H:%M')}"
     draw_centered_text(draw, WIDTH // 2, footer_y, footer, f_footer, GRAY_MID)
 
