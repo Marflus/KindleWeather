@@ -267,7 +267,7 @@ def create_image(data, out_path="meteo.png"):
     f_location = load_font(FONT_BOLD_PATH, S(26))
     f_temp_huge = load_font(FONT_BOLD_PATH, S(100))
     f_desc = load_font(FONT_REGULAR_PATH, S(30))
-    f_minmax = load_font(FONT_BOLD_PATH, S(22))
+    f_minmax = load_font(FONT_BOLD_PATH, S(30))
     f_panel_label = load_font(FONT_REGULAR_PATH, S(20))
     f_panel_value = load_font(FONT_BOLD_PATH, S(24))
     f_section = load_font(FONT_BOLD_PATH, S(24))
@@ -347,28 +347,37 @@ def create_image(data, out_path="meteo.png"):
     icon_cx, icon_cy = left_zone_left + icon_r, hero_top + hero_h // 2
     draw_icon(draw, daily_code, icon_cx, icon_cy, icon_r)
 
+    # La pile [température / description] est centrée verticalement sur
+    # le milieu de la carte (même centre que l'icône), et non plus
+    # calée à un décalage fixe depuis le haut : sinon, avec une icône
+    # centrée sur toute la hauteur, le texte semblait plaqué en haut.
     text_x = left_zone_left + icon_r * 2 + gap_icon_text
-    temp_y = hero_top + S(28)
-    draw.text((text_x, temp_y), temp_str, font=f_temp_huge, fill=INK)
-
-    # Min/max empilés et centrés verticalement sur le nombre de
-    # température (calculé à partir des boîtes englobantes réelles, pas
-    # d'un décalage fixe, pour un alignement propre quelle que soit la
-    # police).
     temp_bbox = draw.textbbox((0, 0), temp_str, font=f_temp_huge)
+    temp_ink_h = temp_bbox[3] - temp_bbox[1]
+    desc_bbox = draw.textbbox((0, 0), desc, font=f_desc)
+    desc_ink_h = desc_bbox[3] - desc_bbox[1]
+    stack_gap = S(18)
+    stack_top = icon_cy - (temp_ink_h + stack_gap + desc_ink_h) / 2
+
+    temp_y = stack_top - temp_bbox[1]
+    draw.text((text_x, temp_y), temp_str, font=f_temp_huge, fill=INK)
+    desc_y = stack_top + temp_ink_h + stack_gap - desc_bbox[1]
+    draw.text((text_x, desc_y), desc, font=f_desc, fill=INK)
+
+    # Min/max empilés à droite du nombre, centrés verticalement dessus
+    # (calculé à partir des boîtes englobantes réelles, pas d'un
+    # décalage fixe, pour un alignement propre quelle que soit la police).
     temp_center_y = temp_y + (temp_bbox[1] + temp_bbox[3]) / 2
     max_str, min_str = f"Max {t_max}°", f"Min {t_min}°"
     max_bbox = draw.textbbox((0, 0), max_str, font=f_minmax)
     min_bbox = draw.textbbox((0, 0), min_str, font=f_minmax)
     max_h, min_h = max_bbox[3] - max_bbox[1], min_bbox[3] - min_bbox[1]
-    line_gap = S(10)
-    stack_top = temp_center_y - (max_h + line_gap + min_h) / 2
-    minmax_x = text_x + text_w(draw, temp_str, f_temp_huge) + S(28)
-    draw.text((minmax_x, stack_top - max_bbox[1]), max_str, font=f_minmax, fill=INK)
-    draw.text((minmax_x, stack_top + max_h + line_gap - min_bbox[1]), min_str,
+    line_gap = S(12)
+    minmax_stack_top = temp_center_y - (max_h + line_gap + min_h) / 2
+    minmax_x = text_x + text_w(draw, temp_str, f_temp_huge) + S(30)
+    draw.text((minmax_x, minmax_stack_top - max_bbox[1]), max_str, font=f_minmax, fill=INK)
+    draw.text((minmax_x, minmax_stack_top + max_h + line_gap - min_bbox[1]), min_str,
               font=f_minmax, fill=GRAY_DARK)
-
-    draw.text((text_x, hero_top + S(150)), desc, font=f_desc, fill=INK)
 
     # -- panneau lever/coucher + humidité/vent, à droite du séparateur --
     # Grille à positions fixes (icône et texte à la même abscisse pour les
@@ -483,12 +492,16 @@ def create_image(data, out_path="meteo.png"):
             draw.text((min(x - lw / 2, gx1 - lw), gy1 + S(12)), label, font=f_axis, fill=GRAY_DARK)
 
     # ============== TABLEAU DÉTAIL HORAIRE (toutes les 2h, matin | après-midi) ==============
-    # Deux colonnes côte à côte pour tenir 12 points (2h à 22h) sans
-    # allonger le tableau : matin à gauche (2h→12h), après-midi/soir à
+    # Deux demi-tableaux côte à côte pour tenir 12 points (2h à 22h) sans
+    # allonger la page : matin à gauche (2h→12h), après-midi/soir à
     # droite (14h→minuit). Pas de "ressenti" ici (manque de place sur une
-    # demi-largeur) ; humidité + vent sont groupés vers la droite de
-    # chaque mini-colonne.
-    sep2_y = gy1 + S(36)
+    # demi-largeur). Dans chaque demi-tableau, 4 colonnes de largeur
+    # égale (heure, température, humidité, vent) avec l'icône en préfixe
+    # à part : un positionnement "en grappe" (texte collé à l'élément
+    # précédent) donnait des colonnes bien alignées en haut du tableau
+    # mais qui dérivaient horizontalement selon la largeur du texte de
+    # chaque ligne (ex. "10 km/h" vs "8 km/h").
+    sep2_y = gy1 + S(80)
     draw.line([(M, sep2_y), (WIDTH - M, sep2_y)], fill=GRAY_LIGHT, width=S(2))
 
     row_top = sep2_y + S(18)
@@ -499,6 +512,10 @@ def create_image(data, out_path="meteo.png"):
     col_lefts = [M, M + col_w + col_gap]
     hour_columns = [[2, 4, 6, 8, 10, 12], [14, 16, 18, 20, 22, 0]]
     n_rows = len(hour_columns[0])
+
+    icon_zone_w = S(42)          # zone icône, séparée des 4 colonnes de données
+    sub_w = (col_w - icon_zone_w) // 4
+    icon_r = S(13)
 
     def resolve_hour_index(h):
         # 0 = minuit du lendemain (fin de la colonne après-midi/soir).
@@ -519,35 +536,21 @@ def create_image(data, out_path="meteo.png"):
             humidity = data["hourly"]["relativehumidity_2m"][abs_i]
             wind = round(data["hourly"]["windspeed_10m"][abs_i])
 
-            # Icône, heure puis température, chacune positionnée après la
-            # largeur réelle de la précédente (une largeur fixe pour
-            # "02:00" fait se chevaucher heure et température : leur
-            # police est assez grande pour que 5 caractères dépassent un
-            # écart de ~66px).
-            icon_r = S(15)
-            icon_cx = col_left + S(16)
+            icon_cx = col_left + icon_zone_w // 2
             draw_icon(draw, code, icon_cx, y + row_h // 2, icon_r)
 
-            hour_x = icon_cx + icon_r + S(12)
-            draw.text((hour_x, y + S(21)), hour_str, font=f_row_hour, fill=INK)
+            data_left = col_left + icon_zone_w
+            col_hour, col_temp, col_humid, col_wind = (
+                data_left, data_left + sub_w, data_left + 2 * sub_w, data_left + 3 * sub_w,
+            )
+            draw.text((col_hour, y + S(21)), hour_str, font=f_row_hour, fill=INK)
+            draw.text((col_temp, y + S(21)), f"{temp}°C", font=f_row_temp, fill=INK)
 
-            temp_x = hour_x + text_w(draw, hour_str, f_row_hour) + S(16)
-            draw.text((temp_x, y + S(21)), f"{temp}°C", font=f_row_temp, fill=INK)
+            draw_droplet(draw, col_humid + S(11), y + row_h // 2, S(11), fill=GRAY_DARK)
+            draw.text((col_humid + S(28), y + S(23)), f"{humidity} %", font=f_row_small, fill=GRAY_DARK)
 
-            # Cluster humidité + vent, ancré à droite de la mini-colonne
-            # (largeurs de texte variables -> positions calculées, pas
-            # de décalages fixes, pour ne jamais se chevaucher).
-            wind_str = f"{wind} km/h"
-            wind_value_x = col_left + col_w - text_w(draw, wind_str, f_row_small)
-            wind_icon_cx = wind_value_x - S(20)
-            humidity_str = f"{humidity} %"
-            humidity_value_x = wind_icon_cx - S(24) - text_w(draw, humidity_str, f_row_small)
-            droplet_cx = humidity_value_x - S(18)
-
-            draw_droplet(draw, droplet_cx, y + row_h // 2, S(11), fill=GRAY_DARK)
-            draw.text((humidity_value_x, y + S(23)), humidity_str, font=f_row_small, fill=GRAY_DARK)
-            draw_wind_icon(draw, wind_icon_cx, y + row_h // 2, S(13), fill=GRAY_DARK)
-            draw.text((wind_value_x, y + S(23)), wind_str, font=f_row_small, fill=GRAY_DARK)
+            draw_wind_icon(draw, col_wind + S(13), y + row_h // 2, S(13), fill=GRAY_DARK)
+            draw.text((col_wind + S(30), y + S(23)), f"{wind} km/h", font=f_row_small, fill=GRAY_DARK)
 
     # Séparateur vertical entre les deux demi-journées.
     col_div_x = M + col_w + col_gap // 2
