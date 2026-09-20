@@ -34,7 +34,9 @@ l'envoie et l'affiche sur la Kindle via SSH, à travers un tunnel
                  ├─ (ré)installe kindle/dashboard_watchdog.sh en tâche
                  │  cron si absente (auto-réparation)
                  ├─ envoie meteo.png sur la liseuse
-                 └─ eips -f -g meteo.png  ── un seul rafraîchissement écran
+                 ├─ eips -f -g meteo.png  ── un seul rafraîchissement écran
+                 └─ si le Screen Saver Hack est installé, synchronise
+                    aussi meteo.png comme image de veille (voir plus bas)
 ```
 
 ### `generate_meteo.py`
@@ -174,6 +176,57 @@ forcés actifs que ~30 minutes par jour.
 > firmware, il peut être nécessaire de les ajuster (voir [MobileRead
 > Wiki](https://www.mobileread.com/forums/forumdisplay.php?f=150)).
 
+## Remplacer l'écran de veille par défaut d'Amazon
+
+Le réveil programmé ci-dessus règle la connectivité et la batterie, mais
+en dehors de sa fenêtre de ~30 minutes autour de 6h, la liseuse dort
+normalement — et Amazon affiche alors son propre écran de veille par
+défaut, qui recouvre le dashboard jusqu'à la prochaine mise à jour.
+
+Pour l'éviter **sans** sacrifier la batterie, la solution est de
+remplacer les images de veille d'Amazon par le dashboard lui-même, via le
+[« Screen Saver Hack »](https://www.mobileread.com/forums/showthread.php?t=195474)
+(aussi appelé « linkss »), une extension très répandue dans la
+communauté jailbreak Kindle. Une fois le dashboard placé dans son
+dossier d'images, la liseuse continue de dormir normalement (l'écran
+e-ink ne consomme rien tant qu'il n'est pas rafraîchi), mais ce qu'elle
+affiche en dormant, c'est notre dashboard — plus l'écran par défaut
+d'Amazon.
+
+### Installation (à faire une fois, sur la liseuse)
+
+1. Télécharger le paquet correspondant à ton modèle/jailbreak depuis le
+   [fil MobileRead « K5 FW 5.x ScreenSavers Hack »](https://www.mobileread.com/forums/showthread.php?t=195474)
+   (probablement la même source que celle utilisée pour le jailbreak
+   initial).
+2. Placer le `.bin` dans le dossier `mrpackages`, puis dans KUAL :
+   **Helper → Install MR Packages**.
+3. Redémarrer la liseuse (l'installation demande généralement plusieurs
+   redémarrages).
+4. Vérifier que `/mnt/us/linkss/screensavers/` existe désormais
+   (`ls /mnt/us/linkss/screensavers` en SSH).
+
+### Ce que fait le workflow automatiquement ensuite
+
+Une fois le dossier détecté, chaque exécution quotidienne :
+
+- supprime les autres images du dossier `/mnt/us/linkss/screensavers/`
+  (celles fournies par défaut avec le hack), pour que le dashboard soit
+  la seule image de veille et qu'il n'y ait aucune rotation ;
+- y copie le `meteo.png` du jour.
+
+Si le dossier n'existe pas encore (hack non installé), cette étape ne
+fait rien — le reste du pipeline continue de fonctionner normalement.
+
+> **Non vérifié sur du matériel réel** : certaines implémentations de ce
+> hack nécessitent de déposer un fichier vide nommé `reboot` dans
+> `/mnt/us/linkss/` pour qu'un changement de *liste* d'images de veille
+> soit pris en compte. Ici, seul le *contenu* d'un fichier de nom
+> constant (`meteo.png`) change chaque jour, ce qui ne devrait pas
+> nécessiter de redémarrage — mais si l'image de veille ne se met pas à
+> jour après un déploiement, essaie de redémarrer la liseuse une fois
+> pour vérifier cette hypothèse, et dis-le-moi.
+
 ## Développement local
 
 ```bash
@@ -205,11 +258,12 @@ python generate_meteo.py   # génère meteo.png dans le dossier courant
     échéant), et que le Wi-Fi est bien actif
     (`lipc-get-prop com.lab126.wifid enable` doit renvoyer `1`).
 - **L'écran de veille Amazon apparaît en dehors de la fenêtre de 6h** :
-  c'est le comportement attendu (voir [Pourquoi un réveil programmé
-  plutôt qu'une veille permanente
-  ?](#pourquoi-un-réveil-programmé-plutôt-quune-veille-permanente-)) — la
-  liseuse dort normalement le reste de la journée pour préserver sa
-  batterie.
+  comportement par défaut (la liseuse dort normalement le reste de la
+  journée pour préserver sa batterie — voir [Pourquoi un réveil
+  programmé plutôt qu'une veille permanente
+  ?](#pourquoi-un-réveil-programmé-plutôt-quune-veille-permanente-)). Pour
+  l'éviter complètement, voir [Remplacer l'écran de veille par défaut
+  d'Amazon](#remplacer-lécran-de-veille-par-défaut-damazon) ci-dessous.
 - **Le job échoue à se connecter en SSH en général** : vérifier que la
   Kindle est bien visible sur le réseau Tailscale (`tailscale status`) et
   que `KINDLE_TAILSCALE_IP` correspond à son IP actuelle.

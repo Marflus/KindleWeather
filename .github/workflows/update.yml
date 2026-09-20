@@ -175,3 +175,28 @@ jobs:
             # pas dans le PATH d'un shell SSH non-interactif sur la Kindle.
             /usr/sbin/eips -f -g /mnt/us/dashboard/meteo.png
           "
+
+      # ------------------------------------------------------------
+      # 6) Si le « Screen Saver Hack » (linkss) est installé sur la
+      #    Kindle, synchroniser le dashboard comme UNIQUE image de veille
+      #    (/mnt/us/linkss/screensavers/) : quand la liseuse s'endort en
+      #    dehors de la fenêtre de réveil du watchdog, elle affiche alors
+      #    notre dashboard au lieu de l'écran de veille par défaut
+      #    d'Amazon, sans avoir besoin de rester éveillée en permanence.
+      #    Sans effet (silencieux) si le hack n'est pas installé : le
+      #    dossier /mnt/us/linkss n'existe simplement pas encore.
+      # ------------------------------------------------------------
+      - name: Synchroniser l'image de veille (Screen Saver Hack, si installé)
+        run: |
+          ssh $SSH_OPTS "root@${KINDLE_HOST}" "
+            if [ -d /mnt/us/linkss/screensavers ]; then
+              find /mnt/us/linkss/screensavers -maxdepth 1 -type f \
+                \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' \) \
+                ! -name 'meteo.png' -delete
+            fi
+          "
+          if ssh $SSH_OPTS "root@${KINDLE_HOST}" "[ -d /mnt/us/linkss/screensavers ]"; then
+            scp $SSH_OPTS meteo.png "root@${KINDLE_HOST}:/mnt/us/linkss/screensavers/meteo.png"
+          else
+            echo "Screen Saver Hack non installé (/mnt/us/linkss absent) -- étape ignorée."
+          fi
