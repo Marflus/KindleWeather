@@ -1,6 +1,6 @@
 #!/bin/sh
 # ============================================================
-# dashboard_watchdog.sh — réveil ciblé de la Kindle autour de 6h
+# dashboard_watchdog.sh — réveil ciblé de la Kindle autour de 7h30
 # ------------------------------------------------------------
 # Contrairement à une ancienne version de ce projet qui empêchait la
 # Kindle de s'endormir en permanence (fiable, mais qui vide la batterie
@@ -12,8 +12,8 @@
 # Installé par le workflow (.github/workflows/update.yml) comme tâche
 # cron exécutée toutes les 5 minutes (voir crontab de la Kindle). À
 # chaque exécution :
-#   - si l'heure locale de la liseuse est dans la fenêtre 05:50–06:20
-#     (large marge autour de la mise à jour de 6h, pour absorber un
+#   - si l'heure locale de la liseuse est dans la fenêtre 07:20–07:50
+#     (large marge autour de la mise à jour de 7h30, pour absorber un
 #     éventuel décalage d'horloge ou de traitement du job) :
 #       -> désactive l'écran de veille et repousse la mise en veille
 #          profonde, pour que la liseuse reste joignable en SSH ;
@@ -23,12 +23,12 @@
 #
 # Important : ceci suppose que l'horloge système de la Kindle est bien
 # réglée sur l'heure locale (celle affichée à l'écran). Si la mise à
-# jour de 6h échoue de façon récurrente, vérifier avec `date` en SSH
+# jour de 7h30 échoue de façon récurrente, vérifier avec `date` en SSH
 # que l'heure de la liseuse correspond bien à l'heure réelle locale.
 # ============================================================
 
-WINDOW_START=350   # 05:50 = 5*60 + 50
-WINDOW_END=380      # 06:20 = 6*60 + 20
+WINDOW_START=440   # 07:20 = 7*60 + 20
+WINDOW_END=470      # 07:50 = 7*60 + 50
 
 hour="$(date +%H)"
 minute="$(date +%M)"

@@ -3,22 +3,22 @@
 Dashboard météo quotidien affiché sur une liseuse Kindle jailbreakée,
 transformée en écran e-ink dédié à la météo du jour.
 
-Chaque matin à **6h (heure de Paris)**, un workflow GitHub Actions génère une
-image météo à partir des données [Open-Meteo](https://open-meteo.com/), puis
-l'envoie et l'affiche sur la Kindle via SSH, à travers un tunnel
+Chaque matin à **7h30 (heure de Paris)**, un workflow GitHub Actions génère
+une image météo à partir des données [Open-Meteo](https://open-meteo.com/),
+puis l'envoie et l'affiche sur la Kindle via SSH, à travers un tunnel
 [Tailscale](https://tailscale.com/).
 
 ## Comment ça marche
 
 ```
- Kindle (dort ~23h30/24, watchdog cron toutes les 5 min)
+ Kindle (dort ~23h/24, watchdog cron toutes les 5 min)
         │
-        └─ vers 05:50–06:20 heure locale : reste éveillée et joignable
+        └─ vers 07:20–07:50 heure locale : reste éveillée et joignable
            (kindle/dashboard_watchdog.sh), puis se rendort après la fenêtre
 
- GitHub Actions — job "check-time" (cron 4h ET 5h UTC)
+ GitHub Actions — job "check-time" (cron 5h30 ET 6h30 UTC)
         │
-        └─ 6h à Paris aujourd'hui ? ── non ──▶ rien d'autre ne s'exécute
+        └─ 7h30 à Paris aujourd'hui ? ── non ──▶ rien d'autre ne s'exécute
                     │
                    oui
                     ▼
@@ -63,10 +63,10 @@ important car le workflow tourne sur un runner GitHub Actions en UTC.
 ### `.github/workflows/update.yml`
 
 Orchestre la mise à jour quotidienne, en deux jobs : `check-time` (est-ce
-bien 6h à Paris ?) puis `update-dashboard` (génère l'image, se connecte à
+bien 7h30 à Paris ?) puis `update-dashboard` (génère l'image, se connecte à
 la Kindle, et l'affiche) si c'est le cas. Voir la section
 [Planification](#planification-le-pourquoi-de-deux-cron) ci-dessous pour
-le détail du déclenchement à 6h.
+le détail du déclenchement à 7h30.
 
 ### `kindle/dashboard_watchdog.sh`
 
@@ -99,21 +99,21 @@ Dans **Settings → Secrets and variables → Actions** :
 ## Planification : le pourquoi de deux `cron`
 
 GitHub Actions ne planifie qu'en UTC et ne suit pas les changements
-d'heure d'été/hiver. Pour afficher le dashboard à 6h pile heure de Paris
-toute l'année, le workflow se déclenche à **4h ET 5h UTC** :
+d'heure d'été/hiver. Pour afficher le dashboard à 7h30 pile heure de Paris
+toute l'année, le workflow se déclenche à **5h30 ET 6h30 UTC** :
 
-- 4h UTC = 6h à Paris en heure d'été (UTC+2)
-- 5h UTC = 6h à Paris en heure d'hiver (UTC+1)
+- 5h30 UTC = 7h30 à Paris en heure d'été (UTC+2)
+- 6h30 UTC = 7h30 à Paris en heure d'hiver (UTC+1)
 
 Le job `check-time` calcule l'heure locale réelle avec `TZ='Europe/Paris'
-date` : le job `update-dashboard` ne se déclenche que s'il est bien 6h à
+date` : le job `update-dashboard` ne se déclenche que s'il est bien 7h30 à
 Paris — l'autre déclenchement de la journée n'exécute que `check-time`
 (quasi instantané) et s'arrête là. Un déclenchement manuel
 (`workflow_dispatch`, via l'onglet *Actions*) passe toujours cette
 vérification, pour pouvoir tester à n'importe quelle heure.
 
-> Si tu changes l'heure cible (6h), pense à mettre à jour **les deux**
-> côtés : la comparaison `"$current_hour" = "06"` dans le job
+> Si tu changes l'heure cible (7h30), pense à mettre à jour **les deux**
+> côtés : la comparaison `"$current_time" = "07:30"` dans le job
 > `check-time` du workflow, et la fenêtre `WINDOW_START`/`WINDOW_END`
 > dans `kindle/dashboard_watchdog.sh`. Ce sont deux horloges
 > indépendantes (le runner GitHub et la Kindle) qui doivent rester
@@ -129,7 +129,7 @@ restent actifs en continu au lieu de se mettre en veille entre les mises
 
 Le compromis retenu ici est différent : la Kindle **dort normalement** le
 reste de la journée (donc économise sa batterie), et c'est **elle-même**
-qui se réveille brièvement chaque matin autour de 6h, plutôt que de
+qui se réveille brièvement chaque matin autour de 7h30, plutôt que de
 compter sur GitHub Actions pour la « pousser » depuis l'extérieur pendant
 qu'elle dort (une fois le Wi-Fi coupé par la mise en veille, plus aucune
 connexion entrante n'est possible, quelle que soit la fréquence des
@@ -139,7 +139,7 @@ tentatives côté serveur).
 liseuse (toutes les 5 minutes, via `/etc/crontab`) et, à chaque
 exécution :
 
-- si l'heure locale de la Kindle est dans la fenêtre **05:50–06:20** :
+- si l'heure locale de la Kindle est dans la fenêtre **07:20–07:50** :
   désactive l'écran de veille (`lipc-set-prop com.lab126.powerd
   preventScreenSaver 1`), repousse la mise en veille profonde
   (`lipc-send-event com.lab126.powerd resetAutoSuspendTimeout 0`) et
@@ -169,7 +169,7 @@ forcés actifs que ~30 minutes par jour.
 > continue à exécuter les tâches planifiées même quand l'écran est en
 > veille — ce qui est le cas sur la plupart des jailbreaks Kindle, mais
 > n'a pas pu être vérifié sur du matériel réel depuis cet environnement.
-> Si la mise à jour de 6h ne fonctionne pas de façon fiable, voir
+> Si la mise à jour de 7h30 ne fonctionne pas de façon fiable, voir
 > [Dépannage](#dépannage) ci-dessous. Les noms de propriétés
 > `lipc-set-prop`/`lipc-send-event` sont ceux couramment utilisés par la
 > communauté de jailbreak Kindle ; selon le modèle et la version du
@@ -179,7 +179,7 @@ forcés actifs que ~30 minutes par jour.
 ## Remplacer l'écran de veille par défaut d'Amazon
 
 Le réveil programmé ci-dessus règle la connectivité et la batterie, mais
-en dehors de sa fenêtre de ~30 minutes autour de 6h, la liseuse dort
+en dehors de sa fenêtre de ~30 minutes autour de 7h30, la liseuse dort
 normalement — et Amazon affiche alors son propre écran de veille par
 défaut, qui recouvre le dashboard jusqu'à la prochaine mise à jour.
 
@@ -218,14 +218,20 @@ Une fois le dossier détecté, chaque exécution quotidienne :
 Si le dossier n'existe pas encore (hack non installé), cette étape ne
 fait rien — le reste du pipeline continue de fonctionner normalement.
 
-> **Non vérifié sur du matériel réel** : certaines implémentations de ce
-> hack nécessitent de déposer un fichier vide nommé `reboot` dans
-> `/mnt/us/linkss/` pour qu'un changement de *liste* d'images de veille
-> soit pris en compte. Ici, seul le *contenu* d'un fichier de nom
-> constant (`meteo.png`) change chaque jour, ce qui ne devrait pas
-> nécessiter de redémarrage — mais si l'image de veille ne se met pas à
-> jour après un déploiement, essaie de redémarrer la liseuse une fois
-> pour vérifier cette hypothèse, et dis-le-moi.
+> **Testé sur du matériel réel : ne fonctionne pas sur les firmwares
+> récents.** Sur une Paperwhite 3 avec un firmware de janvier 2025, on a
+> confirmé que le hack (dernière version disponible, datée de janvier
+> 2023) monte bien correctement `meteo.png` à l'emplacement système
+> attendu (`/usr/share/blanket/screensaver`), mais l'écran de veille
+> réellement affiché reste celui d'Amazon — signe que ce firmware
+> récent n'utilise plus cet emplacement pour choisir l'image affichée.
+> Le code de synchronisation ci-dessus reste en place (il ne fait rien
+> de nuisible et pourrait fonctionner sur un firmware plus ancien, ou
+> si un hack mis à jour apparaît un jour), mais n'attends pas
+> d'amélioration visible sur un firmware 2024-2025 : voir [Pourquoi un
+> réveil programmé plutôt qu'une veille
+> permanente ?](#pourquoi-un-réveil-programmé-plutôt-quune-veille-permanente-)
+> pour le compromis qui, lui, fonctionne bien.
 
 ## Développement local
 
@@ -236,7 +242,7 @@ python generate_meteo.py   # génère meteo.png dans le dossier courant
 
 ## Dépannage
 
-- **Le job échoue à se connecter en SSH à 6h** :
+- **Le job échoue à se connecter en SSH à 7h30** :
   - vérifier en SSH direct (pendant que la Kindle est réveillée, ou après
     l'avoir réveillée manuellement en appuyant sur le bouton/l'écran) que
     la tâche cron est bien installée :
@@ -257,7 +263,7 @@ python generate_meteo.py   # génère meteo.png dans le dossier courant
     — mettre à jour la variable de dépôt `KINDLE_TAILSCALE_IP` le cas
     échéant), et que le Wi-Fi est bien actif
     (`lipc-get-prop com.lab126.wifid enable` doit renvoyer `1`).
-- **L'écran de veille Amazon apparaît en dehors de la fenêtre de 6h** :
+- **L'écran de veille Amazon apparaît en dehors de la fenêtre de 7h30** :
   comportement par défaut (la liseuse dort normalement le reste de la
   journée pour préserver sa batterie — voir [Pourquoi un réveil
   programmé plutôt qu'une veille permanente
@@ -267,8 +273,8 @@ python generate_meteo.py   # génère meteo.png dans le dossier courant
 - **Le job échoue à se connecter en SSH en général** : vérifier que la
   Kindle est bien visible sur le réseau Tailscale (`tailscale status`) et
   que `KINDLE_TAILSCALE_IP` correspond à son IP actuelle.
-- **Le dashboard ne se met pas à jour à 6h pile** : vérifier dans l'onglet
+- **Le dashboard ne se met pas à jour à 7h30 pile** : vérifier dans l'onglet
   *Actions* que le job `update-dashboard` s'est bien déclenché à
-  l'horaire correspondant à 6h à Paris (4h ou 5h UTC selon la saison) —
-  l'autre horaire de la journée ne doit exécuter que `check-time`, qui
-  se termine immédiatement sans lancer `update-dashboard`.
+  l'horaire correspondant à 7h30 à Paris (5h30 ou 6h30 UTC selon la
+  saison) — l'autre horaire de la journée ne doit exécuter que
+  `check-time`, qui se termine immédiatement sans lancer `update-dashboard`.
