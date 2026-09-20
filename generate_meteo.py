@@ -219,14 +219,6 @@ def draw_sun_horizon(draw, cx, cy, r, rising, fill=INK):
         draw.polygon([(cx - d, tip - d), (cx + d, tip - d), (cx, tip + d)], fill=fill)
 
 
-def draw_thermometer(draw, cx, cy, r, fill=INK):
-    stem_w = r * 0.32
-    top = cy - r * 1.3
-    bottom = cy + r * 0.35
-    draw.rounded_rectangle([cx - stem_w, top, cx + stem_w, bottom], radius=stem_w, fill=fill)
-    draw.ellipse([cx - r * 0.55, cy - r * 0.05, cx + r * 0.55, cy + r * 1.05], fill=fill)
-
-
 WEATHER_LABELS = {
     0: "Ciel dégagé", 1: "Plutôt ensoleillé", 2: "Partiellement nuageux",
     3: "Ciel couvert", 45: "Brouillard", 48: "Brouillard givrant",
@@ -367,12 +359,17 @@ def create_image(data, out_path="meteo.png"):
     draw.text((text_x, hero_top + S(190)), minmax_str, font=f_minmax, fill=GRAY_DARK)
 
     # -- panneau lever/coucher + humidité/vent, à droite du séparateur --
-    region_left = divider_x + zone_pad
+    # cell_h resserré pour coller au contenu réel (icône + 2 lignes de
+    # texte) : avec une cellule trop haute, le contenu (centré dans sa
+    # moitié haute) semblait décalé vers le haut du cadre une fois
+    # l'ensemble centré dans la carte.
+    panel_shift_x, panel_shift_y = S(8), S(10)  # recentrage fin : un peu à droite et vers le bas
+    region_left = divider_x + zone_pad + panel_shift_x
     region_right = region_left + panel_w
     col_w = panel_w // 2
-    cell_h = S(80)
+    cell_h = S(64)
     content_h = cell_h * 2
-    panel_top = hero_top + (hero_h - content_h) // 2
+    panel_top = hero_top + (hero_h - content_h) // 2 + panel_shift_y
     mini_icon_r = S(16)  # même taille pour les 4 icônes du panneau
     cells = [
         ("Lever", hhmm(sunrise) if sunrise else "—", "sunrise"),
@@ -391,7 +388,7 @@ def create_image(data, out_path="meteo.png"):
         gap = S(12)
         group_w2 = icon_d + gap + text_w_max
         start_x = col_left + (col_w - group_w2) // 2
-        icon_cx2, icon_cy2 = start_x + icon_d // 2, cy + S(24)
+        icon_cx2, icon_cy2 = start_x + icon_d // 2, cy + S(20)
         text_x2 = start_x + icon_d + gap
         if kind == "sunrise":
             draw_sun_horizon(draw, icon_cx2, icon_cy2, mini_icon_r, rising=True)
@@ -413,7 +410,13 @@ def create_image(data, out_path="meteo.png"):
         alert_text = "Aucune précipitation prévue aujourd'hui"
     draw.rounded_rectangle([M, alert_top, WIDTH - M, alert_top + alert_h],
                             radius=alert_h // 2, outline=INK, width=S(3))
-    draw_centered_text(draw, WIDTH // 2, alert_top + S(14), alert_text, f_alert, INK)
+    # Centrage vertical calculé à partir de la boîte englobante réelle du
+    # texte (et non d'un décalage fixe) : la hauteur de ligne d'une police
+    # inclut une marge au-dessus du texte qui, si on l'ignore, fait
+    # paraître le texte trop bas dans le bandeau.
+    alert_bbox = draw.textbbox((0, 0), alert_text, font=f_alert)
+    alert_text_y = alert_top + (alert_h - (alert_bbox[3] - alert_bbox[1])) // 2 - alert_bbox[1]
+    draw_centered_text(draw, WIDTH // 2, alert_text_y, alert_text, f_alert, INK)
 
     # ============== COURBE DE TEMPÉRATURE (00h → 00h) ==============
     sep1_y = alert_top + alert_h + S(22)
@@ -470,46 +473,80 @@ def create_image(data, out_path="meteo.png"):
             lw = text_w(draw, label, f_axis)
             draw.text((min(x - lw / 2, gx1 - lw), gy1 + S(12)), label, font=f_axis, fill=GRAY_DARK)
 
-    # ============== TABLEAU DÉTAIL HORAIRE (00h → 00h) ==============
+    # ============== TABLEAU DÉTAIL HORAIRE (toutes les 2h, matin | après-midi) ==============
+    # Deux colonnes côte à côte pour tenir 12 points (2h à 22h) sans
+    # allonger le tableau : matin à gauche (2h→12h), après-midi/soir à
+    # droite (14h→minuit). Pas de "ressenti" ici (manque de place sur une
+    # demi-largeur) ; humidité + vent sont groupés vers la droite de
+    # chaque mini-colonne.
     sep2_y = gy1 + S(36)
     draw.line([(M, sep2_y), (WIDTH - M, sep2_y)], fill=GRAY_LIGHT, width=S(2))
 
     row_top = sep2_y + S(18)
     row_h = S(66)
 
-    row_specs = [(f"{h:02d}:00", hour_to_index[h]) for h in (0, 3, 6, 9, 12, 15, 18, 21)
-                 if h in hour_to_index]
-    if next_idx is not None:
-        row_specs.append(("00:00", next_idx))
+    col_gap = S(40)
+    col_w = (WIDTH - 2 * M - col_gap) // 2
+    col_lefts = [M, M + col_w + col_gap]
+    hour_columns = [[2, 4, 6, 8, 10, 12], [14, 16, 18, 20, 22, 0]]
+    n_rows = len(hour_columns[0])
 
-    for n, (hour_str, abs_i) in enumerate(row_specs):
-        temp = round(data["hourly"]["temperature_2m"][abs_i])
-        code = data["hourly"]["weathercode"][abs_i]
-        humidity = data["hourly"]["relativehumidity_2m"][abs_i]
-        wind = round(data["hourly"]["windspeed_10m"][abs_i])
-        feels = round(data["hourly"].get("apparent_temperature", data["hourly"]["temperature_2m"])[abs_i])
+    def resolve_hour_index(h):
+        # 0 = minuit du lendemain (fin de la colonne après-midi/soir).
+        return next_idx if h == 0 else hour_to_index.get(h)
 
+    for n in range(n_rows):
         y = row_top + n * row_h
         if n % 2 == 1:
             draw.rectangle([M, y, WIDTH - M, y + row_h], fill=GRAY_PALE)
 
-        icon_cx = M + S(46)
-        draw_icon(draw, code, icon_cx, y + row_h // 2, S(22))
+        for col_left, hours in zip(col_lefts, hour_columns):
+            abs_i = resolve_hour_index(hours[n])
+            if abs_i is None:
+                continue
+            hour_str = "00:00" if hours[n] == 0 else f"{hours[n]:02d}:00"
+            temp = round(data["hourly"]["temperature_2m"][abs_i])
+            code = data["hourly"]["weathercode"][abs_i]
+            humidity = data["hourly"]["relativehumidity_2m"][abs_i]
+            wind = round(data["hourly"]["windspeed_10m"][abs_i])
 
-        draw.text((M + S(100), y + S(21)), hour_str, font=f_row_hour, fill=INK)
-        draw.text((M + S(210), y + S(21)), f"{temp}°C", font=f_row_temp, fill=INK)
+            # Icône, heure puis température, chacune positionnée après la
+            # largeur réelle de la précédente (une largeur fixe pour
+            # "02:00" fait se chevaucher heure et température : leur
+            # police est assez grande pour que 5 caractères dépassent un
+            # écart de ~66px).
+            icon_r = S(15)
+            icon_cx = col_left + S(16)
+            draw_icon(draw, code, icon_cx, y + row_h // 2, icon_r)
 
-        draw_droplet(draw, M + S(400), y + row_h // 2, S(13), fill=GRAY_DARK)
-        draw.text((M + S(420), y + S(23)), f"{humidity} %", font=f_row_small, fill=GRAY_DARK)
+            hour_x = icon_cx + icon_r + S(12)
+            draw.text((hour_x, y + S(21)), hour_str, font=f_row_hour, fill=INK)
 
-        draw_wind_icon(draw, M + S(560), y + row_h // 2, S(13), fill=GRAY_DARK)
-        draw.text((M + S(590), y + S(23)), f"{wind} km/h", font=f_row_small, fill=GRAY_DARK)
+            temp_x = hour_x + text_w(draw, hour_str, f_row_hour) + S(16)
+            draw.text((temp_x, y + S(21)), f"{temp}°C", font=f_row_temp, fill=INK)
 
-        draw_thermometer(draw, M + S(770), y + row_h // 2, S(13), fill=GRAY_DARK)
-        draw.text((M + S(795), y + S(23)), f"Ressenti {feels}°C", font=f_row_small, fill=GRAY_DARK)
+            # Cluster humidité + vent, ancré à droite de la mini-colonne
+            # (largeurs de texte variables -> positions calculées, pas
+            # de décalages fixes, pour ne jamais se chevaucher).
+            wind_str = f"{wind} km/h"
+            wind_value_x = col_left + col_w - text_w(draw, wind_str, f_row_small)
+            wind_icon_cx = wind_value_x - S(20)
+            humidity_str = f"{humidity} %"
+            humidity_value_x = wind_icon_cx - S(24) - text_w(draw, humidity_str, f_row_small)
+            droplet_cx = humidity_value_x - S(18)
+
+            draw_droplet(draw, droplet_cx, y + row_h // 2, S(11), fill=GRAY_DARK)
+            draw.text((humidity_value_x, y + S(23)), humidity_str, font=f_row_small, fill=GRAY_DARK)
+            draw_wind_icon(draw, wind_icon_cx, y + row_h // 2, S(13), fill=GRAY_DARK)
+            draw.text((wind_value_x, y + S(23)), wind_str, font=f_row_small, fill=GRAY_DARK)
+
+    # Séparateur vertical entre les deux demi-journées.
+    col_div_x = M + col_w + col_gap // 2
+    draw.line([(col_div_x, row_top + S(6)), (col_div_x, row_top + n_rows * row_h - S(6))],
+              fill=GRAY_LIGHT, width=S(2))
 
     # ============== PIED DE PAGE ==============
-    footer_y = row_top + len(row_specs) * row_h + S(14)
+    footer_y = row_top + n_rows * row_h + S(14)
     footer = f"Mis à jour le {now_local.strftime('%d/%m/%Y à %H:%M')}"
     draw_centered_text(draw, WIDTH // 2, footer_y, footer, f_footer, GRAY_MID)
 
