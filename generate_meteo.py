@@ -470,6 +470,41 @@ def create_image(data, out_path="meteo.png"):
 
         area = [(gx0, gy1)] + points + [(gx1, gy1)]
         draw.polygon(area, fill=GRAY_PALE)
+
+        # Hachures sous la courbe pendant les heures de pluie : un calque
+        # de lignes diagonales est préparé sur une copie de l'image (donc
+        # déjà avec l'aire pâle en fond), puis collé uniquement là où un
+        # masque délimite la zone sous la courbe pour les segments
+        # pluvieux (regroupés en tronçons continus pour éviter des
+        # hachures coupées à chaque heure).
+        chart_codes = [data["hourly"]["weathercode"][i] for i in chart_idx]
+        rain_seg = [chart_codes[k] in RAIN_CODES for k in range(len(points) - 1)]
+        k = 0
+        rain_runs = []
+        while k < len(rain_seg):
+            if rain_seg[k]:
+                start = k
+                while k < len(rain_seg) and rain_seg[k]:
+                    k += 1
+                rain_runs.append((start, k))
+            else:
+                k += 1
+
+        if rain_runs:
+            rain_mask = Image.new("L", (WIDTH, HEIGHT), 0)
+            mask_draw = ImageDraw.Draw(rain_mask)
+            for start, end in rain_runs:
+                run_pts = points[start:end + 1]
+                run_area = [(run_pts[0][0], gy1)] + run_pts + [(run_pts[-1][0], gy1)]
+                mask_draw.polygon(run_area, fill=255)
+
+            hatch_layer = img.copy()
+            hatch_draw = ImageDraw.Draw(hatch_layer)
+            diag = gy1 - gy0
+            for x0 in range(int(gx0 - diag), int(gx1), S(9)):
+                hatch_draw.line([(x0, gy1), (x0 + diag, gy0)], fill=GRAY_DARK, width=S(2))
+            img.paste(hatch_layer, (0, 0), rain_mask)
+
         draw.line(points, fill=INK, width=S(4), joint="curve")
 
         # Repères toutes les 3h + point final à 00h (minuit)
