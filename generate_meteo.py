@@ -267,7 +267,7 @@ def create_image(data, out_path="meteo.png"):
     f_location = load_font(FONT_BOLD_PATH, S(26))
     f_temp_huge = load_font(FONT_BOLD_PATH, S(100))
     f_desc = load_font(FONT_REGULAR_PATH, S(30))
-    f_minmax = load_font(FONT_BOLD_PATH, S(30))
+    f_minmax = load_font(FONT_BOLD_PATH, S(38))
     f_panel_label = load_font(FONT_REGULAR_PATH, S(20))
     f_panel_value = load_font(FONT_BOLD_PATH, S(24))
     f_section = load_font(FONT_BOLD_PATH, S(24))
@@ -364,16 +364,17 @@ def create_image(data, out_path="meteo.png"):
     desc_y = stack_top + temp_ink_h + stack_gap - desc_bbox[1]
     draw.text((text_x, desc_y), desc, font=f_desc, fill=INK)
 
-    # Min/max empilés à droite du nombre, centrés verticalement dessus
-    # (calculé à partir des boîtes englobantes réelles, pas d'un
-    # décalage fixe, pour un alignement propre quelle que soit la police).
-    temp_center_y = temp_y + (temp_bbox[1] + temp_bbox[3]) / 2
+    # Min/max empilés à droite du nombre, centrés verticalement sur le
+    # milieu de la carte (même centre que l'icône, pas le milieu du
+    # nombre de température) — calculé à partir des boîtes englobantes
+    # réelles, pas d'un décalage fixe, pour un alignement propre quelle
+    # que soit la police.
     max_str, min_str = f"Max {t_max}°", f"Min {t_min}°"
     max_bbox = draw.textbbox((0, 0), max_str, font=f_minmax)
     min_bbox = draw.textbbox((0, 0), min_str, font=f_minmax)
     max_h, min_h = max_bbox[3] - max_bbox[1], min_bbox[3] - min_bbox[1]
-    line_gap = S(12)
-    minmax_stack_top = temp_center_y - (max_h + line_gap + min_h) / 2
+    line_gap = S(14)
+    minmax_stack_top = icon_cy - (max_h + line_gap + min_h) / 2
     minmax_x = text_x + text_w(draw, temp_str, f_temp_huge) + S(30)
     draw.text((minmax_x, minmax_stack_top - max_bbox[1]), max_str, font=f_minmax, fill=INK)
     draw.text((minmax_x, minmax_stack_top + max_h + line_gap - min_bbox[1]), min_str,
