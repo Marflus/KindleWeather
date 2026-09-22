@@ -138,6 +138,18 @@ jobs:
       #    préserver sa batterie. Cette étape est idempotente (n'ajoute
       #    la tâche que si elle est absente) et sert aussi de
       #    "réparation automatique" si la Kindle a été réinitialisée.
+      #
+      #    Deux quirks confirmés sur du matériel réel (Paperwhite,
+      #    firmware 2025) et gérés ci-dessous :
+      #      - la racine est montée en lecture seule par défaut
+      #        (nécessite `mntroot rw` avant d'écrire dans /etc) ;
+      #      - `/etc/crontab` peut être un DOSSIER (un fichier de tâches
+      #        par utilisateur, ex. /etc/crontab/root) plutôt qu'un
+      #        fichier unique, selon le firmware ;
+      #      - aucun script /etc/init.d ne démarre crond automatiquement
+      #        au boot, et le binaire doit être lancé en mode premier
+      #        plan (-f) puis détaché (nohup + &) pour rester actif —
+      #        sans -f il se termine aussitôt sans erreur ni log.
       # ------------------------------------------------------------
       - name: Installer le watchdog de réveil sur la Kindle (si besoin)
         run: |
@@ -145,12 +157,25 @@ jobs:
           scp $SSH_OPTS kindle/dashboard_watchdog.sh "root@${KINDLE_HOST}:/mnt/us/dashboard/dashboard_watchdog.sh"
           ssh $SSH_OPTS "root@${KINDLE_HOST}" "
             chmod +x /mnt/us/dashboard/dashboard_watchdog.sh
-            touch /etc/crontab
-            grep -qF 'dashboard_watchdog.sh' /etc/crontab || \
-              echo '*/5 * * * * /mnt/us/dashboard/dashboard_watchdog.sh' >> /etc/crontab
-            killall -HUP crond 2>/dev/null || /etc/init.d/crond restart 2>/dev/null || true
+            mntroot rw 2>/dev/null || true
+
+            CRONTAB_FILE=/etc/crontab
+            if [ -d /etc/crontab ]; then
+              CRONTAB_FILE=/etc/crontab/root
+            fi
+            grep -qF 'dashboard_watchdog.sh' \"\$CRONTAB_FILE\" 2>/dev/null || \
+              echo '*/5 * * * * /mnt/us/dashboard/dashboard_watchdog.sh' >> \"\$CRONTAB_FILE\"
+
             if ! ps | grep -q '[c]rond'; then
-              echo 'ATTENTION : crond ne semble pas actif sur cette liseuse -- le reveil programme ne fonctionnera pas.'
+              killall -HUP crond 2>/dev/null || /etc/init.d/crond restart 2>/dev/null || true
+              sleep 1
+            fi
+            if ! ps | grep -q '[c]rond'; then
+              nohup /usr/sbin/crond -c /etc/crontab -f >/dev/null 2>&1 &
+              sleep 1
+            fi
+            if ! ps | grep -q '[c]rond'; then
+              echo 'ATTENTION : crond ne semble toujours pas actif sur cette liseuse -- le reveil programme ne fonctionnera pas.'
             fi
           "
 

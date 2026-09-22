@@ -286,12 +286,24 @@ python generate_meteo.py   # génère meteo.png dans le dossier courant
 - **Le job échoue à se connecter en SSH à 6h00** :
   - vérifier en SSH direct (pendant que la Kindle est réveillée, ou après
     l'avoir réveillée manuellement en appuyant sur le bouton/l'écran) que
-    la tâche cron est bien installée :
-    `cat /etc/crontab | grep dashboard_watchdog` ;
+    la tâche cron est bien installée. **Attention** : sur certains
+    firmwares, `/etc/crontab` est un *dossier* (un fichier de tâches par
+    utilisateur, ex. `/etc/crontab/root`) et non un fichier unique —
+    vérifier lequel des deux s'applique avant de chercher dedans :
+    `ls -la /etc/crontab` (si c'est un dossier : `cat /etc/crontab/root |
+    grep dashboard_watchdog`, sinon `cat /etc/crontab | grep
+    dashboard_watchdog`) ;
   - vérifier que `crond` tourne : `ps | grep crond` — s'il est absent, le
     watchdog ne peut pas s'exécuter (voir le message d'avertissement
     affiché par l'étape *Installer le watchdog de réveil* dans les logs
-    GitHub Actions) ;
+    GitHub Actions). Sur certains firmwares, rien ne démarre `crond`
+    automatiquement au boot (pas de script `/etc/init.d/crond`), et le
+    binaire ne se daemonise pas correctement sans l'option `-f` (il se
+    termine aussitôt, sans erreur ni log) — d'où le lancement en `nohup
+    /usr/sbin/crond -c /etc/crontab -f >/dev/null 2>&1 &` utilisé par le
+    workflow. Autre piège sur ces firmwares : la racine est montée en
+    lecture seule par défaut, donc écrire dans `/etc/crontab` échoue
+    silencieusement sans `mntroot rw` au préalable ;
   - vérifier que l'heure système de la Kindle correspond à l'heure locale
     réelle : `date` en SSH. Si elle est décalée, ajuster la fenêtre
     `WINDOW_START`/`WINDOW_END` dans `kindle/dashboard_watchdog.sh` ou
