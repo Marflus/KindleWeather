@@ -5,7 +5,7 @@
             "priority": 1,
             "items": [
                 {
-                    "name": "Afficher le dashboard météo",
+                    "name": "Afficher le dashboard meteo",
                     "priority": 1,
                     "action": "./show_dashboard.sh"
                 }
