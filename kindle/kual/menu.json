@@ -7,7 +7,7 @@
                 {
                     "name": "Afficher le dashboard météo",
                     "priority": 1,
-                    "action": "show_dashboard.sh"
+                    "action": "./show_dashboard.sh"
                 }
             ]
         }
