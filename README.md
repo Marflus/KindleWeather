@@ -234,9 +234,11 @@ pour tester la méthode ci-dessus sans attendre le prochain cycle, ou pour
 forcer l'affichage après une manipulation manuelle). Sans effet
 (silencieux) si KUAL n'est pas installé.
 
-Fichiers correspondants : `kindle/kual/menu.json` (définition du menu) et
-`kindle/kual/show_dashboard.sh` (`eips -f -g /mnt/us/dashboard/meteo.png`),
-déployés dans `/mnt/us/extensions/kindlemeteo/`.
+Fichiers correspondants, déployés dans `/mnt/us/extensions/kindlemeteo/` :
+`kindle/kual/config.xml` (déclare l'extension à KUAL — **indispensable**,
+sans lui KUAL ne scanne même pas le dossier), `kindle/kual/menu.json`
+(définition du menu) et `kindle/kual/show_dashboard.sh` (`eips -f -g
+/mnt/us/dashboard/meteo.png`).
 
 ### Ancienne méthode : Screen Saver Hack / linkss (legacy)
 

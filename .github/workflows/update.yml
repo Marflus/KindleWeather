@@ -235,11 +235,16 @@ jobs:
       #    écran de veille (preventScreenSaver permanent, voir
       #    kindle/dashboard_watchdog.sh) fonctionne bien. Idempotente,
       #    et sans effet (silencieux) si KUAL n'est pas installé.
+      #    config.xml est indispensable : sans lui, KUAL ne scanne même
+      #    pas le dossier (menu.json seul ne suffit pas à être détecté
+      #    comme extension -- confirmé en comparant avec une extension
+      #    fonctionnelle existante sur la liseuse de test).
       # ------------------------------------------------------------
       - name: Installer le bouton KUAL "Afficher le dashboard" (si KUAL est installé)
         run: |
           if ssh $SSH_OPTS "root@${KINDLE_HOST}" "[ -d /mnt/us/extensions ]"; then
             ssh $SSH_OPTS "root@${KINDLE_HOST}" "mkdir -p /mnt/us/extensions/kindlemeteo"
+            scp $SSH_OPTS kindle/kual/config.xml "root@${KINDLE_HOST}:/mnt/us/extensions/kindlemeteo/config.xml"
             scp $SSH_OPTS kindle/kual/menu.json "root@${KINDLE_HOST}:/mnt/us/extensions/kindlemeteo/menu.json"
             scp $SSH_OPTS kindle/kual/show_dashboard.sh "root@${KINDLE_HOST}:/mnt/us/extensions/kindlemeteo/show_dashboard.sh"
             ssh $SSH_OPTS "root@${KINDLE_HOST}" "chmod +x /mnt/us/extensions/kindlemeteo/show_dashboard.sh"
