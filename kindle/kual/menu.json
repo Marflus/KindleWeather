@@ -1,0 +1,15 @@
+{
+    "items": [
+        {
+            "name": "KindleMeteo",
+            "priority": 1,
+            "items": [
+                {
+                    "name": "Afficher le dashboard météo",
+                    "priority": 1,
+                    "action": "show_dashboard.sh"
+                }
+            ]
+        }
+    ]
+}

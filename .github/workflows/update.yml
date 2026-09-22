@@ -4,7 +4,7 @@
 # Architecture (voir le README pour le détail) :
 #   - la Kindle dort normalement toute la journée pour préserver sa
 #     batterie ; c'est ELLE qui se réveille brièvement chaque matin
-#     autour de 7h30 (heure locale), via une tâche cron embarquée
+#     autour de 6h00 (heure locale), via une tâche cron embarquée
 #     (kindle/dashboard_watchdog.sh) ;
 #   - ce workflow se contente de générer l'image météo puis de la
 #     pousser sur la liseuse pendant cette fenêtre de réveil, à travers
@@ -12,12 +12,12 @@
 #     jailbreakée et joignable en SSH).
 #
 # Deux jobs :
-#   1. check-time   : détermine s'il est bien 7h30 à Paris (déclenchement
+#   1. check-time   : détermine s'il est bien 6h00 à Paris (déclenchement
 #                     manuel toujours accepté, pour tester).
 #   2. update-dashboard : générer + pousser + afficher, seulement si
 #                     check-time l'autorise.
 #
-# /!\ L'heure cible (7h30) est définie à DEUX endroits qui doivent rester
+# /!\ L'heure cible (6h00) est définie à DEUX endroits qui doivent rester
 # cohérents si on la change : le job check-time ci-dessous, et la
 # fenêtre WINDOW_START/WINDOW_END dans kindle/dashboard_watchdog.sh.
 # ============================================================
@@ -27,11 +27,11 @@ name: Mise à jour Kindle
 on:
   schedule:
     # GitHub Actions ne planifie qu'en UTC et ne suit pas les
-    # changements d'heure d'été/hiver : on déclenche donc le job à 5h30
-    # ET 6h30 UTC (couvrant les deux cas), et check-time filtre pour ne
-    # garder que celui qui correspond réellement à 7h30 à Paris ce jour-là.
-    - cron: '30 5 * * *'   # 7h30 à Paris en heure d'été (UTC+2)
-    - cron: '30 6 * * *'   # 7h30 à Paris en heure d'hiver (UTC+1)
+    # changements d'heure d'été/hiver : on déclenche donc le job à 4h00
+    # ET 5h00 UTC (couvrant les deux cas), et check-time filtre pour ne
+    # garder que celui qui correspond réellement à 6h00 à Paris ce jour-là.
+    - cron: '0 4 * * *'   # 6h00 à Paris en heure d'été (UTC+2)
+    - cron: '0 5 * * *'   # 6h00 à Paris en heure d'hiver (UTC+1)
   workflow_dispatch:        # permet de lancer une mise à jour manuellement
 
 jobs:
@@ -40,7 +40,7 @@ jobs:
     outputs:
       should_run: ${{ steps.check.outputs.should_run }}
     steps:
-      - name: Vérifier qu'il est bien 7h30 à Paris
+      - name: Vérifier qu'il est bien 6h00 à Paris
         id: check
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -51,10 +51,10 @@ jobs:
 
           current_time="$(TZ='Europe/Paris' date +%H:%M)"
           echo "Heure locale actuelle à Paris : ${current_time}"
-          if [ "$current_time" = "07:30" ]; then
+          if [ "$current_time" = "06:00" ]; then
             echo "should_run=true" >> "$GITHUB_OUTPUT"
           else
-            echo "Pas encore 7h30 à Paris (déclenchement dû au décalage été/hiver) : on ignore ce run."
+            echo "Pas encore 6h00 à Paris (déclenchement dû au décalage été/hiver) : on ignore ce run."
             echo "should_run=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -95,7 +95,7 @@ jobs:
       #    puis préparer la clé SSH utilisée pour s'y connecter.
       #    À ce stade, la liseuse doit être dans sa fenêtre de réveil
       #    quotidienne (voir kindle/dashboard_watchdog.sh) : si ce job
-      #    tourne bien à 7h30 à Paris et que le watchdog est installé sur
+      #    tourne bien à 6h00 à Paris et que le watchdog est installé sur
       #    la Kindle, elle est joignable.
       # ------------------------------------------------------------
       - name: Connexion au réseau Tailscale
@@ -134,7 +134,7 @@ jobs:
       #    Kindle (voir kindle/dashboard_watchdog.sh) : une tâche cron,
       #    exécutée toutes les 5 minutes sur la liseuse, qui ne
       #    l'empêche de s'endormir que dans une courte fenêtre autour de
-      #    7h30 — le reste de la journée, elle dort normalement pour
+      #    6h00 — le reste de la journée, elle dort normalement pour
       #    préserver sa batterie. Cette étape est idempotente (n'ajoute
       #    la tâche que si elle est absente) et sert aussi de
       #    "réparation automatique" si la Kindle a été réinitialisée.
@@ -199,4 +199,25 @@ jobs:
             scp $SSH_OPTS meteo.png "root@${KINDLE_HOST}:/mnt/us/linkss/screensavers/meteo.png"
           else
             echo "Screen Saver Hack non installé (/mnt/us/linkss absent) -- étape ignorée."
+          fi
+
+      # ------------------------------------------------------------
+      # 7) S'assurer que le bouton KUAL "Afficher le dashboard" est
+      #    installé sur la Kindle (voir kindle/kual/). Ce bouton permet
+      #    de redessiner manuellement le dashboard courant depuis le menu
+      #    KUAL de la liseuse, sans attendre la prochaine mise à jour
+      #    automatique — pratique pour vérifier que le mécanisme anti-
+      #    écran de veille (preventScreenSaver permanent, voir
+      #    kindle/dashboard_watchdog.sh) fonctionne bien. Idempotente,
+      #    et sans effet (silencieux) si KUAL n'est pas installé.
+      # ------------------------------------------------------------
+      - name: Installer le bouton KUAL "Afficher le dashboard" (si KUAL est installé)
+        run: |
+          if ssh $SSH_OPTS "root@${KINDLE_HOST}" "[ -d /mnt/us/extensions ]"; then
+            ssh $SSH_OPTS "root@${KINDLE_HOST}" "mkdir -p /mnt/us/extensions/kindlemeteo"
+            scp $SSH_OPTS kindle/kual/menu.json "root@${KINDLE_HOST}:/mnt/us/extensions/kindlemeteo/menu.json"
+            scp $SSH_OPTS kindle/kual/show_dashboard.sh "root@${KINDLE_HOST}:/mnt/us/extensions/kindlemeteo/show_dashboard.sh"
+            ssh $SSH_OPTS "root@${KINDLE_HOST}" "chmod +x /mnt/us/extensions/kindlemeteo/show_dashboard.sh"
+          else
+            echo "KUAL non installé (/mnt/us/extensions absent) -- étape ignorée."
           fi
