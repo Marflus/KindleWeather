@@ -113,17 +113,17 @@ ssh root@KINDLE_IP "mv /mnt/us/config.json.bak /mnt/us/extensions/kindleweather/
 KindleWeather
   Start weather station
   Settings
-    Language: English       > English, Francais, Deutsch, Espanol, Italiano, Portugues, Nederlands, Polski
-    Orientation: Portrait   > Portrait, Landscape
-    Icons: Classic          > Classic, Weather Icons, Material
-    Temperature: Celsius    > Celsius, Fahrenheit
-    Clock: 24-hour          > 24-hour, 12-hour (AM/PM)
+    Language: English       > [x] English, [ ] Francais, [ ] Deutsch, [ ] Espanol...
+    Orientation: Portrait   > [x] Portrait, [ ] Landscape
+    Icons: Classic          > [x] Classic, [ ] Weather Icons, [ ] Material
+    Temperature: Celsius    > [x] Celsius, [ ] Fahrenheit
+    Clock: 24-hour          > [x] 24-hour, [ ] 12-hour (AM/PM)
   Diagnostic
 ```
 
-Pressing a value saves it in `config.json` and puts a check mark next to it.
-The menu shows the new value the next time KUAL opens. Change the settings
-before starting the station: KUAL is closed while it runs.
+Pressing a value saves it in `config.json`. KUAL then reloads its menu and goes
+back to its first page, where the settings show the new value. Change the
+settings before starting the station: KUAL is closed while it runs.
 
 ## Configuration
 

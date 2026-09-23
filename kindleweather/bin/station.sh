@@ -20,9 +20,21 @@ ROTATION_FILE=$(echo /sys/devices/platform/*_epdc_fb/graphics/fb0/rotate)
 ROTATION=$(cat "$ROTATION_FILE" 2>/dev/null)
 log "screen rotation: ${ROTATION:-unknown}"
 
+# Shown until the first dashboard, which takes up to a minute.
+starting_screen() {
+    [ -n "$ROTATION" ] && echo "$ROTATION" >"$ROTATION_FILE"
+    /usr/sbin/eips -c
+    /usr/sbin/eips 3 27 "$STARTING_MESSAGE"
+    /usr/sbin/eips 3 29 "The dashboard appears within a minute."
+    /usr/sbin/eips 3 31 "To quit, restart the Kindle."
+}
+starting_screen
+
 # Stop the interface and its services, so nothing draws over the dashboard
-# and the battery lasts.
+# and the battery lasts. The interface may blank the screen as it stops: show
+# the message again.
 log "stopping the interface: $(stop lab126_gui 2>&1)"
+starting_screen
 for job in otaupd phd tmd x todo mcsd archive dynconfig dpmd appmgrd stackdumpd; do
     stop "$job" >/dev/null 2>&1
 done
@@ -47,8 +59,6 @@ show() {
         line=$((line + 1))
     done
 }
-
-show "$STARTING_MESSAGE"
 
 wifi_connected() {
     lipc-get-prop com.lab126.wifid cmState | grep -q CONNECTED

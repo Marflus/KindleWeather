@@ -3,13 +3,16 @@
 python3 -m kindle_weather.settings SETTING VALUE   changes config.json, then the menu
 python3 -m kindle_weather.settings                 rewrites the menu from config.json
 
-The settings buttons run bin/set.sh. The menu names the current values, which
-KUAL displays the next time it opens: it does not wait for the change to reload.
+A settings button runs bin/set.sh, then KUAL reloads the menu a quarter of a
+second later. That is too soon for Python: set.sh first updates the menu with
+sed, which the one-button-per-line layout of menu.json makes simple, then runs
+this module.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -70,7 +73,7 @@ def change(setting: str, value: str) -> None:
     for parent in parents:
         section = section.setdefault(parent, {})
     section[key] = value
-    CONFIG_PATH.write_text(json.dumps(raw, indent=2, ensure_ascii=False) + "\n", "utf-8")
+    _write(CONFIG_PATH, json.dumps(raw, indent=2, ensure_ascii=False) + "\n")
 
 
 def write_menu() -> None:
@@ -82,31 +85,48 @@ def write_menu() -> None:
         "temperature": config.temperature_unit,
         "clock": config.clock,
     }
-    # One submenu per setting, named after its current value.
+    # A submenu per setting, titled with its current value, which is also
+    # marked [x] among the choices. set.sh relies on these names.
     settings = []
-    for priority, (setting, (label, _, values)) in enumerate(SETTINGS.items(), start=1):
+    for priority, (setting, (title, _, values)) in enumerate(SETTINGS.items(), start=1):
         choices = [
             {
-                "name": name,
+                "name": f"[{'x' if value == current[setting] else ' '}] {name}",
                 "priority": index,
                 "action": f"sh bin/set.sh {setting} {value}",
-                # Stay in the menu, with a check mark on the chosen value.
+                # Stay in KUAL, and reload the menu to show the change.
                 "exitmenu": False,
-                "checked": True,
+                "refresh": True,
             }
             for index, (value, name) in enumerate(values.items(), start=1)
         ]
         name = values[current[setting]]
-        settings.append({"name": f"{label}: {name}", "priority": priority, "items": choices})
+        settings.append({"name": f"{title}: {name}", "priority": priority, "items": choices})
     items = [
         {"name": "Start weather station", "priority": 1, "action": "sh bin/start.sh"},
         {"name": "Settings", "priority": 2, "items": settings},
         {"name": "Diagnostic", "priority": 3, "action": "sh bin/diagnose.sh"},
     ]
     menu = {"items": [{"name": "KindleWeather", "priority": 1, "items": items}]}
-    with open(MENU_PATH, "w", encoding="utf-8", newline="\n") as file:
-        json.dump(menu, file, indent=2)
-        file.write("\n")
+    _write(MENU_PATH, _menu_json(menu) + "\n")
+
+
+def _menu_json(entry: dict, depth: int = 0) -> str:
+    """JSON with one button per line, for set.sh to edit with sed."""
+    indent = "  " * depth
+    if "items" not in entry:
+        return indent + json.dumps(entry)
+    fields = json.dumps({key: value for key, value in entry.items() if key != "items"})[1:-1]
+    children = ",\n".join(_menu_json(child, depth + 1) for child in entry["items"])
+    return f'{indent}{{{fields}{", " if fields else ""}"items": [\n{children}\n{indent}]}}'
+
+
+def _write(path: Path, text: str) -> None:
+    """Replace the file at once, so that KUAL never reads it half written."""
+    temporary = path.with_name(path.name + ".tmp")
+    with open(temporary, "w", encoding="utf-8", newline="\n") as file:
+        file.write(text)
+    os.replace(temporary, path)
 
 
 if __name__ == "__main__":

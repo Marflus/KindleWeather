@@ -288,26 +288,28 @@ class _Dashboard:
             draw, forecast.current.weather_code, (left, icon_top, left + place_column, body_bottom)
         )
 
-        max_text = f"Max {round(forecast.today.temperature_max)}°"
-        min_text = f"Min {round(forecast.today.temperature_min)}°"
+        unit = forecast.temperature_unit
+        max_text = f"Max {round(forecast.today.temperature_max)}{unit}"
+        min_text = f"Min {round(forecast.today.temperature_min)}{unit}"
         min_max_width = max(text_width(draw, t, fonts["min_max"]) for t in (max_text, min_text))
         min_max_x = right - min_max_width
         min_max = [(max_text, fonts["min_max"], INK), (min_text, fonts["min_max"], GRAY_DARK)]
         self._text_stack(min_max_x, center_y, min_max, 14)
 
         # Temperature and description, centered between the city column and min/max.
-        temperature = f"{round(forecast.current.temperature)}°"
+        temperature = f"{round(forecast.current.temperature)}{unit}"
         description = self.locale.describe(forecast.current.weather_code)
         space_left, space_right = left + place_column + 30, min_max_x - 30
-        description_font = _shrink_to_fit(
-            draw, description, fonts["description"], space_right - space_left
-        )
+        # Both shrink if needed, such as for "-12°C" or a long description.
+        space = space_right - space_left
+        temperature_font = _shrink_to_fit(draw, temperature, fonts["temperature"], space)
+        description_font = _shrink_to_fit(draw, description, fonts["description"], space)
         block_width = max(
-            text_width(draw, temperature, fonts["temperature"]),
+            text_width(draw, temperature, temperature_font),
             text_width(draw, description, description_font),
         )
         block_x = (space_left + space_right - block_width) / 2
-        main = [(temperature, fonts["temperature"], INK), (description, description_font, INK)]
+        main = [(temperature, temperature_font, INK), (description, description_font, INK)]
         self._text_stack(block_x, center_y, main, 18)
 
         self._details_panel(divider_x + padding, center_y, panel_width)
@@ -364,7 +366,7 @@ class _Dashboard:
             )
             label = self.locale.format_short_date(day.date)
             draw_centered_text(self.draw, center_x, top + 12, label, date_font, INK)
-            temperature = f"{day.temperature_mean}°"
+            temperature = f"{day.temperature_mean}{self.forecast.temperature_unit}"
             temperature_box = self.draw.textbbox((0, 0), temperature, font=temperature_font)
             temperature_y = bottom - 12 - temperature_box[3]
             draw_centered_text(
@@ -426,8 +428,9 @@ class _Dashboard:
         for fraction in (0, 0.5, 1):
             y = bottom - fraction * (bottom - top)
             draw.line([left, y, right, y], fill=GRAY_LIGHT, width=1)
-        draw.text((MARGIN, top - 12), f"{round(high)}°", font=font, fill=GRAY_DARK)
-        draw.text((MARGIN, bottom - 12), f"{round(low)}°", font=font, fill=GRAY_DARK)
+        unit = forecast.temperature_unit
+        draw.text((MARGIN, top - 12), f"{round(high)}{unit}", font=font, fill=GRAY_DARK)
+        draw.text((MARGIN, bottom - 12), f"{round(low)}{unit}", font=font, fill=GRAY_DARK)
 
         points = [(left + f * (right - left), y_of(h.temperature)) for f, h in samples]
         draw.polygon([(left, bottom), *points, (right, bottom)], fill=GRAY_PALE)
