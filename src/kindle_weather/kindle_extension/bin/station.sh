@@ -8,8 +8,6 @@ CONFIG="$EXTENSION_DIR/config.json"
 IMAGE="$EXTENSION_DIR/dashboard.png"
 LOG="$EXTENSION_DIR/station.log"
 REFRESH_SECONDS=3600
-# A downloaded dashboard older than this means it is no longer published.
-OUTDATED_SECONDS=21600
 LOW_BATTERY_PERCENT=10
 # Wake-capable real-time clock of the Paperwhite 2 and 3.
 RTC=/dev/rtc1
@@ -70,36 +68,6 @@ draw() {
     [ -z "$error" ] && log "dashboard updated"
 }
 
-# Download the dashboard from $DASHBOARD_URL to $IMAGE, or set $error.
-download() {
-    # -R dates the file from the server, to tell when it was last published.
-    curl -fsSL -R -o "$IMAGE.part" "$DASHBOARD_URL" 2>>"$LOG"
-    case $? in
-        0) ;;
-        6 | 7 | 28) error="$SERVER_ERROR" ;;
-        22) error="$NOT_FOUND_ERROR" ;;
-        35 | 51 | 53 | 54 | 58 | 59 | 60 | 64 | 66 | 77 | 80 | 82 | 83 | 90 | 91)
-            error="$SECURE_ERROR" ;;
-        *) error="$DOWNLOAD_ERROR" ;;
-    esac
-    if [ -z "$error" ] && ! head -c 8 "$IMAGE.part" | grep -q PNG; then
-        # Typically a Wi-Fi login page instead of the image.
-        error="$INVALID_FILE_ERROR"
-    fi
-    if [ -n "$error" ]; then
-        rm -f "$IMAGE.part"
-        return
-    fi
-    mv "$IMAGE.part" "$IMAGE"
-    log "dashboard updated"
-
-    published=$(date -r "$IMAGE" +%s 2>/dev/null)
-    now=$(date +%s)
-    if [ -n "$published" ] && [ $((now - published)) -gt "$OUTDATED_SECONDS" ]; then
-        error="$OUTDATED_ERROR"
-    fi
-}
-
 battery_warning() {
     level=$(lipc-get-prop com.lab126.powerd battLevel 2>/dev/null)
     if [ -n "$level" ] && [ "$level" -le "$LOW_BATTERY_PERCENT" ] 2>/dev/null; then
@@ -107,8 +75,8 @@ battery_warning() {
     fi
 }
 
-# Defines DASHBOARD_URL, the error messages (E7 to E14) and LOW_BATTERY_WARNING,
-# in the configured language. Written at installation, then again from
+# Defines the error messages (E7, E8) and LOW_BATTERY_WARNING, in the
+# configured language. Written at installation, then again from
 # config.json at each start when Python is available.
 . "$EXTENSION_DIR/settings.sh"
 PYTHON=$(find_python)
@@ -127,12 +95,10 @@ log "station started, python: ${PYTHON:-none}"
 while true; do
     error=""
     lipc-set-prop com.lab126.cmd wirelessEnable 1
-    if ! wait_for_wifi; then
-        error="$WIFI_ERROR"
-    elif [ -n "$DASHBOARD_URL" ]; then
-        download
-    else
+    if wait_for_wifi; then
         draw
+    else
+        error="$WIFI_ERROR"
     fi
     lipc-set-prop com.lab126.cmd wirelessEnable 0
     warning=$(battery_warning)

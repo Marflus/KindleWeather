@@ -77,7 +77,7 @@ def write_kual_files(target: Path, config: Config) -> None:
         ]
     }
     _write_unix_text(target / "menu.json", json.dumps(menu, indent=2) + "\n")
-    settings = {"DASHBOARD_URL": config.dashboard_url or ""}
+    settings = {}
     for name, error in KINDLE_ERRORS.items():
         settings[name] = ascii_fold(f"{labels['error']} {error.code}: {labels[error.label]}")
     settings["LOW_BATTERY_WARNING"] = ascii_fold(labels["low_battery"])

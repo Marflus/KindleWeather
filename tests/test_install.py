@@ -74,31 +74,19 @@ def test_menu_starts_the_station_detached(kindle, tmp_path):
 
 
 def test_settings_are_a_unix_shell_file(kindle, tmp_path):
-    target = install(kindle, tmp_path, dashboard_url="https://x.org/a b.png")
+    target = install(kindle, tmp_path)
     assert (target / "settings.sh").read_bytes() == (
-        b"DASHBOARD_URL='https://x.org/a b.png'\n"
         b"WIFI_ERROR='Erreur E7: Pas de connexion Wi-Fi'\n"
         b"PYTHON_ERROR='Erreur E8: Python 3 absent, installez-le avec MRPI'\n"
-        b"SERVER_ERROR='Erreur E9: Serveur du tableau de bord injoignable'\n"
-        b"NOT_FOUND_ERROR='Erreur E10: Tableau de bord introuvable sur le serveur'\n"
-        b"SECURE_ERROR='Erreur E11: Echec de la connexion securisee'\n"
-        b"INVALID_FILE_ERROR='Erreur E12: Fichier du tableau de bord invalide'\n"
-        b"OUTDATED_ERROR='Erreur E13: Tableau de bord perime'\n"
-        b"DOWNLOAD_ERROR='Erreur E14: Echec du telechargement du tableau de bord'\n"
         b"LOW_BATTERY_WARNING='Batterie faible'\n"
     )
-
-
-def test_the_kindle_draws_its_dashboard_without_dashboard_url(kindle, tmp_path):
-    target = install(kindle, tmp_path)
-    assert (target / "settings.sh").read_text().startswith("DASHBOARD_URL=''\n")
 
 
 def test_settings_define_every_message_station_sh_uses(kindle, tmp_path):
     target = install(kindle, tmp_path)
     defined = {line.split("=")[0] for line in (target / "settings.sh").read_text().splitlines()}
     script = (DEFAULT_EXTENSION_SOURCE / "bin" / "station.sh").read_text()
-    used = set(re.findall(r"\$\{?([A-Z_]+(?:_ERROR|_WARNING|_URL))\b", script))
+    used = set(re.findall(r"\$\{?([A-Z_]+(?:_ERROR|_WARNING))\b", script))
     assert used == defined
 
 

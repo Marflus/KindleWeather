@@ -1,7 +1,5 @@
 # KindleWeather
 
-[![CI](https://github.com/Marflus/KindleWeather/actions/workflows/ci.yml/badge.svg)](https://github.com/Marflus/KindleWeather/actions/workflows/ci.yml)
-
 Turn a jailbroken Kindle into a standalone, battery-powered weather station.
 Every hour the Kindle wakes up, fetches the forecast from
 [Open-Meteo](https://open-meteo.com/), draws a grayscale dashboard tuned for
@@ -143,7 +141,6 @@ updating KindleWeather, keep a copy of your `config.json`: the zip replaces it.
 | `display.orientation` | `"portrait"` (default) or `"landscape"`. In landscape, read the Kindle turned a quarter turn clockwise. |
 | `display.icons` | `"classic"` (default), `"weather-icons"` or `"material"`, see [Icon sets](#icon-sets). |
 | `temperature_unit` | `"celsius"` (default) or `"fahrenheit"`. |
-| `dashboard_url` | Optional, see [the alternative](#alternative-publish-the-dashboard-with-github-actions). When set, the Kindle downloads its dashboard from this address instead of drawing it. |
 
 ## Languages
 
@@ -191,34 +188,6 @@ retried at the next hourly refresh.
 
 Below 10 % battery, the Kindle also shows a low battery warning.
 
-## Alternative: publish the dashboard with GitHub Actions
-
-The Kindle can also download a dashboard drawn elsewhere instead of drawing
-it itself, which does not need Python on the Kindle. A GitHub workflow of
-this repository can draw it every hour and publish it on GitHub Pages:
-
-1. Fork this repository and edit [`config/config.json`](config/config.json).
-   Add `dashboard_url` with your GitHub Pages address:
-   `https://<user>.github.io/<repository>/dashboard.png`.
-2. In **Settings > Pages**, set **Source** to **GitHub Actions**. GitHub Pages
-   requires a public repository on the free plan.
-3. Run **Actions > Publish dashboard > Run workflow**, then open `dashboard_url`
-   in a browser to check the image. The workflow then runs every hour.
-4. Install the station with `dashboard_url` in the Kindle's `config.json`.
-
-GitHub may delay scheduled workflows, so the dashboard can be older than an
-hour, and it disables them after 60 days without activity in the repository.
-Downloading adds these errors:
-
-| Code | Meaning |
-|---|---|
-| E9 | The dashboard server could not be reached (DNS, connection or timeout). |
-| E10 | The server answered with an HTTP error, typically 404: check `dashboard_url` and that GitHub Pages is enabled. |
-| E11 | The HTTPS connection failed, often because of the Kindle's outdated certificates. |
-| E12 | The downloaded file is not a PNG image, such as a Wi-Fi login page. |
-| E13 | The dashboard has not been updated for over 6 hours: check the **Actions** tab. |
-| E14 | Any other download error; the reason is in `station.log`. |
-
 ## Usage
 
 ```bash
@@ -236,8 +205,6 @@ and macOS usually have.
 ## Project structure
 
 ```
-.github/workflows/    ci.yml (lint, tests), release.yml (kindleweather.zip),
-                      publish.yml (GitHub Pages alternative)
 config/               config.json, used in a clone of the repository
 preview/              dashboard previews, one folder per icon set
 scripts/              previews.py (makes preview/), package.py (makes dist/kindleweather.zip)
@@ -263,10 +230,8 @@ python scripts/previews.py    # regenerate the previews
 python scripts/package.py     # build dist/kindleweather.zip
 ```
 
-CI runs these checks on Python 3.9 and 3.12 on every push and pull request.
-To publish `kindleweather.zip` as a release, push a `v*` tag or run the **Release** workflow.
-The repository owner can run the **My Kindle** workflow to get the extension
-with `config/config.json`, ready to copy, and a preview of the dashboard.
+The code must run on Python 3.9, the oldest the Kindle may have. To publish a
+new version, build `dist/kindleweather.zip` and attach it to a GitHub release.
 
 ## Known limitations
 

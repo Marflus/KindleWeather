@@ -28,12 +28,6 @@
     "error_render": "Falha ao gerar o painel",
     "error_wifi": "Sem conexão Wi-Fi",
     "error_python": "Python 3 ausente, instale-o com o MRPI",
-    "error_server": "Servidor do painel inacessível",
-    "error_not_found": "Painel não encontrado no servidor",
-    "error_secure": "Falha na conexão segura",
-    "error_invalid_file": "Arquivo do painel inválido",
-    "error_outdated": "Painel desatualizado",
-    "error_download": "Falha ao baixar o painel",
     "error_retry": "Nova tentativa em uma hora",
     "low_battery": "Bateria fraca"
   },

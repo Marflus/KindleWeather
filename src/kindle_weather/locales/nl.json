@@ -28,12 +28,6 @@
     "error_render": "Maken van het dashboard mislukt",
     "error_wifi": "Geen wifi-verbinding",
     "error_python": "Python 3 ontbreekt, installeer het met MRPI",
-    "error_server": "Dashboardserver onbereikbaar",
-    "error_not_found": "Dashboard niet gevonden op de server",
-    "error_secure": "Beveiligde verbinding mislukt",
-    "error_invalid_file": "Ongeldig dashboardbestand",
-    "error_outdated": "Dashboard verouderd",
-    "error_download": "Downloaden van het dashboard mislukt",
     "error_retry": "Nieuwe poging over een uur",
     "low_battery": "Batterij bijna leeg"
   },

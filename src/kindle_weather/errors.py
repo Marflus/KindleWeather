@@ -33,13 +33,6 @@ RENDER_FAILED = ErrorCode("E6", "error_render")
 KINDLE_ERRORS = {
     "WIFI_ERROR": ErrorCode("E7", "error_wifi"),
     "PYTHON_ERROR": ErrorCode("E8", "error_python"),
-    # When the Kindle downloads its dashboard from dashboard_url.
-    "SERVER_ERROR": ErrorCode("E9", "error_server"),
-    "NOT_FOUND_ERROR": ErrorCode("E10", "error_not_found"),
-    "SECURE_ERROR": ErrorCode("E11", "error_secure"),
-    "INVALID_FILE_ERROR": ErrorCode("E12", "error_invalid_file"),
-    "OUTDATED_ERROR": ErrorCode("E13", "error_outdated"),
-    "DOWNLOAD_ERROR": ErrorCode("E14", "error_download"),
 }
 
 

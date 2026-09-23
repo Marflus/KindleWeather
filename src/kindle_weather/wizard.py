@@ -55,8 +55,6 @@ def run_wizard(
         "display": {"width": width, "height": height, "orientation": orientation, "icons": icons},
         "temperature_unit": unit,
     }
-    if current.get("dashboard_url"):
-        config["dashboard_url"] = current["dashboard_url"]
     parse_config(config)
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n", "utf-8")

@@ -28,12 +28,6 @@
     "error_render": "Erstellen des Dashboards fehlgeschlagen",
     "error_wifi": "Keine WLAN-Verbindung",
     "error_python": "Python 3 fehlt, mit MRPI installieren",
-    "error_server": "Dashboard-Server nicht erreichbar",
-    "error_not_found": "Dashboard auf dem Server nicht gefunden",
-    "error_secure": "Sichere Verbindung fehlgeschlagen",
-    "error_invalid_file": "Ungültige Dashboard-Datei",
-    "error_outdated": "Dashboard veraltet",
-    "error_download": "Download des Dashboards fehlgeschlagen",
     "error_retry": "Nächster Versuch in einer Stunde",
     "low_battery": "Akku schwach"
   },

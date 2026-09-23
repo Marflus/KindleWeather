@@ -28,12 +28,6 @@
     "error_render": "Error al generar el panel",
     "error_wifi": "Sin conexión Wi-Fi",
     "error_python": "Falta Python 3, instálelo con MRPI",
-    "error_server": "Servidor del panel inaccesible",
-    "error_not_found": "Panel no encontrado en el servidor",
-    "error_secure": "Error de conexión segura",
-    "error_invalid_file": "Archivo del panel no válido",
-    "error_outdated": "Panel desactualizado",
-    "error_download": "Error al descargar el panel",
     "error_retry": "Nuevo intento en una hora",
     "low_battery": "Batería baja"
   },

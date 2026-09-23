@@ -100,7 +100,7 @@ def test_kual_files_follow_the_config(config_path, tmp_path):
     cli.main(["--config", str(config_path), "kual-files", str(tmp_path)])
     menu = json.loads((tmp_path / "menu.json").read_text())
     assert menu["items"][0]["items"][0]["name"] == "Demarrer la station meteo"
-    assert (tmp_path / "settings.sh").read_text().startswith("DASHBOARD_URL=''\n")
+    assert "E7: Pas de connexion Wi-Fi" in (tmp_path / "settings.sh").read_text()
 
 
 def test_install_finds_the_kindle(config_path, monkeypatch, tmp_path):

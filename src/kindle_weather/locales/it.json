@@ -28,12 +28,6 @@
     "error_render": "Generazione della dashboard non riuscita",
     "error_wifi": "Nessuna connessione Wi-Fi",
     "error_python": "Python 3 mancante, installalo con MRPI",
-    "error_server": "Server della dashboard non raggiungibile",
-    "error_not_found": "Dashboard non trovata sul server",
-    "error_secure": "Connessione sicura non riuscita",
-    "error_invalid_file": "File della dashboard non valido",
-    "error_outdated": "Dashboard non aggiornata",
-    "error_download": "Download della dashboard non riuscito",
     "error_retry": "Nuovo tentativo tra un'ora",
     "low_battery": "Batteria scarica"
   },

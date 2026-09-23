@@ -32,7 +32,6 @@ def test_wizard_writes_a_valid_config(tmp_path, monkeypatch):
     assert loaded.orientation == "landscape"
     assert loaded.temperature_unit == "celsius"
     assert loaded.icon_set == "material"
-    assert loaded.dashboard_url is None
     assert any("Atlantis was not found" in line for line in said)
     assert any("Found Varsovie, Pologne (PL)" in line for line in said)
 
