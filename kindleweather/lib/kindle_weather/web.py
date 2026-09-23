@@ -14,9 +14,10 @@ import signal
 import socket
 import subprocess
 import sys
+import threading
 import time
 from contextlib import suppress
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, urlsplit
 
 from kindle_weather.config import load_config
@@ -53,7 +54,15 @@ input[type=radio] { width: 24px; height: 24px; vertical-align: middle; }
 """
 
 
+# One change at a time to config.json, whatever the number of browsers.
+CHANGES = threading.Lock()
+
+
 class Handler(BaseHTTPRequestHandler):
+    # Browsers open connections in advance and may leave them silent: close
+    # them after a while, each in its own thread (see main()).
+    timeout = 20
+
     def do_GET(self) -> None:
         self.server.last_request = time.time()
         url = urlsplit(self.path)
@@ -67,6 +76,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         self.server.last_request = time.time()
+        with CHANGES:
+            self._post()
+
+    def _post(self) -> None:
         length = int(self.headers.get("Content-Length") or 0)
         form = {
             key: values[0]
@@ -221,7 +234,8 @@ def _firewall(action: str) -> None:
 
 
 def main() -> None:
-    server = HTTPServer(("", PORT), Handler)
+    # A thread per connection, so that an idle one does not hold up the others.
+    server = ThreadingHTTPServer(("", PORT), Handler)
     server.timeout = 30
     server.last_request = time.time()
     server.done = False
