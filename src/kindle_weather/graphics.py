@@ -148,6 +148,20 @@ def icon_bounds(code: int, r: float) -> tuple[int, int, int, int]:
     return left - size / 2, top - size / 2, right - size / 2, bottom - size / 2
 
 
+def draw_weather_icon_in_box(draw, code: int, box) -> None:
+    """Draw the largest icon whose ink fits in box, centered on it."""
+    left, top, right, bottom = box
+    reference = 100
+    ink_left, ink_top, ink_right, ink_bottom = icon_bounds(code, reference)
+    r = reference * min(
+        (right - left) / (ink_right - ink_left), (bottom - top) / (ink_bottom - ink_top)
+    )
+    ink_left, ink_top, ink_right, ink_bottom = icon_bounds(code, r)
+    cx = (left + right) / 2 - (ink_left + ink_right) / 2
+    cy = (top + bottom) / 2 - (ink_top + ink_bottom) / 2
+    draw_weather_icon(draw, code, cx, cy, r)
+
+
 def draw_diagonal_hatch(draw, box, spacing, width, rising=True, fill=GRAY_DARK) -> None:
     left, top, right, bottom = box
     rise = bottom - top

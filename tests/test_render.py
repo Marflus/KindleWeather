@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 from PIL import ImageChops
 
@@ -34,3 +36,8 @@ def test_precipitation_runs_split_by_kind():
         ("snow", 7, 8),
     ]
     assert precipitation_runs([0, 1, 2, 45]) == []
+
+
+def test_renders_without_upcoming_days(forecast):
+    image = render_dashboard(replace(forecast, upcoming_days=[]), FRENCH)
+    assert image.size == (1072, 1448)

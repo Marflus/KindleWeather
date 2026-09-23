@@ -19,13 +19,14 @@ def raw_forecast():
     return {
         "timezone": TIMEZONE,
         "daily": {
-            "time": ["2026-09-23", "2026-09-24"],
-            "weather_code": [63, 3],
-            "temperature_2m_max": [18.4, 16.0],
-            "temperature_2m_min": [6.6, 7.0],
-            "sunrise": ["2026-09-23T06:32", "2026-09-24T06:34"],
-            "sunset": ["2026-09-23T18:41", "2026-09-24T18:38"],
+            "time": [f"2026-09-{day}" for day in range(23, 31)],
+            "weather_code": [63, 3, 0, 2, 61, 95, 71, 1],
+            "temperature_2m_max": [18.4, 16.0, 19.2, 17.5, 14.1, 15.6, 9.8, 12.3],
+            "temperature_2m_min": [6.6, 7.0, 8.1, 6.4, 5.2, 7.7, 1.9, 3.0],
+            "sunrise": [f"2026-09-{day}T06:32" for day in range(23, 31)],
+            "sunset": [f"2026-09-{day}T18:41" for day in range(23, 31)],
         },
+        "hourly_units": {"temperature_2m": "°C"},
         "hourly": {
             "time": times,
             "temperature_2m": [12 + 6 * math.sin((i % 24 - 9) * math.pi / 12) for i in range(48)],

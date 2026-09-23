@@ -18,9 +18,10 @@ next refresh.
 ## Features
 
 - Today's conditions, min/max, sunrise and sunset, average humidity and wind
+- Forecast for the next 7 days: weather icon and mean temperature
 - Precipitation alert for the next 24 hours with its icon, by priority: snow, then thunderstorm, then rain
 - Temperature chart and 2-hourly table for the next 24 hours, starting at the current hour; rain, thunderstorm and snow hours get distinct patterns
-- Portrait or landscape layout, English or French
+- Portrait or landscape layout, English or French, Celsius or Fahrenheit
 - City set by name; its coordinates and localized name come from the Open-Meteo geocoding API
 - Hourly refresh, with the Kindle suspended to RAM in between
 
@@ -106,6 +107,7 @@ To stop the station, hold the power button until the Kindle restarts (10 to
   "language": "en",
   "location": { "city": "Lyon", "country_code": "FR" },
   "display": { "width": 1072, "height": 1448, "orientation": "portrait" },
+  "temperature_unit": "celsius",
   "dashboard_url": "https://you.github.io/KindleWeather/dashboard.png"
 }
 ```
@@ -117,6 +119,7 @@ To stop the station, hold the power button until the Kindle restarts (10 to
 | `location.country_code` | Optional ISO 3166-1 alpha-2 code (`"FR"`, `"US"`...) to pick the right city among homonyms. |
 | `display.width`, `display.height` | Screen resolution in pixels, in portrait (see [Compatibility](#compatibility)). |
 | `display.orientation` | `"portrait"` (default) or `"landscape"`. In landscape, read the Kindle turned a quarter turn clockwise. |
+| `temperature_unit` | `"celsius"` (default) or `"fahrenheit"`. |
 | `dashboard_url` | Where the Kindle downloads the dashboard. Any HTTP(S) host works, not only GitHub Pages. |
 
 After changing `language` or `dashboard_url`, run `kindle-weather install`
@@ -189,9 +192,10 @@ rafraîchissement suivant.
 ## Fonctionnalités
 
 - Conditions du jour, minimales et maximales, lever et coucher du soleil, humidité et vent moyens
+- Prévisions des 7 prochains jours : icône météo et température moyenne
 - Alerte de précipitations pour les 24 prochaines heures avec son icône, par priorité : neige, puis orage, puis pluie
 - Courbe des températures et tableau toutes les 2 heures pour les 24 prochaines heures, à partir de l'heure actuelle ; les heures de pluie, d'orage et de neige ont chacune leur motif
-- Affichage en portrait ou en paysage, en anglais ou en français
+- Affichage en portrait ou en paysage, en anglais ou en français, en Celsius ou en Fahrenheit
 - Ville définie par son nom : ses coordonnées et son nom traduit viennent de l'API de géocodage d'Open-Meteo
 - Rafraîchissement toutes les heures, avec la Kindle en veille profonde entre deux mises à jour
 
@@ -279,6 +283,7 @@ redémarrage de la Kindle (10 à 20 secondes).
   "language": "fr",
   "location": { "city": "Lyon", "country_code": "FR" },
   "display": { "width": 1072, "height": 1448, "orientation": "portrait" },
+  "temperature_unit": "celsius",
   "dashboard_url": "https://vous.github.io/KindleWeather/dashboard.png"
 }
 ```
@@ -290,6 +295,7 @@ redémarrage de la Kindle (10 à 20 secondes).
 | `location.country_code` | Code ISO 3166-1 alpha-2 facultatif (`"FR"`, `"US"`...) pour choisir la bonne ville parmi des homonymes. |
 | `display.width`, `display.height` | Résolution de l'écran en pixels, en portrait (voir [Compatibilité](#compatibilité)). |
 | `display.orientation` | `"portrait"` (par défaut) ou `"landscape"` (paysage). En paysage, la Kindle se lit tournée d'un quart de tour dans le sens des aiguilles d'une montre. |
+| `temperature_unit` | `"celsius"` (par défaut) ou `"fahrenheit"`. |
 | `dashboard_url` | Adresse où la Kindle télécharge le tableau de bord. N'importe quel hébergement HTTP(S) convient, pas seulement GitHub Pages. |
 
 Après un changement de `language` ou de `dashboard_url`, relancer

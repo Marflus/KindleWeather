@@ -9,5 +9,6 @@
     "height": 1448,
     "orientation": "portrait"
   },
+  "temperature_unit": "celsius",
   "dashboard_url": "https://marflus.github.io/KindleWeather/dashboard.png"
 }

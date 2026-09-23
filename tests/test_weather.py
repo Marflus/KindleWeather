@@ -1,5 +1,5 @@
 from dataclasses import replace
-from datetime import datetime
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -16,8 +16,18 @@ def test_window_starts_at_the_current_hour(forecast):
 
 
 def test_summary_describes_today(forecast):
-    assert forecast.temperature_max == 18.4
+    assert forecast.today.date == date(2026, 9, 23)
+    assert forecast.today.temperature_max == 18.4
+    assert forecast.today.temperature_mean == 12
     assert (forecast.sunrise, forecast.sunset) == ("06:32", "18:41")
+    assert forecast.temperature_unit == "°C"
+
+
+def test_upcoming_days_start_tomorrow(forecast):
+    assert len(forecast.upcoming_days) == 7
+    assert forecast.upcoming_days[0].date == date(2026, 9, 24)
+    assert forecast.upcoming_days[-1].date == date(2026, 9, 30)
+    assert forecast.upcoming_days[5].weather_code == 71
 
 
 def test_window_is_cut_short_at_the_end_of_the_data(raw_forecast):

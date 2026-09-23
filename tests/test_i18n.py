@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 import pytest
 
@@ -29,3 +29,8 @@ def test_footer_timestamps():
 
 def test_unknown_weather_code_falls_back():
     assert ENGLISH.describe(1234) == "Variable weather"
+
+
+def test_short_dates():
+    assert ENGLISH.format_short_date(date(2026, 9, 24)) == "Thu 24"
+    assert FRENCH.format_short_date(date(2026, 9, 24)) == "Jeu 24"

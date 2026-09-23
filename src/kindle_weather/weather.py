@@ -1,9 +1,9 @@
-"""Open-Meteo client: city geocoding and today's forecast."""
+"""Open-Meteo client: city geocoding and forecast."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 import requests
@@ -12,6 +12,9 @@ GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 REQUEST_TIMEOUT = 20
 HEADERS = {"User-Agent": "KindleWeather"}
+
+WINDOW_HOURS = 24
+UPCOMING_DAYS = 7
 
 # WMO weather interpretation codes, grouped by icon.
 FOG_CODES = frozenset({45, 48})
@@ -54,23 +57,31 @@ class HourlyForecast:
     wind_speed: float
 
 
-WINDOW_HOURS = 24
-
-
 @dataclass(frozen=True)
-class DailyForecast:
-    """Today's summary, and the next 24 hours starting at the current hour."""
-
-    place_name: str
-    observed_at: datetime
+class DayForecast:
+    date: date
     weather_code: int
     temperature_max: float
     temperature_min: float
+
+    @property
+    def temperature_mean(self) -> int:
+        return round((round(self.temperature_max) + round(self.temperature_min)) / 2)
+
+
+@dataclass(frozen=True)
+class Forecast:
+    place_name: str
+    observed_at: datetime
+    temperature_unit: str
+    today: DayForecast
     sunrise: str | None
     sunset: str | None
+    # The next 24 hours, starting at the current hour.
     hours: list[HourlyForecast]
-    # The hour right after the window, which closes the temperature curve.
+    # The hour right after that window, which closes the temperature curve.
     window_end: HourlyForecast | None
+    upcoming_days: list[DayForecast]
 
     @property
     def precipitation_risk(self) -> str | None:
@@ -90,7 +101,7 @@ def geocode(city: str, country_code: str | None, language: str) -> Place:
     return Place(name=best["name"], latitude=best["latitude"], longitude=best["longitude"])
 
 
-def fetch_forecast(place: Place) -> dict:
+def fetch_forecast(place: Place, temperature_unit: str = "celsius") -> dict:
     return _get_json(
         FORECAST_URL,
         {
@@ -98,18 +109,18 @@ def fetch_forecast(place: Place) -> dict:
             "longitude": place.longitude,
             "daily": "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset",
             "hourly": "temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m",
+            "temperature_unit": temperature_unit,
             "timezone": "auto",
-            "forecast_days": 2,
+            "forecast_days": UPCOMING_DAYS + 1,
         },
     )
 
 
-def parse_forecast(raw: dict, place_name: str, now: datetime | None = None) -> DailyForecast:
+def parse_forecast(raw: dict, place_name: str, now: datetime | None = None) -> Forecast:
     now = now or datetime.now(ZoneInfo(raw["timezone"]))
-    today = now.strftime("%Y-%m-%d")
     hourly, daily = raw["hourly"], raw["daily"]
 
-    def entry(index: int) -> HourlyForecast:
+    def hour_entry(index: int) -> HourlyForecast:
         return HourlyForecast(
             hour=int(hourly["time"][index][11:13]),
             temperature=hourly["temperature_2m"][index],
@@ -118,24 +129,33 @@ def parse_forecast(raw: dict, place_name: str, now: datetime | None = None) -> D
             wind_speed=hourly["wind_speed_10m"][index],
         )
 
+    def day_entry(index: int) -> DayForecast:
+        return DayForecast(
+            date=date.fromisoformat(daily["time"][index]),
+            weather_code=daily["weather_code"][index],
+            temperature_max=daily["temperature_2m_max"][index],
+            temperature_min=daily["temperature_2m_min"][index],
+        )
+
     current_hour = now.strftime("%Y-%m-%dT%H:00")
     try:
         start = hourly["time"].index(current_hour)
     except ValueError:
         raise WeatherError(f"no hourly forecast for {current_hour}") from None
     end = start + WINDOW_HOURS
-    day = daily["time"].index(today)
+    today = daily["time"].index(now.strftime("%Y-%m-%d"))
+    last_day = min(today + UPCOMING_DAYS, len(daily["time"]) - 1)
 
-    return DailyForecast(
+    return Forecast(
         place_name=place_name,
         observed_at=now,
-        weather_code=daily["weather_code"][day],
-        temperature_max=daily["temperature_2m_max"][day],
-        temperature_min=daily["temperature_2m_min"][day],
-        sunrise=_clock_time(daily["sunrise"][day]),
-        sunset=_clock_time(daily["sunset"][day]),
-        hours=[entry(i) for i in range(start, min(end, len(hourly["time"])))],
-        window_end=entry(end) if end < len(hourly["time"]) else None,
+        temperature_unit=raw["hourly_units"]["temperature_2m"],
+        today=day_entry(today),
+        sunrise=_clock_time(daily["sunrise"][today]),
+        sunset=_clock_time(daily["sunset"][today]),
+        hours=[hour_entry(i) for i in range(start, min(end, len(hourly["time"])))],
+        window_end=hour_entry(end) if end < len(hourly["time"]) else None,
+        upcoming_days=[day_entry(i) for i in range(today + 1, last_day + 1)],
     )
 
 

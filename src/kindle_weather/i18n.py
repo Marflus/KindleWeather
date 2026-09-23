@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 
 
 @dataclass(frozen=True)
@@ -23,6 +23,9 @@ class Locale:
             month=self.months[moment.month - 1],
             year=moment.year,
         )
+
+    def format_short_date(self, day: date) -> str:
+        return f"{self.weekdays[day.weekday()][:3]} {day.day}"
 
     def format_updated_at(self, moment: datetime) -> str:
         return self.labels["updated"].format(moment.strftime(self.timestamp))

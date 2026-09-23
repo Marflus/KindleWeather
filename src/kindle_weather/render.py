@@ -23,6 +23,7 @@ from kindle_weather.graphics import (
     draw_sun_horizon,
     draw_symbol_grid,
     draw_weather_icon,
+    draw_weather_icon_in_box,
     draw_wind,
     icon_bounds,
     text_width,
@@ -31,7 +32,7 @@ from kindle_weather.i18n import Locale
 from kindle_weather.weather import (
     PRECIPITATION_KINDS,
     WINDOW_HOURS,
-    DailyForecast,
+    Forecast,
     precipitation_kind,
 )
 
@@ -46,6 +47,8 @@ FONT_SPECS = {
     "min_max": (font_roboto.RobotoBold, 38),
     "panel_label": (font_roboto.Roboto, 20),
     "panel_value": (font_roboto.RobotoBold, 24),
+    "day": (font_roboto.RobotoBold, 22),
+    "day_temperature": (font_roboto.RobotoBold, 30),
     "banner": (font_roboto.RobotoBold, 24),
     "axis": (font_roboto.Roboto, 18),
     "row": (font_roboto.RobotoBold, 26),
@@ -64,8 +67,10 @@ TABLE_CELLS = (0, 0.24, 0.47, 0.71)
 @dataclass(frozen=True)
 class Layout:
     size: tuple[int, int]
-    header_top: int
+    top: int
+    card_height: int
     panel_width: int
+    days_height: int
     chart_height: int
     table_columns: int
     row_height: int
@@ -76,23 +81,27 @@ class Layout:
 LAYOUTS = {
     "portrait": Layout(
         size=(1072, 1448),
-        header_top=56,
-        panel_width=340,
-        chart_height=336,
+        top=36,
+        card_height=270,
+        panel_width=300,
+        days_height=150,
+        chart_height=270,
         table_columns=2,
         row_height=66,
         column_gap=40,
-        footer_gap=54,
+        footer_gap=44,
     ),
     "landscape": Layout(
         size=(1448, 1072),
-        header_top=40,
+        top=28,
+        card_height=250,
         panel_width=520,
-        chart_height=170,
+        days_height=130,
+        chart_height=130,
         table_columns=3,
-        row_height=60,
+        row_height=52,
         column_gap=24,
-        footer_gap=40,
+        footer_gap=34,
     ),
 }
 
@@ -105,7 +114,7 @@ MARGIN = px(50)
 
 
 def render_dashboard(
-    forecast: DailyForecast,
+    forecast: Forecast,
     locale: Locale,
     size: tuple[int, int] = SCREEN_SIZE,
     orientation: str = "portrait",
@@ -132,6 +141,12 @@ def precipitation_runs(codes: list[int]) -> list[tuple[str, int, int]]:
     return runs
 
 
+def _shrink_to_fit(draw, text: str, font: ImageFont.FreeTypeFont, max_width: float):
+    while text_width(draw, text, font) > max_width and font.size > px(16):
+        font = font.font_variant(size=font.size - px(1))
+    return font
+
+
 def _draw_symbol(draw, kind: str, x: float, y: float) -> None:
     if kind == "storm":
         draw_bolt(draw, x, y, px(16))
@@ -140,7 +155,7 @@ def _draw_symbol(draw, kind: str, x: float, y: float) -> None:
 
 
 class _Dashboard:
-    def __init__(self, forecast: DailyForecast, locale: Locale, layout: Layout):
+    def __init__(self, forecast: Forecast, locale: Locale, layout: Layout):
         self.forecast = forecast
         self.locale = locale
         self.layout = layout
@@ -152,9 +167,10 @@ class _Dashboard:
         }
 
     def render(self) -> Image.Image:
-        y = self._header()
-        y = self._summary(y + px(18))
-        y = self._precipitation_banner(y + px(12))
+        y = self._summary(px(self.layout.top))
+        if self.forecast.upcoming_days:
+            y = self._upcoming_days(y + px(14))
+        y = self._precipitation_banner(y + px(14))
         y = self._temperature_chart(y + px(22))
         y = self._hourly_table(y + px(80))
         self._footer(y + px(self.layout.footer_gap))
@@ -163,87 +179,87 @@ class _Dashboard:
     def _separator(self, y: float) -> None:
         self.draw.line([(MARGIN, y), (self.width - MARGIN, y)], fill=GRAY_LIGHT, width=px(2))
 
-    def _header(self) -> int:
-        # Centered: the Kindle status bar covers the top corners.
-        top = px(self.layout.header_top)
-        center = self.width // 2
-        date = self.locale.format_long_date(self.forecast.observed_at)
-        place = self.forecast.place_name.upper()
-        draw_centered_text(self.draw, center, top, date, self.fonts["date"], INK)
-        draw_centered_text(
-            self.draw, center, top + px(48), place, self.fonts["location"], GRAY_DARK
+    def _summary(self, top: int) -> int:
+        """Today's card: date on top; city and icon, temperature, min and max; details panel."""
+        draw, fonts, forecast = self.draw, self.fonts, self.forecast
+        bottom = top + px(self.layout.card_height)
+        panel_width, padding = px(self.layout.panel_width), px(24)
+        draw.rounded_rectangle(
+            [MARGIN, top, self.width - MARGIN, bottom], radius=px(22), fill=GRAY_PALE
         )
-        bottom = top + px(96)
-        self._separator(bottom)
+        date = self.locale.format_long_date(forecast.observed_at)
+        draw_centered_text(draw, self.width // 2, top + px(20), date, fonts["date"], INK)
+
+        body_top, body_bottom = top + px(70), bottom - px(18)
+        center_y = (body_top + body_bottom) // 2
+        divider_x = self.width - MARGIN - panel_width - 2 * padding
+        draw.line([(divider_x, body_top), (divider_x, body_bottom)], fill=GRAY_LIGHT, width=px(2))
+        left, right = MARGIN + padding, divider_x - padding
+
+        place = forecast.place_name.upper()
+        place_box = draw.textbbox((0, 0), place, font=fonts["location"])
+        place_column = max(px(130), place_box[2] - place_box[0])
+        draw_centered_text(
+            draw,
+            left + place_column / 2,
+            body_top - place_box[1],
+            place,
+            fonts["location"],
+            GRAY_DARK,
+        )
+        icon_top = body_top + place_box[3] - place_box[1] + px(12)
+        draw_weather_icon_in_box(
+            draw, forecast.today.weather_code, (left, icon_top, left + place_column, body_bottom)
+        )
+
+        max_text = f"Max {round(forecast.today.temperature_max)}°"
+        min_text = f"Min {round(forecast.today.temperature_min)}°"
+        min_max_width = max(text_width(draw, t, fonts["min_max"]) for t in (max_text, min_text))
+        min_max_x = right - min_max_width
+        min_max = [(max_text, fonts["min_max"], INK), (min_text, fonts["min_max"], GRAY_DARK)]
+        self._text_stack(min_max_x, center_y, min_max, px(14))
+
+        # Temperature and description, centered between the city column and min/max.
+        temperature = f"{forecast.today.temperature_mean}°"
+        description = self.locale.describe(forecast.today.weather_code)
+        space_left, space_right = left + place_column + px(30), min_max_x - px(30)
+        description_font = _shrink_to_fit(
+            draw, description, fonts["description"], space_right - space_left
+        )
+        block_width = max(
+            text_width(draw, temperature, fonts["temperature"]),
+            text_width(draw, description, description_font),
+        )
+        block_x = (space_left + space_right - block_width) / 2
+        main = [(temperature, fonts["temperature"], INK), (description, description_font, INK)]
+        self._text_stack(block_x, center_y, main, px(18))
+
+        self._details_panel(divider_x + padding, center_y, panel_width)
         return bottom
 
-    def _summary(self, top: int) -> int:
-        draw, fonts, forecast = self.draw, self.fonts, self.forecast
-        height, panel_width, padding = px(220), px(self.layout.panel_width), px(20)
-        draw.rounded_rectangle(
-            [MARGIN, top, self.width - MARGIN, top + height], radius=px(22), fill=GRAY_PALE
-        )
-        divider_x = self.width - MARGIN - panel_width - 2 * padding
-        draw.line(
-            [(divider_x, top + px(24)), (divider_x, top + height - px(24))],
-            fill=GRAY_LIGHT,
-            width=px(2),
-        )
+    def _text_stack(self, x: float, center_y: float, lines, gap: int) -> None:
+        """Draw (text, font, fill) lines left-aligned at x, centered on center_y by their ink."""
+        boxes = [self.draw.textbbox((0, 0), text, font=font) for text, font, _ in lines]
+        heights = [box[3] - box[1] for box in boxes]
+        y = center_y - (sum(heights) + gap * (len(lines) - 1)) / 2
+        for (text, font, fill), box, height in zip(lines, boxes, heights, strict=True):
+            self.draw.text((x, y - box[1]), text, font=font, fill=fill)
+            y += height + gap
 
-        t_max = round(forecast.temperature_max)
-        t_min = round(forecast.temperature_min)
-        temperature = f"{round((t_max + t_min) / 2)}°"
-        description = self.locale.describe(forecast.weather_code)
-
-        icon_r = px(72)
-        icon_cx, center_y = MARGIN + padding + icon_r, top + height // 2
-        draw_weather_icon(draw, forecast.weather_code, icon_cx, center_y, icon_r)
-
-        text_x = icon_cx + icon_r + px(38)
-        temp_box = draw.textbbox((0, 0), temperature, font=fonts["temperature"])
-        desc_box = draw.textbbox((0, 0), description, font=fonts["description"])
-        temp_height, desc_height = temp_box[3] - temp_box[1], desc_box[3] - desc_box[1]
-        stack_top = center_y - (temp_height + px(18) + desc_height) / 2
-        draw.text(
-            (text_x, stack_top - temp_box[1]), temperature, font=fonts["temperature"], fill=INK
-        )
-        draw.text(
-            (text_x, stack_top + temp_height + px(18) - desc_box[1]),
-            description,
-            font=fonts["description"],
-            fill=INK,
-        )
-
-        max_text, min_text = f"Max {t_max}°", f"Min {t_min}°"
-        max_box = draw.textbbox((0, 0), max_text, font=fonts["min_max"])
-        min_box = draw.textbbox((0, 0), min_text, font=fonts["min_max"])
-        max_height, min_height = max_box[3] - max_box[1], min_box[3] - min_box[1]
-        min_max_x = text_x + text_width(draw, temperature, fonts["temperature"]) + px(30)
-        min_max_top = center_y - (max_height + px(14) + min_height) / 2
-        draw.text((min_max_x, min_max_top - max_box[1]), max_text, font=fonts["min_max"], fill=INK)
-        draw.text(
-            (min_max_x, min_max_top + max_height + px(14) - min_box[1]),
-            min_text,
-            font=fonts["min_max"],
-            fill=GRAY_DARK,
-        )
-
-        self._details_panel(divider_x + padding + px(8), top, height, panel_width)
-        return top + height
-
-    def _details_panel(self, left: int, card_top: int, card_height: int, width: int) -> None:
+    def _details_panel(self, left: int, center_y: int, width: int) -> None:
         hours = self.forecast.hours
         labels = self.locale.labels
         humidity = round(sum(h.humidity for h in hours) / len(hours))
         wind = round(sum(h.wind_speed for h in hours) / len(hours))
+        # Row by row: sunrise and humidity, then sunset and wind.
         cells = (
             (labels["sunrise"], self.forecast.sunrise or "—", "sunrise"),
-            (labels["sunset"], self.forecast.sunset or "—", "sunset"),
             (labels["humidity"], f"{humidity} %", "humidity"),
+            (labels["sunset"], self.forecast.sunset or "—", "sunset"),
             (labels["wind"], f"{wind} km/h", "wind"),
         )
         cell_height, icon_r, inset = px(64), px(16), px(14)
-        top = card_top + (card_height - 2 * cell_height) // 2 + px(20)
+        top = center_y - (cell_height + px(50)) // 2
         # Fixed grid so icons and labels stay aligned across rows of different text widths.
         for i, (label, value, kind) in enumerate(cells):
             row, column = divmod(i, 2)
@@ -261,6 +277,36 @@ class _Dashboard:
                 (text_x, y + px(2)), label, font=self.fonts["panel_label"], fill=GRAY_DARK
             )
             self.draw.text((text_x, y + px(24)), value, font=self.fonts["panel_value"], fill=INK)
+
+    def _upcoming_days(self, top: int) -> int:
+        """One box per upcoming day: short date, weather icon, mean temperature."""
+        days = self.forecast.upcoming_days
+        height, gap = px(self.layout.days_height), px(12)
+        width = (self.width - 2 * MARGIN - (len(days) - 1) * gap) / len(days)
+        date_font, temperature_font = self.fonts["day"], self.fonts["day_temperature"]
+        for i, day in enumerate(days):
+            left = round(MARGIN + i * (width + gap))
+            right, bottom = round(left + width), top + height
+            center_x = (left + right) / 2
+            self.draw.rounded_rectangle(
+                [left, top, right, bottom], radius=px(16), outline=GRAY_LIGHT, width=px(2)
+            )
+            label = self.locale.format_short_date(day.date)
+            draw_centered_text(self.draw, center_x, top + px(12), label, date_font, INK)
+            temperature = f"{day.temperature_mean}°"
+            temperature_box = self.draw.textbbox((0, 0), temperature, font=temperature_font)
+            temperature_y = bottom - px(12) - temperature_box[3]
+            draw_centered_text(
+                self.draw, center_x, temperature_y, temperature, temperature_font, INK
+            )
+            icon_box = (
+                left + px(18),
+                top + px(46),
+                right - px(18),
+                temperature_y + temperature_box[1] - px(10),
+            )
+            draw_weather_icon_in_box(self.draw, day.weather_code, icon_box)
+        return top + height
 
     def _precipitation_banner(self, top: int) -> int:
         height = px(46)
@@ -416,7 +462,7 @@ class _Dashboard:
                 )
                 draw.text(
                     (temp_x, middle - px(12)),
-                    f"{round(entry.temperature)}°C",
+                    f"{round(entry.temperature)}{self.forecast.temperature_unit}",
                     font=fonts["row"],
                     fill=INK,
                 )
