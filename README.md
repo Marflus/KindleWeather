@@ -216,15 +216,12 @@ src/kindle_weather/   Python package, standard library only; it runs on the Kind
   canvas.py             drawing with the system's cairo and FreeType, through ctypes
   wizard.py, install.py kindle-weather init and install
   kindle_extension/     KUAL extension; bin/station.sh is the station loop
-tests/                pytest suite, runs offline
 ```
 
 ## Development
 
 ```bash
-pip install -e ".[dev]"
-pytest
-ruff check . && ruff format --check .
+pip install -e .
 shellcheck --shell=sh --severity=warning src/kindle_weather/kindle_extension/bin/*.sh
 python scripts/previews.py    # regenerate the previews
 python scripts/package.py     # build dist/kindleweather.zip

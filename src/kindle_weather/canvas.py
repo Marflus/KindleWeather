@@ -159,9 +159,6 @@ class Picture:
         for y in range(self.height):
             yield self.pixels[y * self.width : (y + 1) * self.width]
 
-    def extrema(self) -> tuple[int, int]:
-        return min(self.pixels), max(self.pixels)
-
     def ink_bbox(self) -> tuple[int, int, int, int] | None:
         """Bounds of the non-white pixels, as Pillow's getbbox on the inverted image."""
         white = bytes([WHITE])
