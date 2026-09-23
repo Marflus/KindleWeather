@@ -39,8 +39,12 @@ python_version=$([ -n "$PYTHON" ] && "$PYTHON" -V 2>&1)
         echo "drawing: $(PYTHONPATH="$EXTENSION_DIR/lib" "$PYTHON" -c '
 from kindle_weather.canvas import Canvas
 Canvas(10, 10).picture()
-print("ok")' 2>&1 | tail -n 1)"
+print("ok")' 2>&1 | tail -n 1 | sed "s/^kindle_weather.canvas.CanvasError: //")"
     fi
+    echo "cairo and freetype files: $(find /usr/lib /lib /usr/local/lib /opt /mnt/us/python3 \
+        \( -name 'libcairo*' -o -name 'libfreetype*' \) 2>/dev/null | tr '\n' ' ')"
+    echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+    echo "python file: $(ls -l "$PYTHON" 2>/dev/null)"
     echo "wake-up clock: $(echo /dev/rtc*)"
     echo "wifi: $(lipc-get-prop com.lab126.wifid cmState 2>&1)"
     echo "battery: $(lipc-get-prop com.lab126.powerd battLevel 2>&1) %"

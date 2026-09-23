@@ -46,15 +46,25 @@ class _FontExtents(ctypes.Structure):
     ]
 
 
+LIBRARY_FOLDERS = ("/usr/lib", "/lib", "/usr/local/lib", "/usr/lib/arm-linux-gnueabi")
+
+
 def _load(name: str, soname: str) -> ctypes.CDLL:
-    # The Kindle has no ldconfig cache for find_library: try the soname first.
-    for candidate in (soname, ctypes.util.find_library(name)):
-        if candidate:
-            try:
-                return ctypes.CDLL(candidate)
-            except OSError:
-                continue
-    raise CanvasError(f"the {name} library is missing: install {soname}")
+    # The Kindle has no ldconfig cache for find_library: try the soname, then
+    # the usual folders, then any version of the library there.
+    candidates = [soname, *(f"{folder}/{soname}" for folder in LIBRARY_FOLDERS)]
+    for folder in LIBRARY_FOLDERS:
+        candidates += sorted(str(path) for path in Path(folder).glob(f"lib{name}.so*"))
+    candidates.append(ctypes.util.find_library(name))
+    errors = []
+    for candidate in dict.fromkeys(filter(None, candidates)):
+        try:
+            return ctypes.CDLL(candidate)
+        except OSError as error:
+            errors.append(str(error))
+    # The first errors say why, such as a missing dependency.
+    details = "; ".join(dict.fromkeys(errors)) or "not found"
+    raise CanvasError(f"cannot load the {name} library: {details}")
 
 
 class _Libraries:
