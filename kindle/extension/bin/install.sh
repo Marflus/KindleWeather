@@ -1,6 +1,6 @@
 #!/bin/sh
 # Registers the wake watchdog in root's crontab. Safe to run repeatedly.
-WATCHDOG=/mnt/us/extensions/kindlemeteo/bin/watchdog.sh
+WATCHDOG=/mnt/us/extensions/kindleweather/bin/watchdog.sh
 
 # Some firmwares keep one crontab file per user under /etc/crontab/.
 crontab=/etc/crontab

@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from kindle_meteo.i18n import LOCALES, Locale
+from kindle_weather.i18n import LOCALES, Locale
 
 DEFAULT_CONFIG_PATH = Path("config/config.json")
 DEPLOY_METHODS = ("ssh", "usb")

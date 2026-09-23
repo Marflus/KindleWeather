@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from kindle_meteo.config import KindleTarget
-from kindle_meteo.deploy import DeployError, deploy_ssh, deploy_usb, stage_extension
-from kindle_meteo.i18n import FRENCH
+from kindle_weather.config import KindleTarget
+from kindle_weather.deploy import DeployError, deploy_ssh, deploy_usb, stage_extension
+from kindle_weather.i18n import FRENCH
 
 EXTENSION_SOURCE = Path(__file__).parents[1] / "kindle" / "extension"
 
@@ -36,7 +36,7 @@ def test_usb_deploy_copies_into_kual_extensions(staged, tmp_path):
     mount = tmp_path / "kindle"
     (mount / "extensions").mkdir(parents=True)
     deploy_usb(staged, mount)
-    assert (mount / "extensions" / "kindlemeteo" / "dashboard.png").read_bytes() == b"png"
+    assert (mount / "extensions" / "kindleweather" / "dashboard.png").read_bytes() == b"png"
 
 
 def test_usb_deploy_requires_kual(staged, tmp_path):

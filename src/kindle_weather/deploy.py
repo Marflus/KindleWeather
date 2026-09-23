@@ -8,10 +8,10 @@ import subprocess
 import time
 from pathlib import Path
 
-from kindle_meteo.config import KindleTarget
-from kindle_meteo.i18n import Locale
+from kindle_weather.config import KindleTarget
+from kindle_weather.i18n import Locale
 
-EXTENSION_NAME = "kindlemeteo"
+EXTENSION_NAME = "kindleweather"
 DEFAULT_EXTENSION_SOURCE = Path("kindle/extension")
 REMOTE_EXTENSIONS_DIR = "/mnt/us/extensions"
 REMOTE_EXTENSION_DIR = f"{REMOTE_EXTENSIONS_DIR}/{EXTENSION_NAME}"
@@ -30,7 +30,7 @@ def stage_extension(source: Path, image: Path, locale: Locale, destination: Path
     menu = {
         "items": [
             {
-                "name": "KindleMeteo",
+                "name": "KindleWeather",
                 "priority": 1,
                 "items": [
                     {"name": locale.labels["kual_show"], "priority": 1, "action": "bin/show.sh"}

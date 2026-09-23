@@ -6,7 +6,7 @@ import math
 
 from PIL import ImageDraw, ImageFont
 
-from kindle_meteo.weather import (
+from kindle_weather.weather import (
     DRIZZLE_CODES,
     FOG_CODES,
     RAIN_CODES,

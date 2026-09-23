@@ -7,7 +7,7 @@ from itertools import groupby
 import font_roboto
 from PIL import Image, ImageDraw, ImageFont
 
-from kindle_meteo.graphics import (
+from kindle_weather.graphics import (
     GRAY_DARK,
     GRAY_LIGHT,
     GRAY_MID,
@@ -21,8 +21,8 @@ from kindle_meteo.graphics import (
     draw_wind,
     text_width,
 )
-from kindle_meteo.i18n import Locale
-from kindle_meteo.weather import RAINY_CODES, DailyForecast
+from kindle_weather.i18n import Locale
+from kindle_weather.weather import RAINY_CODES, DailyForecast
 
 LAYOUT_SIZE = (1072, 1448)
 SUPERSAMPLING = 2

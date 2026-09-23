@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from kindle_meteo.config import ConfigError, load_config, parse_config
+from kindle_weather.config import ConfigError, load_config, parse_config
 
 VALID = {
     "language": "en",

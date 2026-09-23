@@ -1,8 +1,8 @@
-# KindleMeteo
+# KindleWeather
 
-[![CI](https://github.com/Marflus/KindleMeteo/actions/workflows/ci.yml/badge.svg)](https://github.com/Marflus/KindleMeteo/actions/workflows/ci.yml)
+[![CI](https://github.com/Marflus/KindleWeather/actions/workflows/ci.yml/badge.svg)](https://github.com/Marflus/KindleWeather/actions/workflows/ci.yml)
 
-Turn a jailbroken Kindle into a daily weather display. KindleMeteo renders a
+Turn a jailbroken Kindle into a daily weather display. KindleWeather renders a
 grayscale dashboard tuned for e-ink from [Open-Meteo](https://open-meteo.com/)
 data, installs it on the Kindle as a [KUAL](https://www.mobileread.com/forums/showthread.php?t=203326)
 extension, and can refresh it every morning with GitHub Actions.
@@ -26,10 +26,10 @@ extension, and can refresh it every morning with GitHub Actions.
 
 ```
 GitHub Actions, daily (or your computer)       Kindle (jailbroken)
- ├─ kindle-meteo render                         /mnt/us/extensions/kindlemeteo/
+ ├─ kindle-weather render                         /mnt/us/extensions/kindleweather/
  │    Open-Meteo geocoding + forecast            ├─ dashboard.png
  │    -> dashboard.png                           ├─ menu.json, config.xml   KUAL button
- └─ kindle-meteo deploy  -- SSH / USB -------->  ├─ bin/show.sh             full e-ink refresh
+ └─ kindle-weather deploy  -- SSH / USB -------->  ├─ bin/show.sh             full e-ink refresh
                                                  ├─ bin/watchdog.sh         cron: wake window
                                                  └─ bin/install.sh          registers the watchdog
 ```
@@ -70,13 +70,13 @@ scaled to the configured size.
    key to `/mnt/us/usbnet/etc/authorized_keys`. Optionally install Tailscale on
    the Kindle so it can be reached from anywhere, including GitHub Actions.
 
-### 2. Install KindleMeteo on your computer
+### 2. Install KindleWeather on your computer
 
 Python 3.10 or newer is required.
 
 ```bash
-git clone https://github.com/Marflus/KindleMeteo.git
-cd KindleMeteo
+git clone https://github.com/Marflus/KindleWeather.git
+cd KindleWeather
 pip install .
 ```
 
@@ -114,17 +114,17 @@ Edit [`config/config.json`](config/config.json):
 ### 4. Render and deploy
 
 ```bash
-kindle-meteo render    # fetches the forecast, writes dashboard.png
-kindle-meteo deploy    # installs the KUAL extension and the dashboard
+kindle-weather render    # fetches the forecast, writes dashboard.png
+kindle-weather deploy    # installs the KUAL extension and the dashboard
 ```
 
-- With `ssh`, `deploy` copies the extension to `/mnt/us/extensions/kindlemeteo`,
+- With `ssh`, `deploy` copies the extension to `/mnt/us/extensions/kindleweather`,
   registers the wake watchdog in the Kindle's crontab, turns the frontlight off
   and displays the dashboard.
 - With `usb`, `deploy` copies the extension to the Kindle drive. Eject the
-  Kindle, then open **KUAL > KindleMeteo** to display it.
+  Kindle, then open **KUAL > KindleWeather** to display it.
 
-The KUAL button **KindleMeteo > Show weather dashboard** redisplays the latest
+The KUAL button **KindleWeather > Show weather dashboard** redisplays the latest
 dashboard at any time. KUAL only scans for new extensions when it starts, so
 restart the Kindle after the first installation.
 
@@ -151,7 +151,7 @@ summer time and one for winter time), then the wake window in
 config/             config.json, the only file to edit
 docs/               README assets
 kindle/extension/   files installed on the Kindle (KUAL extension)
-src/kindle_meteo/   Python package: config, weather, i18n, rendering, deployment
+src/kindle_weather/   Python package: config, weather, i18n, rendering, deployment
 tests/              pytest suite, runs offline
 ```
 
@@ -183,7 +183,7 @@ CI runs these checks on every push and pull request.
 
 # Français
 
-Transformez une Kindle jailbreakée en écran météo quotidien. KindleMeteo génère
+Transformez une Kindle jailbreakée en écran météo quotidien. KindleWeather génère
 un tableau de bord en niveaux de gris, adapté à l'encre électronique, à partir
 des données [Open-Meteo](https://open-meteo.com/). Il l'installe sur la Kindle
 sous forme d'extension [KUAL](https://www.mobileread.com/forums/showthread.php?t=203326)
@@ -203,10 +203,10 @@ et peut le mettre à jour chaque matin avec GitHub Actions.
 
 ```
 GitHub Actions, chaque jour (ou votre ordinateur)   Kindle (jailbreakée)
- ├─ kindle-meteo render                              /mnt/us/extensions/kindlemeteo/
+ ├─ kindle-weather render                              /mnt/us/extensions/kindleweather/
  │    géocodage + prévisions Open-Meteo               ├─ dashboard.png
  │    -> dashboard.png                                ├─ menu.json, config.xml   bouton KUAL
- └─ kindle-meteo deploy  -- SSH / USB ------------->  ├─ bin/show.sh             rafraîchissement complet
+ └─ kindle-weather deploy  -- SSH / USB ------------->  ├─ bin/show.sh             rafraîchissement complet
                                                       ├─ bin/watchdog.sh         cron : fenêtre de réveil
                                                       └─ bin/install.sh          installe le watchdog
 ```
@@ -249,13 +249,13 @@ est mise à l'échelle de la taille configurée.
    Installer éventuellement Tailscale sur la Kindle pour la joindre depuis
    n'importe où, y compris depuis GitHub Actions.
 
-### 2. Installer KindleMeteo sur votre ordinateur
+### 2. Installer KindleWeather sur votre ordinateur
 
 Python 3.10 ou plus récent est requis.
 
 ```bash
-git clone https://github.com/Marflus/KindleMeteo.git
-cd KindleMeteo
+git clone https://github.com/Marflus/KindleWeather.git
+cd KindleWeather
 pip install .
 ```
 
@@ -293,17 +293,17 @@ Modifier [`config/config.json`](config/config.json) :
 ### 4. Générer et déployer
 
 ```bash
-kindle-meteo render    # récupère les prévisions, écrit dashboard.png
-kindle-meteo deploy    # installe l'extension KUAL et le tableau de bord
+kindle-weather render    # récupère les prévisions, écrit dashboard.png
+kindle-weather deploy    # installe l'extension KUAL et le tableau de bord
 ```
 
-- En `ssh`, `deploy` copie l'extension dans `/mnt/us/extensions/kindlemeteo`,
+- En `ssh`, `deploy` copie l'extension dans `/mnt/us/extensions/kindleweather`,
   inscrit le watchdog de réveil dans la crontab de la Kindle, éteint
   l'éclairage et affiche le tableau de bord.
 - En `usb`, `deploy` copie l'extension sur le disque de la Kindle. Éjectez la
-  Kindle, puis ouvrez **KUAL > KindleMeteo** pour l'afficher.
+  Kindle, puis ouvrez **KUAL > KindleWeather** pour l'afficher.
 
-Le bouton KUAL **KindleMeteo > Afficher le dashboard meteo** réaffiche le
+Le bouton KUAL **KindleWeather > Afficher le dashboard meteo** réaffiche le
 dernier tableau de bord à tout moment. KUAL ne détecte les nouvelles extensions
 qu'à son démarrage : redémarrez la Kindle après la première installation.
 
@@ -330,7 +330,7 @@ pour l'heure d'été et une pour l'heure d'hiver), puis la fenêtre de réveil d
 config/             config.json, le seul fichier à modifier
 docs/               ressources du README
 kindle/extension/   fichiers installés sur la Kindle (extension KUAL)
-src/kindle_meteo/   paquet Python : configuration, météo, traductions, rendu, déploiement
+src/kindle_weather/   paquet Python : configuration, météo, traductions, rendu, déploiement
 tests/              tests pytest, exécutés hors ligne
 ```
 

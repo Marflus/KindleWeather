@@ -1,7 +1,7 @@
 from PIL import ImageChops
 
-from kindle_meteo.i18n import ENGLISH, FRENCH
-from kindle_meteo.render import rainy_runs, render_dashboard
+from kindle_weather.i18n import ENGLISH, FRENCH
+from kindle_weather.render import rainy_runs, render_dashboard
 
 
 def test_render_produces_grayscale_image_of_requested_size(forecast):

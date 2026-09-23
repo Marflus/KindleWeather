@@ -3,8 +3,8 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from kindle_meteo import weather
-from kindle_meteo.weather import WeatherError, geocode, parse_forecast
+from kindle_weather import weather
+from kindle_weather.weather import WeatherError, geocode, parse_forecast
 
 
 def test_parse_forecast_keeps_today_and_next_midnight(forecast):

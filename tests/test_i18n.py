@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from kindle_meteo.i18n import ENGLISH, FRENCH, LOCALES
+from kindle_weather.i18n import ENGLISH, FRENCH, LOCALES
 
 MOMENT = datetime(2026, 9, 23, 6, 4)
 

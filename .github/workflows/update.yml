@@ -44,7 +44,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install .
-      - run: kindle-meteo render
+      - run: kindle-weather render
       - uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
@@ -56,4 +56,4 @@ jobs:
           printf '%s\n' "$KINDLE_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
       # The Kindle re-enables Wi-Fi only every 5 minutes during its wake window.
-      - run: kindle-meteo deploy --wait 180
+      - run: kindle-weather deploy --wait 180

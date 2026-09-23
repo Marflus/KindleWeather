@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from kindle_meteo.weather import parse_forecast
+from kindle_weather.weather import parse_forecast
 
 TIMEZONE = "Europe/Warsaw"
 NOW = datetime(2026, 9, 23, 6, 4, tzinfo=ZoneInfo(TIMEZONE))

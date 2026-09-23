@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <extension>
 	<information>
-		<name>KindleMeteo</name>
+		<name>KindleWeather</name>
 		<version>1.0</version>
 		<author>Marflus</author>
-		<id>kindlemeteo</id>
+		<id>kindleweather</id>
 	</information>
 	<menus>
 		<menu type="json" dynamic="true">menu.json</menu>

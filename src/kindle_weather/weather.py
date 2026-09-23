@@ -11,7 +11,7 @@ import requests
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 REQUEST_TIMEOUT = 20
-HEADERS = {"User-Agent": "KindleMeteo"}
+HEADERS = {"User-Agent": "KindleWeather"}
 
 # WMO weather interpretation codes, grouped by icon.
 FOG_CODES = frozenset({45, 48})
