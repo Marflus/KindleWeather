@@ -84,6 +84,7 @@ def write_kual_files(target: Path, config: Config) -> None:
     for name, error in KINDLE_ERRORS.items():
         settings[name] = ascii_fold(f"{labels['error']} {error.code}: {labels[error.label]}")
     settings["LOW_BATTERY_WARNING"] = ascii_fold(labels["low_battery"])
+    settings["STARTING_MESSAGE"] = ascii_fold(labels["starting"])
     lines = "".join(f"{name}={shlex.quote(value)}\n" for name, value in settings.items())
     _write_unix_text(target / "settings.sh", lines)
 

@@ -16,6 +16,10 @@ log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >>"$LOG"
 }
 
+# Everything the script and its commands complain about ends up in the log.
+exec 2>>"$LOG"
+log "station starting"
+
 # Python 3 from MRPI, wherever its package put it.
 find_python() {
     for candidate in python3 /mnt/us/python3/bin/python3 /mnt/us/python/bin/python3; do
@@ -75,8 +79,8 @@ battery_warning() {
     fi
 }
 
-# Defines the error messages (E7, E8) and LOW_BATTERY_WARNING, in the
-# configured language. Written at installation, then again from
+# Defines the error messages (E7, E8), LOW_BATTERY_WARNING and
+# STARTING_MESSAGE, in the configured language. Written at installation, then again from
 # config.json at each start when Python is available.
 . "$EXTENSION_DIR/settings.sh"
 PYTHON=$(find_python)
@@ -91,6 +95,9 @@ for job in lab126_gui otaupd phd tmd x todo mcsd archive dynconfig dpmd appmgrd 
 done
 lipc-set-prop com.lab126.powerd preventScreenSaver 1
 log "station started, python: ${PYTHON:-none}"
+# Replace the frozen home screen while Wi-Fi connects and the dashboard is drawn.
+/usr/sbin/eips -c
+/usr/sbin/eips 2 30 "${STARTING_MESSAGE:-KindleWeather...}"
 
 while true; do
     error=""

@@ -19,6 +19,7 @@
     "updated": "Aggiornato il {}",
     "variable": "Tempo variabile",
     "kual_start": "Avvia la stazione meteo",
+    "starting": "Avvio della stazione meteo...",
     "error": "Errore",
     "error_unreachable": "Servizio meteo non raggiungibile",
     "error_service": "Errore del servizio meteo",
