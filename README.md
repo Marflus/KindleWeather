@@ -264,7 +264,7 @@ python scripts/package.py     # build dist/kindleweather.zip
 ```
 
 CI runs these checks on Python 3.9 and 3.12 on every push and pull request.
-Push a `v*` tag to publish `kindleweather.zip` as a release.
+To publish `kindleweather.zip` as a release, push a `v*` tag or run the **Release** workflow.
 
 ## Known limitations
 

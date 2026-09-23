@@ -1,11 +1,16 @@
 name: Release
 
-# Push a tag such as v2.0.0 to publish kindleweather.zip, the extension to
-# copy to the Kindle, as a GitHub release.
+# Publishes kindleweather.zip, the extension to copy to the Kindle, as a GitHub
+# release: push a tag such as v2.0.0, or run the workflow with the version.
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag, such as v2.0.0"
+        required: true
 
 permissions:
   contents: write
@@ -20,9 +25,12 @@ jobs:
           python-version: "3.12"
       - run: pip install .
       - run: python scripts/package.py
+      # For a manual run, gh creates the tag on the current commit.
       - run: >
-          gh release create "$GITHUB_REF_NAME" dist/kindleweather.zip
-          --title "KindleWeather $GITHUB_REF_NAME"
+          gh release create "$TAG" dist/kindleweather.zip
+          --target "$GITHUB_SHA"
+          --title "KindleWeather $TAG"
           --notes "Copy the extensions folder of kindleweather.zip to the root of the Kindle drive, then edit extensions/kindleweather/config.json. See the README."
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.version || github.ref_name }}
