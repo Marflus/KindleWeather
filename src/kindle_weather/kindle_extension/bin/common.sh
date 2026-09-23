@@ -12,14 +12,19 @@ log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >>"$LOG"
 }
 
-# Python 3 from MRPI, wherever its package put it.
+# Python 3.8 or newer, wherever its package put it and whatever its name
+# (python3, python3.11...).
 find_python() {
-    for candidate in python3 /mnt/us/python3/bin/python3 /mnt/us/python/bin/python3 \
-        /mnt/us/python3.9/bin/python3 /mnt/us/python3.11/bin/python3; do
-        if command -v "$candidate" >/dev/null 2>&1; then
-            command -v "$candidate"
-            return
-        fi
+    for folder in $(echo "$PATH" | tr ':' ' ') /mnt/us/python3/bin /mnt/us/python/bin \
+        /mnt/us/python*/bin /usr/local/bin; do
+        for candidate in "$folder"/python3 "$folder"/python3.*; do
+            case "$candidate" in *-config) continue ;; esac
+            if [ -x "$candidate" ] && "$candidate" -c \
+                'import sys; sys.exit(sys.version_info < (3, 8))' >/dev/null 2>&1; then
+                echo "$candidate"
+                return
+            fi
+        done
     done
 }
 

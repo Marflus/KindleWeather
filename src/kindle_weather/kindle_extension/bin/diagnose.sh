@@ -31,6 +31,7 @@ python_version=$([ -n "$PYTHON" ] && "$PYTHON" -V 2>&1)
     echo "firmware: $(cat /etc/prettyversion.txt 2>/dev/null)"
     echo "setsid: $(check command -v setsid)"
     echo "python: ${PYTHON:-MISSING} $python_version"
+    echo "pythons found: $(echo /mnt/us/python*/bin/python* /usr/bin/python* /usr/local/bin/python*)"
     echo "libcairo.so.2: $(library libcairo.so.2)"
     echo "libfreetype.so.6: $(library libfreetype.so.6)"
     if [ -n "$PYTHON" ]; then
