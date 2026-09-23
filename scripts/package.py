@@ -1,7 +1,8 @@
 """Build dist/kindleweather.zip, the extension to copy to the Kindle: python scripts/package.py
 
-The zip holds extensions/kindleweather with a sample config.json to edit, so
-installing needs no Python on the computer. With --config, it holds that
+The zip holds the kindleweather folder, to copy into the Kindle's extensions
+folder, with a sample config.json to edit, so installing needs no Python on
+the computer. With --config, it holds that
 configuration instead, ready to copy.
 """
 
@@ -46,7 +47,7 @@ def main() -> None:
         with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as bundle:
             for path in sorted(target.rglob("*")):
                 if path.is_file():
-                    bundle.write(path, path.relative_to(root).as_posix())
+                    bundle.write(path, path.relative_to(target.parent).as_posix())
     print(f"Wrote {archive}")
 
 

@@ -81,9 +81,10 @@ is required; no extra module is needed.
 
 1. Download `kindleweather.zip` from the
    [latest release](https://github.com/Marflus/KindleWeather/releases/latest).
-2. Plug the Kindle in over USB and copy the `extensions` folder of the zip to
-   the root of the Kindle drive, next to its `documents` folder. It merges
-   with the `extensions` folder already there for KUAL.
+2. Plug the Kindle in over USB and copy the `kindleweather` folder of the zip
+   into the `extensions` folder at the root of the Kindle drive, next to
+   `documents`. KUAL creates `extensions` when it is installed; if it is
+   missing, create it.
 3. Open `extensions/kindleweather/config.json` on the Kindle drive with a text
    editor and set your city and language, see [Configuration](#configuration).
 4. Eject the Kindle.

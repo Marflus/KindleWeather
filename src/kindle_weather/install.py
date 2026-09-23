@@ -34,7 +34,10 @@ def install_extension(
     """Copy the extension to the Kindle drive at mount_path; return its folder."""
     extensions = mount_path / "extensions"
     if not extensions.is_dir():
-        raise InstallError(f"{extensions} not found: is the Kindle mounted and KUAL installed?")
+        raise InstallError(
+            f"{extensions} not found: is the Kindle mounted and KUAL installed?"
+            " Create the folder if KUAL is installed without it."
+        )
     target = extensions / EXTENSION_NAME
     build_extension(target, config, config_path, source)
     return target
