@@ -108,6 +108,11 @@ class Forecast:
     upcoming_days: list[DayForecast]
 
     @property
+    def current(self) -> HourlyForecast:
+        """The hour in progress."""
+        return self.hours[0]
+
+    @property
     def precipitation_risk(self) -> str | None:
         """Most important precipitation kind expected in the next 24 hours, if any."""
         kinds = {precipitation_kind(entry.weather_code) for entry in self.hours}

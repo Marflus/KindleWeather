@@ -14,7 +14,7 @@ key is needed.
 
 ## Features
 
-- Today: conditions, temperature, min and max, sunrise and sunset, humidity and wind
+- Now: weather, temperature, humidity and wind of the current hour, with the day's min, max, sunrise and sunset
 - The next 7 days, with their weather icon and mean temperature
 - A precipitation alert for the next 24 hours: snow, thunderstorm or rain
 - A temperature chart and an hourly table for the next 24 hours, with rain, snow and thunderstorm hours shaded

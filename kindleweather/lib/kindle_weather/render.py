@@ -226,7 +226,8 @@ class _Dashboard:
         self.draw.line([(MARGIN, y), (self.width - MARGIN, y)], fill=GRAY_LIGHT, width=2)
 
     def _summary(self, top: int) -> int:
-        """Today's card: date on top; city and icon, temperature, min and max; details panel."""
+        """Today's card: date on top; city and the current weather, temperature, the day's
+        min and max; details panel."""
         draw, fonts, forecast = self.draw, self.fonts, self.forecast
         bottom = top + self.layout.card_height
         panel_width, padding = self.layout.panel_width, 24
@@ -255,7 +256,7 @@ class _Dashboard:
         )
         icon_top = body_top + place_box[3] - place_box[1] + 12
         self.icons.draw(
-            draw, forecast.today.weather_code, (left, icon_top, left + place_column, body_bottom)
+            draw, forecast.current.weather_code, (left, icon_top, left + place_column, body_bottom)
         )
 
         max_text = f"Max {round(forecast.today.temperature_max)}°"
@@ -266,8 +267,8 @@ class _Dashboard:
         self._text_stack(min_max_x, center_y, min_max, 14)
 
         # Temperature and description, centered between the city column and min/max.
-        temperature = f"{forecast.today.temperature_mean}°"
-        description = self.locale.describe(forecast.today.weather_code)
+        temperature = f"{round(forecast.current.temperature)}°"
+        description = self.locale.describe(forecast.current.weather_code)
         space_left, space_right = left + place_column + 30, min_max_x - 30
         description_font = _shrink_to_fit(
             draw, description, fonts["description"], space_right - space_left
@@ -293,10 +294,10 @@ class _Dashboard:
             y += height + gap
 
     def _details_panel(self, left: int, center_y: int, width: int) -> None:
-        hours = self.forecast.hours
         labels = self.locale.labels
-        humidity = round(sum(h.humidity for h in hours) / len(hours))
-        wind = round(sum(h.wind_speed for h in hours) / len(hours))
+        # Sunrise and sunset of the day, humidity and wind of the hour in progress.
+        humidity = round(self.forecast.current.humidity)
+        wind = round(self.forecast.current.wind_speed)
         # Row by row: sunrise and humidity, then sunset and wind.
         cells = (
             (labels["sunrise"], self.forecast.sunrise or "—", "sunrise"),
