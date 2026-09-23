@@ -27,7 +27,7 @@ def test_defaults():
 @pytest.mark.parametrize(
     ("override", "message"),
     [
-        ({"language": "de"}, "language"),
+        ({"language": "xx"}, "language"),
         ({"location": {"city": " "}}, "location.city"),
         ({"display": {"width": 0, "height": 1448}}, "display"),
         ({"display": {"orientation": "diagonal"}}, "display.orientation"),

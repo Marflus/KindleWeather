@@ -117,6 +117,13 @@ def fetch_forecast(place: Place, temperature_unit: str = "celsius") -> dict:
 
 
 def parse_forecast(raw: dict, place_name: str, now: datetime | None = None) -> Forecast:
+    try:
+        return _parse_forecast(raw, place_name, now)
+    except (KeyError, IndexError, TypeError, ValueError) as error:
+        raise WeatherError(f"unexpected forecast data: {error!r}") from error
+
+
+def _parse_forecast(raw: dict, place_name: str, now: datetime | None) -> Forecast:
     now = now or datetime.now(ZoneInfo(raw["timezone"]))
     hourly, daily = raw["hourly"], raw["daily"]
 

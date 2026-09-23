@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from itertools import groupby
 
 import font_roboto
@@ -121,6 +122,41 @@ def render_dashboard(
 ) -> Image.Image:
     """Render for a portrait framebuffer of `size`; landscape output is rotated to fit it."""
     image = _Dashboard(forecast, locale, LAYOUTS[orientation]).render()
+    return _to_framebuffer(image, size, orientation)
+
+
+def render_error(
+    code: str,
+    locale: Locale,
+    size: tuple[int, int] = SCREEN_SIZE,
+    orientation: str = "portrait",
+    moment: datetime | None = None,
+) -> Image.Image:
+    """Full-screen error shown instead of the dashboard when there is no weather data."""
+    width, height = (px(value) for value in LAYOUTS[orientation].size)
+    image = Image.new("L", (width, height), WHITE)
+    draw = ImageDraw.Draw(image)
+    labels = locale.labels
+    lines = [
+        (f"{labels['error']} {code}", ImageFont.truetype(font_roboto.RobotoBold, px(90)), INK),
+        (labels["error_weather"], ImageFont.truetype(font_roboto.RobotoBold, px(34)), INK),
+        (labels["error_retry"], ImageFont.truetype(font_roboto.Roboto, px(26)), GRAY_DARK),
+    ]
+    boxes = [draw.textbbox((0, 0), text, font=font) for text, font, _ in lines]
+    gap = px(36)
+    y = (height - sum(box[3] - box[1] for box in boxes) - gap * (len(lines) - 1)) / 2
+    for (text, font, fill), box in zip(lines, boxes, strict=True):
+        draw_centered_text(draw, width / 2, y - box[1], text, font, fill)
+        y += box[3] - box[1] + gap
+
+    moment = moment or datetime.now(timezone.utc)
+    footer = ImageFont.truetype(font_roboto.Roboto, px(16))
+    stamp = f"{moment:%Y-%m-%d %H:%M} UTC"
+    draw_centered_text(draw, width / 2, height - px(60), stamp, footer, GRAY_MID)
+    return _to_framebuffer(image, size, orientation)
+
+
+def _to_framebuffer(image: Image.Image, size: tuple[int, int], orientation: str) -> Image.Image:
     if orientation == "landscape":
         # Read with the Kindle turned a quarter turn clockwise.
         width, height = size

@@ -10,11 +10,26 @@ REFRESH_SECONDS=3600
 # Wake-capable real-time clock of the Paperwhite 2 and 3.
 RTC=/dev/rtc1
 
-# Defines DASHBOARD_URL. Written by `kindle-weather install`.
+# Defines DASHBOARD_URL and the WIFI_ERROR (E2) and DOWNLOAD_ERROR (E3)
+# messages. Written by `kindle-weather install`.
 . "$EXTENSION_DIR/settings.sh"
 
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >>"$LOG"
+}
+
+# Show the last dashboard, with an error message on its top line if any.
+show() {
+    lipc-set-prop com.lab126.powerd flIntensity 0
+    for rotation in /sys/devices/platform/*_epdc_fb/graphics/fb0/rotate; do
+        echo 0 >"$rotation"
+    done
+    if [ -f "$IMAGE" ]; then
+        /usr/sbin/eips -f -g "$IMAGE"
+    else
+        /usr/sbin/eips -c
+    fi
+    [ -n "$1" ] && /usr/sbin/eips 1 0 "$1"
 }
 
 wait_for_wifi() {
@@ -35,21 +50,20 @@ lipc-set-prop com.lab126.powerd preventScreenSaver 1
 log "station started"
 
 while true; do
+    error=""
     lipc-set-prop com.lab126.cmd wirelessEnable 1
-    if wait_for_wifi && curl -fsS -o "$IMAGE.part" "$DASHBOARD_URL" 2>>"$LOG"; then
+    if ! wait_for_wifi; then
+        error="$WIFI_ERROR"
+    elif curl -fsS -o "$IMAGE.part" "$DASHBOARD_URL" 2>>"$LOG"; then
         mv "$IMAGE.part" "$IMAGE"
         log "dashboard updated"
     else
         rm -f "$IMAGE.part"
-        log "update failed, keeping the previous dashboard"
+        error="$DOWNLOAD_ERROR"
     fi
     lipc-set-prop com.lab126.cmd wirelessEnable 0
-
-    lipc-set-prop com.lab126.powerd flIntensity 0
-    for rotation in /sys/devices/platform/*_epdc_fb/graphics/fb0/rotate; do
-        echo 0 >"$rotation"
-    done
-    /usr/sbin/eips -f -g "$IMAGE"
+    [ -n "$error" ] && log "$error"
+    show "$error"
 
     # Suspending right after a screen update can hang some models.
     sleep 3

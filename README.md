@@ -7,8 +7,6 @@ renders a grayscale dashboard tuned for e-ink from [Open-Meteo](https://open-met
 data every hour. The Kindle downloads it, displays it, and sleeps until the
 next refresh.
 
-**[Version française ci-dessous](#français)**
-
 <p align="center">
   <img src="preview/portrait-en.png" alt="Portrait dashboard" height="420">
   <img src="preview/landscape-en.png" alt="Landscape dashboard" height="420">
@@ -21,7 +19,9 @@ next refresh.
 - Forecast for the next 7 days: weather icon and mean temperature
 - Precipitation alert for the next 24 hours with its icon, by priority: snow, then thunderstorm, then rain
 - Temperature chart and 2-hourly table for the next 24 hours, starting at the current hour; rain, thunderstorm and snow hours get distinct patterns
-- Portrait or landscape layout, English or French, Celsius or Fahrenheit
+- Portrait or landscape layout, Celsius or Fahrenheit
+- Display in 8 languages (see [Languages](#languages))
+- Error screen and error codes when the weather data or the connection is missing
 - City set by name; its coordinates and localized name come from the Open-Meteo geocoding API
 - Hourly refresh, with the Kindle suspended to RAM in between
 
@@ -114,7 +114,7 @@ To stop the station, hold the power button until the Kindle restarts (10 to
 
 | Key | Description |
 |---|---|
-| `language` | `"en"` or `"fr"`: dashboard, city name and KUAL menu. |
+| `language` | Display language, see [Languages](#languages). Applies to the dashboard, the city name and the KUAL menu. |
 | `location.city` | City name, geocoded by Open-Meteo. The name shown is fetched in the chosen language. |
 | `location.country_code` | Optional ISO 3166-1 alpha-2 code (`"FR"`, `"US"`...) to pick the right city among homonyms. |
 | `display.width`, `display.height` | Screen resolution in pixels, in portrait (see [Compatibility](#compatibility)). |
@@ -124,6 +124,30 @@ To stop the station, hold the power button until the Kindle restarts (10 to
 
 After changing `language` or `dashboard_url`, run `kindle-weather install`
 again. The other settings only need a commit: the next hourly run picks them up.
+
+## Languages
+
+The display is available in English (`en`), French (`fr`), German (`de`),
+Spanish (`es`), Italian (`it`), Portuguese (`pt`, Brazilian), Dutch (`nl`) and
+Polish (`pl`). Each language is a JSON file in
+[`src/kindle_weather/locales`](src/kindle_weather/locales): to add one, copy
+`en.json`, translate the values and name the file after the language code.
+
+<p align="center">
+  <img src="preview/portrait-fr.png" alt="Portrait dashboard in French" height="320">
+  <img src="preview/landscape-fr.png" alt="Landscape dashboard in French" height="320">
+</p>
+<p align="center"><sub>The same sample data displayed in French.</sub></p>
+
+## Error codes
+
+| Code | Shown | Meaning |
+|---|---|---|
+| E1 | Full screen | The weather data could not be fetched or read when the dashboard was rendered. The workflow publishes this screen and fails, so GitHub notifies you. |
+| E2 | Top of the last dashboard | The Kindle could not connect to Wi-Fi. |
+| E3 | Top of the last dashboard | The Kindle could not download the dashboard. The reason is in `station.log`. |
+
+Every code is retried at the next hourly refresh.
 
 ## Usage
 
@@ -139,7 +163,7 @@ kindle-weather install MOUNT_PATH                # install the KUAL extension
 config/               config.json, the only file to edit
 preview/              dashboard previews, portrait and landscape, in English and French
 kindle/extension/     KUAL extension; bin/station.sh is the weather station loop
-src/kindle_weather/   Python package: config, weather, i18n, graphics, render, install
+src/kindle_weather/   Python package: config, weather, i18n (locales/*.json), graphics, render, install
 tests/                pytest suite, runs offline
 ```
 
@@ -179,185 +203,3 @@ CI runs these checks on every push and pull request.
 - [KUAL](https://www.mobileread.com/forums/showthread.php?t=203326) and the
   MobileRead community for the Kindle jailbreak tooling.
 
----
-
-# Français
-
-Transformez une Kindle jailbreakée en station météo sur batterie. GitHub
-Actions génère chaque heure un tableau de bord en niveaux de gris, adapté à
-l'encre électronique, à partir des données [Open-Meteo](https://open-meteo.com/).
-La Kindle le télécharge, l'affiche, puis se met en veille jusqu'au
-rafraîchissement suivant.
-
-<p align="center">
-  <img src="preview/portrait-fr.png" alt="Tableau de bord en portrait" height="420">
-  <img src="preview/landscape-fr.png" alt="Tableau de bord en paysage" height="420">
-</p>
-<p align="center"><sub>Affichages portrait et paysage, générés à partir de données d'exemple.</sub></p>
-
-## Fonctionnalités
-
-- Conditions du jour, minimales et maximales, lever et coucher du soleil, humidité et vent moyens
-- Prévisions des 7 prochains jours : icône météo et température moyenne
-- Alerte de précipitations pour les 24 prochaines heures avec son icône, par priorité : neige, puis orage, puis pluie
-- Courbe des températures et tableau toutes les 2 heures pour les 24 prochaines heures, à partir de l'heure actuelle ; les heures de pluie, d'orage et de neige ont chacune leur motif
-- Affichage en portrait ou en paysage, en anglais ou en français, en Celsius ou en Fahrenheit
-- Ville définie par son nom : ses coordonnées et son nom traduit viennent de l'API de géocodage d'Open-Meteo
-- Rafraîchissement toutes les heures, avec la Kindle en veille profonde entre deux mises à jour
-
-## Fonctionnement
-
-```
-GitHub Actions, toutes les heures          Kindle, boucle de la station
- kindle-weather render                      1. Wi-Fi activé, téléchargement de dashboard.png
-   Open-Meteo -> dashboard.png  -------->   2. Wi-Fi coupé, affichage (eips)
- publication sur GitHub Pages               3. veille profonde, réveil 1 heure plus tard
-```
-
-La station est une extension KUAL. Au démarrage, elle arrête l'interface
-d'Amazon et ses services en arrière-plan : rien ne recouvre plus le tableau de
-bord et la batterie tient. Entre deux rafraîchissements, la Kindle est en
-veille profonde (suspend to RAM) et se réveille grâce à son horloge interne ;
-l'écran e-ink garde l'image sans consommer. Pour retrouver la Kindle normale,
-il suffit de la redémarrer. Le principe vient de
-[kindle-weatherstation](https://github.com/mattzzw/kindle-weatherstation).
-
-## Compatibilité
-
-Il faut une Kindle **jailbreakée** avec **KUAL** et le Wi-Fi. L'existence d'un
-jailbreak dépend de la version du firmware : voir [Kindle Modding](https://kindlemodding.org/)
-et le [MobileRead Kindle Developer's Corner](https://www.mobileread.com/forums/forumdisplay.php?f=150).
-
-| Modèle | Écran | Remarques |
-|---|---|---|
-| Kindle Paperwhite 3 (7e génération, 2015) | 1072×1448 | Cible principale |
-| Kindle Paperwhite 2 (6e génération, 2013) | 758×1024 | Renseigner `display` dans la configuration |
-| Kindle Voyage (2014), Oasis (2016), Paperwhite 4 (2018), Kindle (2022) | 1072×1448 | Même résolution |
-| Kindle Paperwhite 5 (2021) | 1236×1648 | Renseigner `display` dans la configuration |
-| Kindle Oasis 2 et 3 (2017, 2019) | 1264×1680 | Renseigner `display` dans la configuration |
-
-Les mises en page sont conçues pour un écran de 1072×1448 et mises à l'échelle
-de la taille configurée. La station utilise l'horloge de réveil `/dev/rtc1`,
-comme sur les Paperwhite 2 et 3 ; sur les autres modèles, vérifier `RTC` dans
-[`station.sh`](kindle/extension/bin/station.sh).
-
-## Installation
-
-### 1. Publier le tableau de bord
-
-1. Forker ce dépôt et modifier [`config/config.json`](config/config.json)
-   (voir plus bas). Renseigner dans `dashboard_url` votre adresse GitHub Pages :
-   `https://<utilisateur>.github.io/<dépôt>/dashboard.png`.
-2. Dans **Settings > Pages**, choisir **GitHub Actions** comme **Source**.
-   Avec l'offre gratuite, GitHub Pages exige un dépôt public.
-3. Lancer **Actions > Publish dashboard > Run workflow**, puis ouvrir
-   `dashboard_url` dans un navigateur pour vérifier l'image. Le workflow
-   s'exécute ensuite toutes les heures.
-
-### 2. Installer la station sur la Kindle
-
-Python 3.10 ou plus récent est requis.
-
-```bash
-git clone https://github.com/<utilisateur>/KindleWeather.git
-cd KindleWeather
-pip install .
-```
-
-Brancher la Kindle en USB, puis installer l'extension KUAL sur son disque :
-
-```bash
-kindle-weather install E:/                    # Windows
-kindle-weather install /media/vous/Kindle     # Linux
-```
-
-Éjecter la Kindle et la redémarrer pour que KUAL détecte la nouvelle extension.
-
-### 3. Démarrer la station
-
-Ouvrir **KUAL > KindleWeather > Demarrer la station meteo**. L'interface
-disparaît et le tableau de bord s'affiche en moins d'une minute. Un journal est
-tenu dans `extensions/kindleweather/station.log` sur le disque de la Kindle.
-
-Pour arrêter la station, maintenir le bouton d'alimentation enfoncé jusqu'au
-redémarrage de la Kindle (10 à 20 secondes).
-
-## Configuration
-
-```json
-{
-  "language": "fr",
-  "location": { "city": "Lyon", "country_code": "FR" },
-  "display": { "width": 1072, "height": 1448, "orientation": "portrait" },
-  "temperature_unit": "celsius",
-  "dashboard_url": "https://vous.github.io/KindleWeather/dashboard.png"
-}
-```
-
-| Clé | Description |
-|---|---|
-| `language` | `"en"` ou `"fr"` : tableau de bord, nom de la ville et menu KUAL. |
-| `location.city` | Nom de la ville, géocodée par Open-Meteo. Le nom affiché est récupéré dans la langue choisie. |
-| `location.country_code` | Code ISO 3166-1 alpha-2 facultatif (`"FR"`, `"US"`...) pour choisir la bonne ville parmi des homonymes. |
-| `display.width`, `display.height` | Résolution de l'écran en pixels, en portrait (voir [Compatibilité](#compatibilité)). |
-| `display.orientation` | `"portrait"` (par défaut) ou `"landscape"` (paysage). En paysage, la Kindle se lit tournée d'un quart de tour dans le sens des aiguilles d'une montre. |
-| `temperature_unit` | `"celsius"` (par défaut) ou `"fahrenheit"`. |
-| `dashboard_url` | Adresse où la Kindle télécharge le tableau de bord. N'importe quel hébergement HTTP(S) convient, pas seulement GitHub Pages. |
-
-Après un changement de `language` ou de `dashboard_url`, relancer
-`kindle-weather install`. Les autres réglages n'ont besoin que d'un commit : le
-prochain passage horaire les prend en compte.
-
-## Utilisation
-
-```bash
-kindle-weather render [--output dashboard.png]   # générer le tableau de bord en local
-kindle-weather install CHEMIN_DU_DISQUE          # installer l'extension KUAL
-```
-
-## Structure du projet
-
-```
-.github/workflows/    ci.yml (lint, tests), publish.yml (tableau de bord horaire)
-config/               config.json, le seul fichier à modifier
-preview/              aperçus du tableau de bord, portrait et paysage, en anglais et en français
-kindle/extension/     extension KUAL ; bin/station.sh est la boucle de la station
-src/kindle_weather/   paquet Python : configuration, météo, traductions, dessin, rendu, installation
-tests/                tests pytest, exécutés hors ligne
-```
-
-## Développement
-
-```bash
-pip install -e ".[dev]"
-pytest
-ruff check . && ruff format --check .
-shellcheck --shell=sh --severity=warning kindle/extension/bin/*.sh
-```
-
-La CI exécute ces vérifications à chaque push et pull request.
-
-## Limitations connues
-
-- Tant que la station tourne, la Kindle ne peut pas servir de liseuse.
-- GitHub peut retarder les workflows planifiés : le tableau de bord peut donc
-  avoir plus d'une heure. GitHub désactive aussi les workflows planifiés après
-  60 jours sans activité sur le dépôt ; les réactiver depuis l'onglet **Actions**.
-- Si la Kindle ne se réveille pas toute seule, appuyer sur le bouton
-  d'alimentation : la station se met à jour puis se rendort. Vérifier `RTC`
-  dans `station.sh` pour votre modèle.
-
-## Remerciements
-
-- La boucle de la station météo (arrêt de l'interface de la Kindle, réveil par
-  l'horloge interne, veille profonde) est adaptée de
-  [kindle-weatherstation](https://github.com/mattzzw/kindle-weatherstation) de
-  [mattzzw](https://github.com/mattzzw), lui-même inspiré de
-  [l'écran météo Kindle de Matthew Petroff](https://mpetroff.net/2012/09/kindle-weather-display/)
-  et de [kindle-kt3_weatherdisplay_battery-optimized](https://github.com/nicoh88/kindle-kt3_weatherdisplay_battery-optimized)
-  de nicoh88.
-- Données météo fournies par [Open-Meteo](https://open-meteo.com/), sous licence CC BY 4.0.
-- Police [Roboto](https://github.com/googlefonts/roboto), empaquetée pour Python
-  par [Pimoroni](https://github.com/pimoroni/fonts-python).
-- [KUAL](https://www.mobileread.com/forums/showthread.php?t=203326) et la
-  communauté MobileRead pour les outils de jailbreak Kindle.

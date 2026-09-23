@@ -27,9 +27,14 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install .
+      # Without weather data, render still writes an error screen (E1) and
+      # fails; publish it anyway so the Kindle shows the error.
       - run: kindle-weather render --output site/dashboard.png
-      - uses: actions/upload-pages-artifact@v3
+      - id: upload
+        if: ${{ !cancelled() && hashFiles('site/dashboard.png') != '' }}
+        uses: actions/upload-pages-artifact@v3
         with:
           path: site
       - id: deployment
+        if: ${{ !cancelled() && steps.upload.outcome == 'success' }}
         uses: actions/deploy-pages@v4

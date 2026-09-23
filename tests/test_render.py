@@ -3,8 +3,10 @@ from dataclasses import replace
 import pytest
 from PIL import ImageChops
 
-from kindle_weather.i18n import ENGLISH, FRENCH
-from kindle_weather.render import precipitation_runs, render_dashboard
+from kindle_weather.i18n import LOCALES
+from kindle_weather.render import precipitation_runs, render_dashboard, render_error
+
+ENGLISH, FRENCH = LOCALES["en"], LOCALES["fr"]
 
 
 @pytest.mark.parametrize("orientation", ["portrait", "landscape"])
@@ -41,3 +43,10 @@ def test_precipitation_runs_split_by_kind():
 def test_renders_without_upcoming_days(forecast):
     image = render_dashboard(replace(forecast, upcoming_days=[]), FRENCH)
     assert image.size == (1072, 1448)
+
+
+@pytest.mark.parametrize("orientation", ["portrait", "landscape"])
+def test_error_screen_fits_the_framebuffer(orientation):
+    image = render_error("E1", FRENCH, size=(1072, 1448), orientation=orientation)
+    assert image.size == (1072, 1448)
+    assert image.getextrema() == (0, 255)
