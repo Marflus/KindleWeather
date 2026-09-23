@@ -127,6 +127,13 @@ def precipitation_runs(codes: list[int]) -> list[tuple[str, int, int]]:
     return runs
 
 
+def _draw_symbol(draw, kind: str, x: float, y: float) -> None:
+    if kind == "storm":
+        draw_bolt(draw, x, y, px(16))
+    else:
+        draw_asterisk(draw, x, y, px(5.5), px(1.5))
+
+
 class _Dashboard:
     def __init__(self, forecast: DailyForecast, locale: Locale, layout: Layout):
         self.forecast = forecast
@@ -349,12 +356,9 @@ class _Dashboard:
         draw = ImageDraw.Draw(layer)
         if kind == "rain":
             draw_diagonal_hatch(draw, box, spacing=px(9), width=px(2))
-        elif kind == "storm":
-            draw_symbol_grid(draw, box, px(22), lambda d, x, y: draw_bolt(d, x, y, px(16)))
         else:
-            draw_symbol_grid(
-                draw, box, px(17), lambda d, x, y: draw_asterisk(d, x, y, px(5.5), px(1.5))
-            )
+            spacing = px(22) if kind == "storm" else px(17)
+            draw_symbol_grid(draw, box, spacing, lambda d, x, y: _draw_symbol(d, kind, x, y))
         self.image.paste(layer, (0, 0), mask)
 
     def _legend(self, kinds: list[str], center_x: float, top: int) -> None:
@@ -366,9 +370,12 @@ class _Dashboard:
         for kind, label, width in zip(kinds, labels, widths, strict=True):
             box = (x, top, x + swatch_width, top + swatch_height)
             self.draw.rectangle(box, fill=GRAY_PALE)
-            mask = Image.new("L", self.image.size, 0)
-            ImageDraw.Draw(mask).rectangle(box, fill=255)
-            self._fill_pattern(kind, mask, box)
+            if kind == "rain":
+                mask = Image.new("L", self.image.size, 0)
+                ImageDraw.Draw(mask).rectangle(box, fill=255)
+                self._fill_pattern(kind, mask, box)
+            else:
+                _draw_symbol(self.draw, kind, (box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
             self.draw.rectangle(box, outline=GRAY_MID, width=px(1))
             text_box = self.draw.textbbox((0, 0), label, font=font)
             text_y = top + (swatch_height - (text_box[3] - text_box[1])) / 2 - text_box[1]
