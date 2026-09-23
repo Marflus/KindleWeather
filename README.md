@@ -177,7 +177,8 @@ glyphs in [`icons.py`](src/kindle_weather/icons.py).
 
 ## Error codes
 
-Errors are written on the top line of the last dashboard, and logged in
+Errors are shown in English, whatever the display language. They are
+written on the top line of the last dashboard, and logged in
 `extensions/kindleweather/station.log` with their details. When there is no
 dashboard yet, the Kindle shows a full-screen error instead. Every error is
 retried at the next hourly refresh.

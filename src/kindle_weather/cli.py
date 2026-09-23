@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import argparse
 import sys
+import time
 import traceback
 from pathlib import Path
 
 from kindle_weather.config import ConfigError, default_config_path, load_config
-from kindle_weather.dashboard import build_dashboard, fallback_locale
-from kindle_weather.errors import RENDER_FAILED, describe
+from kindle_weather.dashboard import build_dashboard
+from kindle_weather.errors import RENDER_FAILED, WEATHER_UNREACHABLE, describe, message
 from kindle_weather.install import (
     InstallError,
     ascii_fold,
@@ -18,6 +19,9 @@ from kindle_weather.install import (
     write_kual_files,
 )
 from kindle_weather.wizard import run_wizard
+
+NETWORK_RETRIES = 3
+NETWORK_RETRY_SECONDS = 10
 
 
 class RenderError(RuntimeError):
@@ -107,11 +111,17 @@ def refresh(config_path: Path, output: Path) -> str | None:
     """
     try:
         dashboard = build_dashboard(config_path)
+        # Right after Wi-Fi connects, the network may take a moment to work.
+        for _ in range(NETWORK_RETRIES):
+            if dashboard.failure is not WEATHER_UNREACHABLE:
+                break
+            print(f"{dashboard.summary}, retrying", file=sys.stderr)
+            time.sleep(NETWORK_RETRY_SECONDS)
+            dashboard = build_dashboard(config_path)
     except Exception:
         # Even the error screen failed, such as without cairo.
         traceback.print_exc()
-        labels = fallback_locale(config_path).labels
-        return f"{labels['error']} {RENDER_FAILED.code}: {labels[RENDER_FAILED.label]}"
+        return message(RENDER_FAILED)
     if dashboard.error is None:
         dashboard.image.save(output)
         return None

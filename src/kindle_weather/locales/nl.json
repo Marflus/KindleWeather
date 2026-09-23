@@ -21,16 +21,6 @@
     "kual_start": "Weerstation starten",
     "kual_diagnostic": "Diagnose",
     "starting": "Weerstation wordt gestart...",
-    "error": "Fout",
-    "error_unreachable": "Weerdienst onbereikbaar",
-    "error_service": "Fout van de weerdienst",
-    "error_location": "Locatie niet gevonden, controleer de configuratie",
-    "error_data": "Ongeldige weergegevens",
-    "error_config": "Ongeldige configuratie",
-    "error_render": "Maken van het dashboard mislukt",
-    "error_wifi": "Geen wifi-verbinding",
-    "error_python": "Python 3 ontbreekt, installeer het met MRPI",
-    "error_retry": "Nieuwe poging over een uur",
     "low_battery": "Batterij bijna leeg"
   },
   "weather": {

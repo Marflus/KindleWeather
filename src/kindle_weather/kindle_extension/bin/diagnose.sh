@@ -61,6 +61,21 @@ except OSError as error:
 print("system %s, direct %s" % (system, dns.resolve(host) or "fails"))' 2>&1 | tail -n 1)"
     fi
     echo "battery: $(lipc-get-prop com.lab126.powerd battLevel 2>&1) %"
+    echo "--- network"
+    echo "address: $(ifconfig wlan0 2>&1 | grep -i 'inet ' | tr -s ' ')"
+    echo "routes: $(route -n 2>&1 | tail -n +3 | tr -s ' ' | tr '\n' '|')"
+    echo "ping 1.1.1.1: $(ping -c 1 -W 3 1.1.1.1 >/dev/null 2>&1 && echo ok || echo fails)"
+    echo "nslookup: $(nslookup api.open-meteo.com 2>&1 | tr '\n' ' ' | cut -c 1-200)"
+    echo "curl: $(curl -sS -m 15 -o /dev/null -w 'HTTP %{http_code}' \
+        'https://api.open-meteo.com/v1/forecast?latitude=52&longitude=21&current=temperature_2m' 2>&1)"
+    if [ -n "$PYTHON" ]; then
+        echo "python tcp 1.1.1.1:443: $("$PYTHON" -c '
+import socket
+socket.create_connection(("1.1.1.1", 443), timeout=5).close()
+print("ok")' 2>&1 | tail -n 1)"
+    fi
+    echo "firewall:"
+    iptables -S 2>&1 | head -n 30
     echo "--- config.json"
     cat "$CONFIG"
     echo "--- test dashboard"

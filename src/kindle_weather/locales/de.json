@@ -21,16 +21,6 @@
     "kual_start": "Wetterstation starten",
     "kual_diagnostic": "Diagnose",
     "starting": "Wetterstation wird gestartet...",
-    "error": "Fehler",
-    "error_unreachable": "Wetterdienst nicht erreichbar",
-    "error_service": "Fehler des Wetterdienstes",
-    "error_location": "Ort nicht gefunden, Konfiguration prüfen",
-    "error_data": "Ungültige Wetterdaten",
-    "error_config": "Ungültige Konfiguration",
-    "error_render": "Erstellen des Dashboards fehlgeschlagen",
-    "error_wifi": "Keine WLAN-Verbindung",
-    "error_python": "Python 3 fehlt, mit MRPI installieren",
-    "error_retry": "Nächster Versuch in einer Stunde",
     "low_battery": "Akku schwach"
   },
   "weather": {

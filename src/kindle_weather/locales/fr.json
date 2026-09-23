@@ -21,16 +21,6 @@
     "kual_start": "Démarrer la station météo",
     "kual_diagnostic": "Diagnostic",
     "starting": "Démarrage de la station météo...",
-    "error": "Erreur",
-    "error_unreachable": "Service météo injoignable",
-    "error_service": "Erreur du service météo",
-    "error_location": "Lieu introuvable, vérifiez la configuration",
-    "error_data": "Données météo invalides",
-    "error_config": "Configuration invalide",
-    "error_render": "Échec du rendu du tableau de bord",
-    "error_wifi": "Pas de connexion Wi-Fi",
-    "error_python": "Python 3 absent, installez-le avec MRPI",
-    "error_retry": "Nouvel essai dans une heure",
     "low_battery": "Batterie faible"
   },
   "weather": {

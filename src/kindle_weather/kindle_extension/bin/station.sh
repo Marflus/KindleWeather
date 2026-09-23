@@ -15,6 +15,12 @@ log "station starting in $EXTENSION_DIR, as user $(id -u)"
 echo $$ >"$PID_FILE"
 load_settings
 
+# The interface shows the home screen in portrait: keep its screen rotation for
+# the dashboard. Rotation 0 is landscape on these Kindles.
+ROTATION_FILE=$(echo /sys/devices/platform/*_epdc_fb/graphics/fb0/rotate)
+PORTRAIT_ROTATION=$(cat "$ROTATION_FILE" 2>/dev/null)
+log "screen rotation: ${PORTRAIT_ROTATION:-unknown} ($ROTATION_FILE)"
+
 # Like kindle-weatherstation: stop the interface first, so nothing draws over
 # the dashboard and the other services do not drain the battery.
 log "stopping the interface: $(stop lab126_gui 2>&1)"
@@ -22,6 +28,7 @@ for job in otaupd phd tmd x todo mcsd archive dynconfig dpmd appmgrd stackdumpd;
     stop "$job" >/dev/null 2>&1
 done
 lipc-set-prop com.lab126.powerd preventScreenSaver 1
+[ -n "$PORTRAIT_ROTATION" ] && echo "$PORTRAIT_ROTATION" >"$ROTATION_FILE"
 /usr/sbin/eips -c
 /usr/sbin/eips 2 30 "$STARTING_MESSAGE"
 
@@ -35,9 +42,9 @@ fi
 # Show the last dashboard, with the non-empty messages on its top lines.
 show() {
     lipc-set-prop com.lab126.powerd flIntensity 0
-    for rotation in /sys/devices/platform/*_epdc_fb/graphics/fb0/rotate; do
-        [ -e "$rotation" ] && echo 0 >"$rotation"
-    done
+    if [ -n "$PORTRAIT_ROTATION" ] && [ -e "$ROTATION_FILE" ]; then
+        echo "$PORTRAIT_ROTATION" >"$ROTATION_FILE"
+    fi
     if [ -f "$IMAGE" ]; then
         /usr/sbin/eips -f -g "$IMAGE"
     else
@@ -81,6 +88,15 @@ draw() {
         return
     fi
     error=$(kindle_weather refresh --output "$IMAGE")
+    case "$error" in
+        "Error E1:"*)
+            # The network is not working yet: ask for an address again, as
+            # kindle-weatherstation's wifi.sh does, then try once more.
+            log "network: $(ifconfig wlan0 2>&1 | grep -i 'inet ' | tr -s ' '), $(tr '\n' ' ' </etc/resolv.conf)"
+            udhcpc -i wlan0 -n -q >/dev/null 2>&1
+            error=$(kindle_weather refresh --output "$IMAGE")
+            ;;
+    esac
     [ -z "$error" ] && log "dashboard updated"
 }
 
@@ -107,6 +123,13 @@ while true; do
 
     # Suspending right after a screen update can hang some models.
     sleep 3
+    asleep_at=$(date +%s)
     rtcwake -d "$RTC" -m no -s "$REFRESH_SECONDS"
     echo mem >/sys/power/state
+    # Suspend can be refused, such as over USB: then wait out the hour.
+    awake=$(($(date +%s) - asleep_at))
+    if [ "$awake" -lt $((REFRESH_SECONDS - 60)) ]; then
+        log "suspend lasted ${awake} s, waiting for the next refresh"
+        sleep $((REFRESH_SECONDS - awake))
+    fi
 done

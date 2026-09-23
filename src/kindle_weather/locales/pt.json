@@ -21,16 +21,6 @@
     "kual_start": "Iniciar a estação meteorológica",
     "kual_diagnostic": "Diagnóstico",
     "starting": "Iniciando a estação meteorológica...",
-    "error": "Erro",
-    "error_unreachable": "Serviço meteorológico inacessível",
-    "error_service": "Erro do serviço meteorológico",
-    "error_location": "Local não encontrado, verifique a configuração",
-    "error_data": "Dados meteorológicos inválidos",
-    "error_config": "Configuração inválida",
-    "error_render": "Falha ao gerar o painel",
-    "error_wifi": "Sem conexão Wi-Fi",
-    "error_python": "Python 3 ausente, instale-o com o MRPI",
-    "error_retry": "Nova tentativa em uma hora",
     "low_battery": "Bateria fraca"
   },
   "weather": {

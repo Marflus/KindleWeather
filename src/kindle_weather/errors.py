@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from kindle_weather.config import ConfigError
+from kindle_weather.i18n import LOCALES
 from kindle_weather.weather import (
     LocationNotFound,
     ServiceError,
@@ -49,6 +50,16 @@ def classify(error: Exception) -> ErrorCode:
     if isinstance(error, WeatherError):
         return INVALID_WEATHER_DATA
     return RENDER_FAILED
+
+
+# Errors are shown in English, whatever the display language.
+ERROR_LOCALE = LOCALES["en"]
+
+
+def message(error: ErrorCode) -> str:
+    """The one-line message of an error, such as "Error E1: Weather service unreachable"."""
+    labels = ERROR_LOCALE.labels
+    return f"{labels['error']} {error.code}: {labels[error.label]}"
 
 
 def describe(error: Exception) -> str:

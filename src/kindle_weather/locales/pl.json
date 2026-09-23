@@ -21,16 +21,6 @@
     "kual_start": "Uruchom stację pogodową",
     "kual_diagnostic": "Diagnostyka",
     "starting": "Uruchamianie stacji pogodowej...",
-    "error": "Błąd",
-    "error_unreachable": "Serwis pogodowy niedostępny",
-    "error_service": "Błąd serwisu pogodowego",
-    "error_location": "Nie znaleziono lokalizacji, sprawdź konfigurację",
-    "error_data": "Nieprawidłowe dane pogodowe",
-    "error_config": "Nieprawidłowa konfiguracja",
-    "error_render": "Nie udało się wygenerować pulpitu",
-    "error_wifi": "Brak połączenia Wi-Fi",
-    "error_python": "Brak Pythona 3, zainstaluj go przez MRPI",
-    "error_retry": "Kolejna próba za godzinę",
     "low_battery": "Niski poziom baterii"
   },
   "weather": {

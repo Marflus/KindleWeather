@@ -12,7 +12,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from kindle_weather.config import Config
-from kindle_weather.errors import KINDLE_ERRORS
+from kindle_weather.errors import KINDLE_ERRORS, message
 
 EXTENSION_NAME = "kindleweather"
 PACKAGE_DIR = Path(__file__).parent
@@ -87,7 +87,7 @@ def write_kual_files(target: Path, config: Config) -> None:
     _write_unix_text(target / "menu.json", json.dumps(menu, indent=2) + "\n")
     settings = {}
     for name, error in KINDLE_ERRORS.items():
-        settings[name] = ascii_fold(f"{labels['error']} {error.code}: {labels[error.label]}")
+        settings[name] = message(error)
     settings["LOW_BATTERY_WARNING"] = ascii_fold(labels["low_battery"])
     settings["STARTING_MESSAGE"] = ascii_fold(labels["starting"])
     lines = "".join(f"{name}={shlex.quote(value)}\n" for name, value in settings.items())
