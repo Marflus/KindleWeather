@@ -26,6 +26,7 @@ from kindle_weather.settings import (
     EXTENSION_DIR,
     SETTINGS,
     change,
+    current_values,
     set_place,
     write_menu,
 )
@@ -138,13 +139,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _page(self, message: str = "", results: str = "", search: str = "") -> None:
         config = load_config(CONFIG_PATH)
-        current = {
-            "language": config.locale.code,
-            "orientation": config.orientation,
-            "icons": config.icon_set,
-            "temperature": config.temperature_unit,
-            "clock": config.clock,
-        }
+        current = current_values(config)
         city = f"{config.city}, {config.country_code}" if config.country_code else config.city
         settings = "".join(
             f"<p><b>{title}</b><br>"

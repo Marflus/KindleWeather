@@ -136,7 +136,7 @@ def render_error(
     lines = [
         (f"Error {error.code}", Font(ROBOTO_BOLD, 90), INK),
         (error.text, _shrink_to_fit(draw, error.text, Font(ROBOTO_BOLD, 34), max_width), INK),
-        ("Next attempt in one hour", Font(ROBOTO, 26), GRAY_DARK),
+        ("Next attempt at the next refresh", Font(ROBOTO, 26), GRAY_DARK),
         (_truncate(draw, " ".join(detail.split()), detail_font, max_width), detail_font, GRAY_MID),
     ]
     # The lines stacked and centered on the screen.

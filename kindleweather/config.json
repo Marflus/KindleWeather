@@ -11,5 +11,6 @@
     "icons": "classic"
   },
   "temperature_unit": "celsius",
-  "clock": "24h"
+  "clock": "24h",
+  "refresh_minutes": 60
 }

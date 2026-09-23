@@ -18,7 +18,7 @@ import sys
 import unicodedata
 from pathlib import Path
 
-from kindle_weather.config import load_config
+from kindle_weather.config import Config, load_config
 from kindle_weather.location import detect_place
 from kindle_weather.weather import Place
 
@@ -63,14 +63,41 @@ SETTINGS = {
         ("clock",),
         {"24h": "24-hour", "12h": "12-hour (AM/PM)"},
     ),
+    "refresh": (
+        "Refresh",
+        ("refresh_minutes",),
+        {
+            15: "Every 15 minutes",
+            30: "Every 30 minutes",
+            60: "Every hour",
+            120: "Every 2 hours",
+            180: "Every 3 hours",
+            360: "Every 6 hours",
+        },
+    ),
 }
+
+
+def current_values(config: Config) -> dict:
+    """The value of each setting in config."""
+    return {
+        "language": config.locale.code,
+        "orientation": config.orientation,
+        "icons": config.icon_set,
+        "temperature": config.temperature_unit,
+        "clock": config.clock,
+        "refresh": config.refresh_minutes,
+    }
 
 
 def change(setting: str, value: str) -> None:
     """Set one setting in config.json, keeping everything else as it is."""
     _, keys, values = SETTINGS[setting]
-    if value not in values:
+    # Values come as text from the menu and the page; some are numbers.
+    matches = [choice for choice in values if str(choice) == value]
+    if not matches:
         raise ValueError(f"{setting} must be one of {tuple(values)}")
+    value = matches[0]
     raw = _read_config()
     *parents, key = keys
     section = raw
@@ -102,13 +129,7 @@ def _write_config(raw: dict) -> None:
 
 def write_menu() -> None:
     config = load_config(CONFIG_PATH)
-    current = {
-        "language": config.locale.code,
-        "orientation": config.orientation,
-        "icons": config.icon_set,
-        "temperature": config.temperature_unit,
-        "clock": config.clock,
-    }
+    current = current_values(config)
     # A submenu per setting, titled with its current value, which is also
     # marked [x] among the choices. set.sh relies on these names.
     city = f"{config.city}, {config.country_code}" if config.country_code else config.city
@@ -141,7 +162,9 @@ def write_menu() -> None:
             }
             for index, (value, name) in enumerate(values.items(), start=1)
         ]
-        name = values[current[setting]]
+        # A value set by hand may not be among the choices.
+        value = current[setting]
+        name = values.get(value, f"Every {value} minutes" if isinstance(value, int) else value)
         settings.append({"name": f"{title}: {name}", "priority": priority, "items": choices})
     settings.append(
         {

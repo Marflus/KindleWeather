@@ -34,6 +34,8 @@ class Config:
     temperature_unit: str
     # "24h" or "12h", with AM and PM.
     clock: str
+    # Minutes between two refreshes of the dashboard, read by bin/station.sh too.
+    refresh_minutes: int
 
 
 def load_config(path: Path) -> Config:
@@ -83,6 +85,12 @@ def load_config(path: Path) -> Config:
     clock = raw.get("clock", "24h")
     _require(clock in CLOCKS, f"clock must be one of {CLOCKS}")
 
+    refresh_minutes = raw.get("refresh_minutes", 60)
+    _require(
+        isinstance(refresh_minutes, int) and 5 <= refresh_minutes <= 1440,
+        "refresh_minutes must be a number of minutes, from 5 to 1440",
+    )
+
     return Config(
         locale=LOCALES[language],
         city=city.strip(),
@@ -93,6 +101,7 @@ def load_config(path: Path) -> Config:
         icon_set=icon_set,
         temperature_unit=temperature_unit,
         clock=clock,
+        refresh_minutes=refresh_minutes,
     )
 
 

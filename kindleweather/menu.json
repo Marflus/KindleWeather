@@ -33,7 +33,15 @@
         {"name": "[x] 24-hour", "priority": 1, "action": "sh bin/set.sh clock 24h", "exitmenu": false, "refresh": true},
         {"name": "[ ] 12-hour (AM/PM)", "priority": 2, "action": "sh bin/set.sh clock 12h", "exitmenu": false, "refresh": true}
       ]},
-      {"name": "All settings in the browser", "priority": 7, "action": "sh bin/web.sh"}
+      {"name": "Refresh: Every hour", "priority": 7, "items": [
+        {"name": "[ ] Every 15 minutes", "priority": 1, "action": "sh bin/set.sh refresh 15", "exitmenu": false, "refresh": true},
+        {"name": "[ ] Every 30 minutes", "priority": 2, "action": "sh bin/set.sh refresh 30", "exitmenu": false, "refresh": true},
+        {"name": "[x] Every hour", "priority": 3, "action": "sh bin/set.sh refresh 60", "exitmenu": false, "refresh": true},
+        {"name": "[ ] Every 2 hours", "priority": 4, "action": "sh bin/set.sh refresh 120", "exitmenu": false, "refresh": true},
+        {"name": "[ ] Every 3 hours", "priority": 5, "action": "sh bin/set.sh refresh 180", "exitmenu": false, "refresh": true},
+        {"name": "[ ] Every 6 hours", "priority": 6, "action": "sh bin/set.sh refresh 360", "exitmenu": false, "refresh": true}
+      ]},
+      {"name": "All settings in the browser", "priority": 8, "action": "sh bin/web.sh"}
     ]},
     {"name": "Diagnostic", "priority": 3, "action": "sh bin/diagnose.sh"}
   ]}

@@ -1,7 +1,7 @@
 # KindleWeather
 
 Turn a jailbroken Kindle into a standalone, battery-powered weather station.
-Every hour the Kindle wakes up, fetches the forecast from
+Every hour, or at the interval you choose, the Kindle wakes up, fetches the forecast from
 [Open-Meteo](https://open-meteo.com/), draws a grayscale dashboard tuned for
 e-ink, displays it and goes back to sleep. No computer, server, account or API
 key is needed.
@@ -24,17 +24,17 @@ key is needed.
 ## How it works
 
 ```
-Kindle, every hour
+Kindle, every hour (or 15 minutes to 6 hours)
  1. wake up, Wi-Fi on
  2. Open-Meteo -> forecast -> dashboard.png, drawn by Python with the Kindle's own cairo library
  3. Wi-Fi off, display the dashboard
- 4. suspend until the next hour
+ 4. suspend until the next refresh
 ```
 
 KindleWeather is a [KUAL](https://www.mobileread.com/forums/showthread.php?t=203326)
 extension. When started, it stops Amazon's interface and its background
 services, so that nothing draws over the dashboard and the battery lasts. The
-Kindle's real-time clock wakes it up every hour, and the e-ink screen keeps the
+Kindle's real-time clock wakes it up for each refresh, and the e-ink screen keeps the
 image without power in between. The approach comes from
 [kindle-weatherstation](https://github.com/mattzzw/kindle-weatherstation).
 
@@ -81,7 +81,7 @@ To stop the station and get the normal Kindle back, restart it: hold the power
 button for about 15 seconds.
 
 While plugged in over USB, the Kindle does not suspend: the station then waits
-for the next hour instead.
+for the next refresh instead.
 
 ### If the station does not start
 
@@ -123,6 +123,7 @@ KindleWeather
     Icons: Classic          > [x] Classic, [ ] Weather Icons, [ ] Material
     Temperature: Celsius    > [x] Celsius, [ ] Fahrenheit
     Clock: 24-hour          > [x] 24-hour, [ ] 12-hour (AM/PM)
+    Refresh: Every hour     > [ ] Every 15 minutes, [ ] Every 30 minutes, [x] Every hour...
     All settings in the browser
   Diagnostic
 ```
@@ -158,7 +159,8 @@ can also be edited by hand.
   "location": { "city": "Lyon", "country_code": "FR" },
   "display": { "width": 1072, "height": 1448, "orientation": "portrait", "icons": "classic" },
   "temperature_unit": "celsius",
-  "clock": "24h"
+  "clock": "24h",
+  "refresh_minutes": 60
 }
 ```
 
@@ -173,6 +175,7 @@ can also be edited by hand.
 | `display.icons` | `"classic"` (default), `"weather-icons"` or `"material"`, see [Icon sets](#icon-sets). |
 | `temperature_unit` | `"celsius"` (default) or `"fahrenheit"`. |
 | `clock` | `"24h"` (default) or `"12h"`, with AM and PM. |
+| `refresh_minutes` | Minutes between two refreshes, from 5 to 1440; 60 by default. The menu offers 15 minutes to 6 hours. Frequent refreshes drain the battery faster, and Open-Meteo's forecast changes little within an hour. |
 
 Changes made to the file while the station runs apply at the next refresh.
 
@@ -202,7 +205,7 @@ Full previews of each set, in portrait and landscape, are in [`preview/`](previe
 
 Errors are written in English on the top line of the last dashboard, or on a
 full screen when there is no dashboard yet. Each one is retried at the next
-hourly refresh, and logged with its details in `station.log`.
+refresh, and logged with its details in `station.log`.
 
 | Code | Meaning | What to do |
 |---|---|---|
@@ -223,7 +226,7 @@ kindleweather/            the KUAL extension, copied as is to the Kindle
   config.xml, menu.json     KUAL menu, written by settings.py
   bin/
     start.sh                  starts station.sh in the background
-    station.sh                the hourly loop: Wi-Fi, drawing, display, suspend
+    station.sh                the refresh loop: Wi-Fi, drawing, display, suspend
     diagnose.sh               the Diagnostic action
     set.sh, city.sh           the settings buttons, and Detect automatically
     web.sh                    opens the settings page in the browser

@@ -1,10 +1,9 @@
 #!/bin/sh
-# The weather station, started by start.sh. Every hour: Wi-Fi on, draw the
-# dashboard, Wi-Fi off, display it, then suspend the Kindle until the next
-# hour. Amazon's interface is stopped for good: restart the Kindle to get it back.
+# The weather station, started by start.sh. At every refresh: Wi-Fi on, draw
+# the dashboard, Wi-Fi off, display it, then suspend the Kindle until the next
+# refresh. Amazon's interface is stopped for good: restart the Kindle to get it back.
 # Adapted from https://github.com/mattzzw/kindle-weatherstation by mattzzw.
 . "$(dirname "$0")/common.sh"
-REFRESH_SECONDS=3600
 LOW_BATTERY_PERCENT=10
 # Real-time clock able to wake the Paperwhite 2 and 3 from suspend.
 RTC=/dev/rtc1
@@ -97,6 +96,17 @@ draw() {
     esac
 }
 
+# Seconds until the next refresh: refresh_minutes in config.json, read at every
+# refresh so that a change applies without restarting; one hour by default.
+refresh_seconds() {
+    minutes=$(sed -n 's/.*"refresh_minutes": *\([0-9][0-9]*\).*/\1/p' "$CONFIG")
+    if [ -n "$minutes" ] && [ "$minutes" -ge 5 ]; then
+        echo $((minutes * 60))
+    else
+        echo 3600
+    fi
+}
+
 battery_warning() {
     level=$(lipc-get-prop com.lab126.powerd battLevel 2>/dev/null)
     if [ -n "$level" ] && [ "$level" -le "$LOW_BATTERY_PERCENT" ] 2>/dev/null; then
@@ -119,13 +129,14 @@ while true; do
 
     # Suspending right after a screen update can hang some models.
     sleep 3
+    seconds=$(refresh_seconds)
     asleep_at=$(date +%s)
-    rtcwake -d "$RTC" -m no -s "$REFRESH_SECONDS"
+    rtcwake -d "$RTC" -m no -s "$seconds"
     echo mem >/sys/power/state
-    # Suspend is refused over USB, for one: then wait out the hour.
+    # Suspend is refused over USB, for one: then wait until the next refresh.
     awake=$(($(date +%s) - asleep_at))
-    if [ "$awake" -lt $((REFRESH_SECONDS - 60)) ]; then
+    if [ "$awake" -lt $((seconds - 60)) ]; then
         log "no suspend (${awake} s), waiting for the next refresh"
-        sleep $((REFRESH_SECONDS - awake))
+        sleep $((seconds - awake))
     fi
 done
