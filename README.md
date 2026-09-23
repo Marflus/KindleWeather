@@ -9,13 +9,18 @@ extension, and can refresh it every morning with GitHub Actions.
 
 **[Version française ci-dessous](#français)**
 
-<p align="center"><img src="docs/preview.png" alt="Dashboard preview" width="420"></p>
-<p align="center"><sub>Sample output, rendered from test data.</sub></p>
+<p align="center">
+  <img src="docs/preview.png" alt="Portrait dashboard" height="420">
+  <img src="docs/preview-landscape.png" alt="Landscape dashboard" height="420">
+</p>
+<p align="center"><sub>Portrait and landscape layouts, rendered from sample data.</sub></p>
 
 ## Features
 
 - Today's conditions, min/max, sunrise and sunset, average humidity and wind
-- 24-hour temperature chart with rainy hours hatched, and a 2-hourly table
+- Precipitation alert with its icon, by priority: snow, then thunderstorm, then rain
+- 24-hour temperature chart with a distinct pattern for rain, thunderstorm and snow hours, and a 2-hourly table
+- Portrait or landscape layout
 - English and French interface
 - City set by name; coordinates and the displayed, localized city name come from the Open-Meteo geocoding API
 - Rendered at 2x then downscaled, for clean anti-aliasing on e-ink
@@ -58,8 +63,8 @@ firmware version: see [Kindle Modding](https://kindlemodding.org/) and the
 | Kindle Oasis 2 and 3 (2017, 2019) | 1264×1680 | Set `display` in the config, untested |
 | Kindle Paperwhite 1 and 2 (2012, 2013) | 758×1024 | Set `display` in the config, untested |
 
-The layout is designed for 1072×1448. Other resolutions get the same layout
-scaled to the configured size.
+Both layouts are designed for a 1072×1448 screen. Other resolutions get the
+same layouts scaled to the configured size.
 
 ## Installation
 
@@ -88,7 +93,7 @@ Edit [`config/config.json`](config/config.json):
 {
   "language": "en",
   "location": { "city": "Lyon", "country_code": "FR" },
-  "display": { "width": 1072, "height": 1448 },
+  "display": { "width": 1072, "height": 1448, "orientation": "portrait" },
   "kindle": {
     "method": "ssh",
     "host": "100.64.0.12",
@@ -104,7 +109,8 @@ Edit [`config/config.json`](config/config.json):
 | `language` | `"en"` or `"fr"`. Applies to the dashboard, the city name and the KUAL menu. |
 | `location.city` | City name. It is geocoded by Open-Meteo, and the name shown on the dashboard is fetched in the chosen language. |
 | `location.country_code` | Optional ISO 3166-1 alpha-2 code (`"FR"`, `"US"`...) to pick the right city among homonyms. |
-| `display.width`, `display.height` | Screen resolution in pixels (see [Compatibility](#compatibility)). |
+| `display.width`, `display.height` | Screen resolution in pixels, in portrait (see [Compatibility](#compatibility)). |
+| `display.orientation` | `"portrait"` (default) or `"landscape"`. In landscape, read the Kindle turned a quarter turn clockwise. |
 | `kindle.method` | `"ssh"` to deploy over the network, `"usb"` to copy to the mounted Kindle drive. |
 | `kindle.host` | Kindle IP address (Tailscale or local network). Required for `ssh`. |
 | `kindle.user` | SSH user, `root` by default. |
@@ -192,7 +198,9 @@ et peut le mettre à jour chaque matin avec GitHub Actions.
 ## Fonctionnalités
 
 - Conditions du jour, minimales et maximales, lever et coucher du soleil, humidité et vent moyens
-- Courbe des températures sur 24 heures avec les heures de pluie hachurées, et tableau toutes les 2 heures
+- Alerte de précipitations avec son icône, par priorité : neige, puis orage, puis pluie
+- Courbe des températures sur 24 heures avec un motif différent pour les heures de pluie, d'orage et de neige, et tableau toutes les 2 heures
+- Affichage en portrait ou en paysage
 - Interface en anglais et en français
 - Ville définie par son nom : les coordonnées et le nom affiché, traduit dans la langue choisie, viennent de l'API de géocodage d'Open-Meteo
 - Rendu en 2x puis réduit, pour un anticrénelage net sur l'écran e-ink
@@ -236,8 +244,8 @@ L'existence d'un jailbreak dépend de la version du firmware : voir
 | Kindle Oasis 2 et 3 (2017, 2019) | 1264×1680 | Renseigner `display` dans la configuration, non testé |
 | Kindle Paperwhite 1 et 2 (2012, 2013) | 758×1024 | Renseigner `display` dans la configuration, non testé |
 
-La mise en page est conçue pour 1072×1448. Pour les autres résolutions, elle
-est mise à l'échelle de la taille configurée.
+Les deux mises en page sont conçues pour un écran de 1072×1448. Pour les autres
+résolutions, elles sont mises à l'échelle de la taille configurée.
 
 ## Installation
 
@@ -267,7 +275,7 @@ Modifier [`config/config.json`](config/config.json) :
 {
   "language": "fr",
   "location": { "city": "Lyon", "country_code": "FR" },
-  "display": { "width": 1072, "height": 1448 },
+  "display": { "width": 1072, "height": 1448, "orientation": "portrait" },
   "kindle": {
     "method": "ssh",
     "host": "100.64.0.12",
@@ -283,7 +291,8 @@ Modifier [`config/config.json`](config/config.json) :
 | `language` | `"en"` ou `"fr"`. S'applique au tableau de bord, au nom de la ville et au menu KUAL. |
 | `location.city` | Nom de la ville. Elle est géocodée par Open-Meteo et le nom affiché est récupéré dans la langue choisie. |
 | `location.country_code` | Code ISO 3166-1 alpha-2 facultatif (`"FR"`, `"US"`...) pour choisir la bonne ville parmi des homonymes. |
-| `display.width`, `display.height` | Résolution de l'écran en pixels (voir [Compatibilité](#compatibilité)). |
+| `display.width`, `display.height` | Résolution de l'écran en pixels, en portrait (voir [Compatibilité](#compatibilité)). |
+| `display.orientation` | `"portrait"` (par défaut) ou `"landscape"` (paysage). En paysage, la Kindle se lit tournée d'un quart de tour dans le sens des aiguilles d'une montre. |
 | `kindle.method` | `"ssh"` pour déployer par le réseau, `"usb"` pour copier sur le disque de la Kindle branchée. |
 | `kindle.host` | Adresse IP de la Kindle (Tailscale ou réseau local). Obligatoire pour `ssh`. |
 | `kindle.user` | Utilisateur SSH, `root` par défaut. |

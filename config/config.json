@@ -6,7 +6,8 @@
   },
   "display": {
     "width": 1072,
-    "height": 1448
+    "height": 1448,
+    "orientation": "portrait"
   },
   "kindle": {
     "method": "ssh",

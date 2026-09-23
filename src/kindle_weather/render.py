@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from itertools import groupby
 
 import font_roboto
@@ -15,19 +16,20 @@ from kindle_weather.graphics import (
     INK,
     WHITE,
     draw_centered_text,
+    draw_diagonal_hatch,
+    draw_dot_grid,
     draw_droplet,
     draw_sun_horizon,
     draw_weather_icon,
     draw_wind,
+    icon_bounds,
     text_width,
 )
 from kindle_weather.i18n import Locale
-from kindle_weather.weather import RAINY_CODES, DailyForecast
+from kindle_weather.weather import PRECIPITATION_KINDS, DailyForecast, precipitation_kind
 
-LAYOUT_SIZE = (1072, 1448)
 SUPERSAMPLING = 2
-WIDTH, HEIGHT = LAYOUT_SIZE[0] * SUPERSAMPLING, LAYOUT_SIZE[1] * SUPERSAMPLING
-MARGIN = 50 * SUPERSAMPLING
+SCREEN_SIZE = (1072, 1448)
 
 FONT_SPECS = {
     "date": (font_roboto.RobotoBold, 34),
@@ -44,60 +46,118 @@ FONT_SPECS = {
     "footer": (font_roboto.Roboto, 16),
 }
 
-TABLE_HOURS = ((2, 4, 6, 8, 10, 12), (14, 16, 18, 20, 22, 0))
+# Icon shown in the precipitation banner for each kind.
+BANNER_ICONS = {"snow": 73, "storm": 95, "rain": 63}
+
+# Start of the hour, temperature, humidity and wind cells, as a share of a table
+# column; wind gets the widest cell since it holds an icon and "km/h".
+TABLE_CELLS = (0, 0.24, 0.47, 0.71)
+
+
+@dataclass(frozen=True)
+class Layout:
+    size: tuple[int, int]
+    header_top: int
+    panel_width: int
+    chart_height: int
+    table_hours: tuple[tuple[int, ...], ...]
+    row_height: int
+    column_gap: int
+    footer_gap: int
+
+
+LAYOUTS = {
+    "portrait": Layout(
+        size=(1072, 1448),
+        header_top=56,
+        panel_width=340,
+        chart_height=336,
+        table_hours=((2, 4, 6, 8, 10, 12), (14, 16, 18, 20, 22, 0)),
+        row_height=66,
+        column_gap=40,
+        footer_gap=54,
+    ),
+    "landscape": Layout(
+        size=(1448, 1072),
+        header_top=40,
+        panel_width=520,
+        chart_height=170,
+        table_hours=((2, 4, 6, 8), (10, 12, 14, 16), (18, 20, 22, 0)),
+        row_height=60,
+        column_gap=24,
+        footer_gap=40,
+    ),
+}
 
 
 def px(value: float) -> int:
     return round(value * SUPERSAMPLING)
 
 
+MARGIN = px(50)
+
+
 def render_dashboard(
-    forecast: DailyForecast, locale: Locale, size: tuple[int, int] = LAYOUT_SIZE
+    forecast: DailyForecast,
+    locale: Locale,
+    size: tuple[int, int] = SCREEN_SIZE,
+    orientation: str = "portrait",
 ) -> Image.Image:
-    return _Dashboard(forecast, locale).render(size)
+    """Render for a portrait framebuffer of `size`; landscape output is rotated to fit it."""
+    image = _Dashboard(forecast, locale, LAYOUTS[orientation]).render()
+    if orientation == "landscape":
+        # Read with the Kindle turned a quarter turn clockwise.
+        width, height = size
+        return image.resize((height, width), Image.Resampling.LANCZOS).transpose(
+            Image.Transpose.ROTATE_90
+        )
+    return image.resize(size, Image.Resampling.LANCZOS)
 
 
-def rainy_runs(codes: list[int]) -> list[tuple[int, int]]:
-    """Return [start, end) index ranges of consecutive rainy codes."""
+def precipitation_runs(codes: list[int]) -> list[tuple[str, int, int]]:
+    """Return (kind, start, end) for each run of consecutive codes of the same precipitation."""
     runs, start = [], 0
-    for rainy, group in groupby(codes, key=lambda code: code in RAINY_CODES):
+    for kind, group in groupby(codes, key=precipitation_kind):
         end = start + len(list(group))
-        if rainy:
-            runs.append((start, end))
+        if kind:
+            runs.append((kind, start, end))
         start = end
     return runs
 
 
 class _Dashboard:
-    def __init__(self, forecast: DailyForecast, locale: Locale):
+    def __init__(self, forecast: DailyForecast, locale: Locale, layout: Layout):
         self.forecast = forecast
         self.locale = locale
-        self.image = Image.new("L", (WIDTH, HEIGHT), WHITE)
+        self.layout = layout
+        self.width, self.height = px(layout.size[0]), px(layout.size[1])
+        self.image = Image.new("L", (self.width, self.height), WHITE)
         self.draw = ImageDraw.Draw(self.image)
         self.fonts = {
             name: ImageFont.truetype(path, px(size)) for name, (path, size) in FONT_SPECS.items()
         }
 
-    def render(self, size: tuple[int, int]) -> Image.Image:
+    def render(self) -> Image.Image:
         y = self._header()
         y = self._summary(y + px(18))
-        y = self._rain_banner(y + px(12))
+        y = self._precipitation_banner(y + px(12))
         y = self._temperature_chart(y + px(22))
         y = self._hourly_table(y + px(80))
-        self._footer(y + px(54))
-        return self.image.resize(size, Image.Resampling.LANCZOS)
+        self._footer(y + px(self.layout.footer_gap))
+        return self.image
 
     def _separator(self, y: float) -> None:
-        self.draw.line([(MARGIN, y), (WIDTH - MARGIN, y)], fill=GRAY_LIGHT, width=px(2))
+        self.draw.line([(MARGIN, y), (self.width - MARGIN, y)], fill=GRAY_LIGHT, width=px(2))
 
     def _header(self) -> int:
         # Centered: the Kindle status bar covers the top corners.
-        top = px(56)
+        top = px(self.layout.header_top)
+        center = self.width // 2
         date = self.locale.format_long_date(self.forecast.observed_at)
         place = self.forecast.place_name.upper()
-        draw_centered_text(self.draw, WIDTH // 2, top, date, self.fonts["date"], INK)
+        draw_centered_text(self.draw, center, top, date, self.fonts["date"], INK)
         draw_centered_text(
-            self.draw, WIDTH // 2, top + px(48), place, self.fonts["location"], GRAY_DARK
+            self.draw, center, top + px(48), place, self.fonts["location"], GRAY_DARK
         )
         bottom = top + px(96)
         self._separator(bottom)
@@ -105,11 +165,11 @@ class _Dashboard:
 
     def _summary(self, top: int) -> int:
         draw, fonts, forecast = self.draw, self.fonts, self.forecast
-        height, panel_width, padding = px(220), px(340), px(20)
+        height, panel_width, padding = px(220), px(self.layout.panel_width), px(20)
         draw.rounded_rectangle(
-            [MARGIN, top, WIDTH - MARGIN, top + height], radius=px(22), fill=GRAY_PALE
+            [MARGIN, top, self.width - MARGIN, top + height], radius=px(22), fill=GRAY_PALE
         )
-        divider_x = WIDTH - MARGIN - panel_width - 2 * padding
+        divider_x = self.width - MARGIN - panel_width - 2 * padding
         draw.line(
             [(divider_x, top + px(24)), (divider_x, top + height - px(24))],
             fill=GRAY_LIGHT,
@@ -188,26 +248,44 @@ class _Dashboard:
             )
             self.draw.text((text_x, y + px(24)), value, font=self.fonts["panel_value"], fill=INK)
 
-    def _rain_banner(self, top: int) -> int:
+    def _precipitation_banner(self, top: int) -> int:
         height = px(46)
         font = self.fonts["banner"]
-        text = self.locale.labels["rain_expected" if self.forecast.has_rain else "no_rain"]
+        risk = self.forecast.precipitation_risk
+        text = self.locale.labels[f"{risk}_risk" if risk else "no_precipitation"]
         self.draw.rounded_rectangle(
-            [MARGIN, top, WIDTH - MARGIN, top + height],
+            [MARGIN, top, self.width - MARGIN, top + height],
             radius=height // 2,
             outline=INK,
             width=px(3),
         )
         box = self.draw.textbbox((0, 0), text, font=font)
         text_y = top + (height - (box[3] - box[1])) // 2 - box[1]
-        draw_centered_text(self.draw, WIDTH // 2, text_y, text, font, INK)
+        if not risk:
+            draw_centered_text(self.draw, self.width // 2, text_y, text, font, INK)
+            return top + height
+
+        # Center icon and text as one group; the icon is placed by its actual ink bounds.
+        code, icon_r, gap = BANNER_ICONS[risk], px(13), px(12)
+        icon_left, icon_top, icon_right, icon_bottom = icon_bounds(code, icon_r)
+        icon_width = icon_right - icon_left
+        group_left = self.width / 2 - (icon_width + gap + box[2] - box[0]) / 2
+        draw_weather_icon(
+            self.draw,
+            code,
+            group_left - icon_left,
+            top + height / 2 - (icon_top + icon_bottom) / 2,
+            icon_r,
+        )
+        self.draw.text((group_left + icon_width + gap - box[0], text_y), text, font=font, fill=INK)
         return top + height
 
     def _temperature_chart(self, separator_y: int) -> int:
         draw, forecast, font = self.draw, self.forecast, self.fonts["axis"]
         self._separator(separator_y)
-        left, right = MARGIN + px(50), WIDTH - MARGIN - px(10)
-        top, bottom = separator_y + px(30), separator_y + px(366)
+        left, right = MARGIN + px(50), self.width - MARGIN - px(10)
+        top = separator_y + px(30)
+        bottom = top + px(self.layout.chart_height)
 
         samples = [(h.hour / 24, h) for h in forecast.hours]
         if forecast.next_midnight:
@@ -228,8 +306,8 @@ class _Dashboard:
         points = [(left + f * (right - left), y_of(h.temperature)) for f, h in samples]
         draw.polygon([(left, bottom), *points, (right, bottom)], fill=GRAY_PALE)
         # Segment k (point k to k+1) takes the weather of its starting hour.
-        segment_codes = [h.weather_code for _, h in samples[:-1]]
-        self._hatch_rain(points, rainy_runs(segment_codes), left, right, top, bottom)
+        runs = precipitation_runs([h.weather_code for _, h in samples[:-1]])
+        self._pattern_under_curve(points, runs, (left, top, right, bottom))
         draw.line(points, fill=INK, width=px(4), joint="curve")
 
         for hour in range(0, 24, 3):
@@ -239,6 +317,10 @@ class _Dashboard:
                 self._chart_tick(x, y_of(entry.temperature), f"{hour:02d}:00", right, bottom)
         if forecast.next_midnight:
             self._chart_tick(*points[-1], "00:00", right, bottom)
+
+        kinds = [kind for kind in PRECIPITATION_KINDS if any(run[0] == kind for run in runs)]
+        if kinds:
+            self._legend(kinds, (left + right) / 2, bottom + px(44))
         return bottom
 
     def _chart_tick(self, x: float, y: float, label: str, right: int, axis_y: int) -> None:
@@ -248,36 +330,62 @@ class _Dashboard:
         label_x = min(x - label_width / 2, right - label_width)
         self.draw.text((label_x, axis_y + px(12)), label, font=font, fill=GRAY_DARK)
 
-    def _hatch_rain(self, points, runs, left: int, right: int, top: int, bottom: int) -> None:
-        if not runs:
-            return
-        mask = Image.new("L", self.image.size, 0)
-        mask_draw = ImageDraw.Draw(mask)
-        for start, end in runs:
-            run = points[start : end + 1]
-            mask_draw.polygon([(run[0][0], bottom), *run, (run[-1][0], bottom)], fill=255)
+    def _pattern_under_curve(self, points, runs, box) -> None:
+        bottom = box[3]
+        for kind in PRECIPITATION_KINDS:
+            mask = Image.new("L", self.image.size, 0)
+            mask_draw = ImageDraw.Draw(mask)
+            for run_kind, start, end in runs:
+                if run_kind == kind:
+                    run = points[start : end + 1]
+                    mask_draw.polygon([(run[0][0], bottom), *run, (run[-1][0], bottom)], fill=255)
+            if mask.getbbox():
+                self._fill_pattern(kind, mask, box)
 
-        hatched = self.image.copy()
-        hatch_draw = ImageDraw.Draw(hatched)
-        rise = bottom - top
-        for x in range(left - rise, right, px(9)):
-            hatch_draw.line([(x, bottom), (x + rise, top)], fill=GRAY_DARK, width=px(2))
-        self.image.paste(hatched, (0, 0), mask)
+    def _fill_pattern(self, kind: str, mask: Image.Image, box) -> None:
+        layer = self.image.copy()
+        draw = ImageDraw.Draw(layer)
+        if kind == "rain":
+            draw_diagonal_hatch(draw, box, spacing=px(9), width=px(2))
+        elif kind == "storm":
+            draw_diagonal_hatch(draw, box, spacing=px(12), width=px(2))
+            draw_diagonal_hatch(draw, box, spacing=px(12), width=px(2), rising=False)
+        else:
+            draw_dot_grid(draw, box, spacing=px(12), radius=px(2.5))
+        self.image.paste(layer, (0, 0), mask)
+
+    def _legend(self, kinds: list[str], center_x: float, top: int) -> None:
+        font = self.fonts["axis"]
+        swatch_width, swatch_height, gap, spacing = px(34), px(18), px(8), px(28)
+        labels = [self.locale.labels[kind] for kind in kinds]
+        widths = [swatch_width + gap + text_width(self.draw, label, font) for label in labels]
+        x = round(center_x - (sum(widths) + spacing * (len(kinds) - 1)) / 2)
+        for kind, label, width in zip(kinds, labels, widths, strict=True):
+            box = (x, top, x + swatch_width, top + swatch_height)
+            self.draw.rectangle(box, fill=GRAY_PALE)
+            mask = Image.new("L", self.image.size, 0)
+            ImageDraw.Draw(mask).rectangle(box, fill=255)
+            self._fill_pattern(kind, mask, box)
+            self.draw.rectangle(box, outline=GRAY_MID, width=px(1))
+            text_box = self.draw.textbbox((0, 0), label, font=font)
+            text_y = top + (swatch_height - (text_box[3] - text_box[1])) / 2 - text_box[1]
+            self.draw.text((box[2] + gap - text_box[0], text_y), label, font=font, fill=GRAY_DARK)
+            x += round(width) + spacing
 
     def _hourly_table(self, separator_y: int) -> int:
         draw, fonts = self.draw, self.fonts
         self._separator(separator_y)
-        top, row_height, gap = separator_y + px(18), px(66), px(40)
-        column_width = (WIDTH - 2 * MARGIN - gap) // 2
-        icon_zone = px(42)
-        cell_width = (column_width - icon_zone) // 4
+        columns = self.layout.table_hours
+        row_height = px(self.layout.row_height)
+        top, gap, icon_zone = separator_y + px(18), px(self.layout.column_gap), px(42)
+        column_width = (self.width - 2 * MARGIN - (len(columns) - 1) * gap) // len(columns)
 
-        for row in range(len(TABLE_HOURS[0])):
+        for row in range(len(columns[0])):
             y = top + row * row_height
             middle = y + row_height // 2
             if row % 2:
-                draw.rectangle([MARGIN, y, WIDTH - MARGIN, y + row_height], fill=GRAY_PALE)
-            for column, hours in enumerate(TABLE_HOURS):
+                draw.rectangle([MARGIN, y, self.width - MARGIN, y + row_height], fill=GRAY_PALE)
+            for column, hours in enumerate(columns):
                 hour = hours[row]
                 entry = self.forecast.next_midnight if hour == 0 else self.forecast.at(hour)
                 if entry is None:
@@ -287,37 +395,41 @@ class _Dashboard:
                     draw, entry.weather_code, column_left + icon_zone // 2, middle, px(13)
                 )
                 hour_x, temp_x, humidity_x, wind_x = (
-                    column_left + icon_zone + i * cell_width for i in range(4)
+                    column_left + icon_zone + round(share * (column_width - icon_zone))
+                    for share in TABLE_CELLS
                 )
-                draw.text((hour_x, y + px(21)), f"{hour:02d}:00", font=fonts["row"], fill=INK)
+                draw.text((hour_x, middle - px(12)), f"{hour:02d}:00", font=fonts["row"], fill=INK)
                 draw.text(
-                    (temp_x, y + px(21)),
+                    (temp_x, middle - px(12)),
                     f"{round(entry.temperature)}°C",
                     font=fonts["row"],
                     fill=INK,
                 )
                 draw_droplet(draw, humidity_x + px(11), middle, px(11), fill=GRAY_DARK)
                 draw.text(
-                    (humidity_x + px(28), y + px(23)),
+                    (humidity_x + px(28), middle - px(10)),
                     f"{entry.humidity} %",
                     font=fonts["row_small"],
                     fill=GRAY_DARK,
                 )
                 draw_wind(draw, wind_x + px(13), middle, px(13), fill=GRAY_DARK)
                 draw.text(
-                    (wind_x + px(30), y + px(23)),
+                    (wind_x + px(30), middle - px(10)),
                     f"{round(entry.wind_speed)} km/h",
                     font=fonts["row_small"],
                     fill=GRAY_DARK,
                 )
 
-        bottom = top + len(TABLE_HOURS[0]) * row_height
-        divider_x = MARGIN + column_width + gap // 2
-        draw.line(
-            [(divider_x, top + px(6)), (divider_x, bottom - px(6))], fill=GRAY_LIGHT, width=px(2)
-        )
+        bottom = top + len(columns[0]) * row_height
+        for column in range(1, len(columns)):
+            divider_x = MARGIN + column * (column_width + gap) - gap // 2
+            draw.line(
+                [(divider_x, top + px(6)), (divider_x, bottom - px(6))],
+                fill=GRAY_LIGHT,
+                width=px(2),
+            )
         return bottom
 
     def _footer(self, y: int) -> None:
         text = self.locale.format_updated_at(self.forecast.observed_at)
-        draw_centered_text(self.draw, WIDTH // 2, y, text, self.fonts["footer"], GRAY_MID)
+        draw_centered_text(self.draw, self.width // 2, y, text, self.fonts["footer"], GRAY_MID)

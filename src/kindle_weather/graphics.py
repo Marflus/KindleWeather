@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from PIL import ImageDraw, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFont
 
 from kindle_weather.weather import (
     DRIZZLE_CODES,
@@ -144,6 +144,33 @@ def draw_sun_horizon(draw, cx, cy, r, rising: bool, fill=INK) -> None:
         draw.polygon(
             [(cx - head, tip - head), (cx + head, tip - head), (cx, tip + head)], fill=fill
         )
+
+
+def icon_bounds(code: int, r: float) -> tuple[int, int, int, int]:
+    """Ink bounding box of a weather icon, relative to the center it is drawn at."""
+    size = math.ceil(r * 6)
+    scratch = Image.new("L", (size, size), WHITE)
+    draw_weather_icon(ImageDraw.Draw(scratch), code, size / 2, size / 2, r)
+    left, top, right, bottom = ImageChops.invert(scratch).getbbox()
+    return left - size / 2, top - size / 2, right - size / 2, bottom - size / 2
+
+
+def draw_diagonal_hatch(draw, box, spacing, width, rising=True, fill=GRAY_DARK) -> None:
+    left, top, right, bottom = box
+    rise = bottom - top
+    for x in range(left - rise, right, spacing):
+        if rising:
+            draw.line([(x, bottom), (x + rise, top)], fill=fill, width=width)
+        else:
+            draw.line([(x, top), (x + rise, bottom)], fill=fill, width=width)
+
+
+def draw_dot_grid(draw, box, spacing, radius, fill=GRAY_DARK) -> None:
+    left, top, right, bottom = box
+    for row, y in enumerate(range(top + spacing // 2, bottom, spacing)):
+        offset = spacing // 2 if row % 2 else 0
+        for x in range(left + offset, right, spacing):
+            draw.ellipse([x - radius, y - radius, x + radius, y + radius], fill=fill)
 
 
 def _three_columns(cx: float, r: float) -> tuple[float, float, float]:

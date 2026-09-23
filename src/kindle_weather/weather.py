@@ -19,7 +19,19 @@ DRIZZLE_CODES = frozenset({51, 53, 55, 56, 57})
 RAIN_CODES = frozenset({61, 63, 65, 66, 67, 80, 81, 82})
 SNOW_CODES = frozenset({71, 73, 75, 77, 85, 86})
 THUNDERSTORM_CODES = frozenset({95, 96, 99})
-RAINY_CODES = DRIZZLE_CODES | RAIN_CODES | THUNDERSTORM_CODES
+
+# Precipitation kinds, most important first.
+PRECIPITATION_KINDS = ("snow", "storm", "rain")
+
+
+def precipitation_kind(code: int) -> str | None:
+    if code in SNOW_CODES:
+        return "snow"
+    if code in THUNDERSTORM_CODES:
+        return "storm"
+    if code in DRIZZLE_CODES or code in RAIN_CODES:
+        return "rain"
+    return None
 
 
 class WeatherError(RuntimeError):
@@ -58,8 +70,10 @@ class DailyForecast:
         return next((entry for entry in self.hours if entry.hour == hour), None)
 
     @property
-    def has_rain(self) -> bool:
-        return any(entry.weather_code in RAINY_CODES for entry in self.hours)
+    def precipitation_risk(self) -> str | None:
+        """Most important precipitation kind expected today, if any."""
+        kinds = {precipitation_kind(entry.weather_code) for entry in self.hours}
+        return next((kind for kind in PRECIPITATION_KINDS if kind in kinds), None)
 
 
 def geocode(city: str, country_code: str | None, language: str) -> Place:

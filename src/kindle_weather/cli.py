@@ -58,7 +58,8 @@ def main(argv: list[str] | None = None) -> int:
 def render(config: Config, output: Path) -> None:
     place = geocode(config.location.city, config.location.country_code, config.locale.code)
     forecast = parse_forecast(fetch_forecast(place), place.name)
-    render_dashboard(forecast, config.locale, config.display_size).save(output)
+    image = render_dashboard(forecast, config.locale, config.display_size, config.orientation)
+    image.save(output)
     print(f"Dashboard for {place.name} written to {output}")
 
 

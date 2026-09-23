@@ -10,6 +10,7 @@ from kindle_weather.i18n import LOCALES, Locale
 
 DEFAULT_CONFIG_PATH = Path("config/config.json")
 DEPLOY_METHODS = ("ssh", "usb")
+ORIENTATIONS = ("portrait", "landscape")
 
 
 class ConfigError(ValueError):
@@ -36,6 +37,7 @@ class Config:
     locale: Locale
     location: Location
     display_size: tuple[int, int]
+    orientation: str
     kindle: KindleTarget
 
 
@@ -61,6 +63,8 @@ def parse_config(raw: dict) -> Config:
         isinstance(width, int) and isinstance(height, int) and width > 0 and height > 0,
         "display.width and display.height must be positive integers",
     )
+    orientation = display.get("orientation", "portrait")
+    _require(orientation in ORIENTATIONS, f"display.orientation must be one of {ORIENTATIONS}")
 
     kindle = raw.get("kindle", {})
     target = KindleTarget(
@@ -78,6 +82,7 @@ def parse_config(raw: dict) -> Config:
         locale=LOCALES[language],
         location=Location(city=city.strip(), country_code=location.get("country_code") or None),
         display_size=(width, height),
+        orientation=orientation,
         kindle=target,
     )
 

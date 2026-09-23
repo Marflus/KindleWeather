@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -14,10 +15,23 @@ def test_parse_forecast_keeps_today_and_next_midnight(forecast):
     assert (forecast.sunrise, forecast.sunset) == ("06:32", "18:41")
 
 
-def test_forecast_lookup_and_rain_flag(forecast):
+def test_forecast_lookup(forecast):
     assert forecast.at(10).weather_code == 61
     assert forecast.at(24) is None
-    assert forecast.has_rain
+
+
+@pytest.mark.parametrize(
+    ("codes", "risk"),
+    [
+        ([0, 3, 45], None),
+        ([0, 51, 61], "rain"),
+        ([61, 95, 63], "storm"),
+        ([61, 95, 71], "snow"),
+    ],
+)
+def test_precipitation_risk_priority(forecast, codes, risk):
+    hours = [replace(forecast.hours[i], weather_code=code) for i, code in enumerate(codes)]
+    assert replace(forecast, hours=hours).precipitation_risk == risk
 
 
 def test_parse_forecast_rejects_data_without_today(raw_forecast):

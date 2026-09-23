@@ -19,6 +19,7 @@ def test_repository_config_is_valid():
 def test_defaults():
     config = parse_config(VALID)
     assert config.display_size == (1072, 1448)
+    assert config.orientation == "portrait"
     assert config.kindle.user == "root"
     assert config.location.country_code is None
 
@@ -29,6 +30,7 @@ def test_defaults():
         ({"language": "de"}, "language"),
         ({"location": {"city": " "}}, "location.city"),
         ({"display": {"width": 0, "height": 1448}}, "display"),
+        ({"display": {"orientation": "diagonal"}}, "display.orientation"),
         ({"kindle": {"method": "ftp"}}, "kindle.method"),
         ({"kindle": {"method": "ssh", "host": ""}}, "kindle.host"),
         ({"kindle": {"method": "usb", "mount_path": ""}}, "kindle.mount_path"),
