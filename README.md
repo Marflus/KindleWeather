@@ -72,9 +72,10 @@ The station wakes up with the clock at `/dev/rtc1`, as on the Paperwhite 2 and
 4. **Set your city**: open `extensions/kindleweather/config.json` on the Kindle
    with a text editor, see [Configuration](#configuration).
 5. **Start the station**: eject the Kindle and unplug it, then open
-   **KUAL > KindleWeather > Start weather station**. KUAL closes, the screen
-   shows "Starting the weather station..." and the dashboard appears within a
-   minute.
+   **KUAL > KindleWeather**. Choose the language, orientation, icons and
+   temperature unit if needed (see [KUAL menu](#kual-menu)), then press
+   **Start weather station**. KUAL closes, the screen shows "Starting the
+   weather station..." and the dashboard appears within a minute.
 
 To stop the station and get the normal Kindle back, restart it: hold the power
 button for about 15 seconds.
@@ -106,9 +107,27 @@ scp -r kindleweather root@KINDLE_IP:/mnt/us/extensions/
 ssh root@KINDLE_IP "mv /mnt/us/config.json.bak /mnt/us/extensions/kindleweather/config.json"
 ```
 
+## KUAL menu
+
+```
+KindleWeather
+  Start weather station
+  Language: English       > English, Francais, Deutsch, Espanol, Italiano, Portugues, Nederlands, Polski
+  Orientation: Portrait   > Portrait, Landscape
+  Icons: Classic          > Classic, Weather Icons, Material
+  Temperature: Celsius    > Celsius, Fahrenheit
+  Diagnostic
+```
+
+Pressing a value saves it in `config.json` and puts a check mark next to it.
+The menu shows the new value the next time KUAL opens. Change the settings
+before starting the station: KUAL is closed while it runs.
+
 ## Configuration
 
-`config.json`, in the `kindleweather` folder:
+Every setting is in `config.json`, in the `kindleweather` folder. The city is
+set there with a text editor; the other settings can also be changed from the
+[KUAL menu](#kual-menu).
 
 ```json
 {
@@ -129,7 +148,7 @@ ssh root@KINDLE_IP "mv /mnt/us/config.json.bak /mnt/us/extensions/kindleweather/
 | `display.icons` | `"classic"` (default), `"weather-icons"` or `"material"`, see [Icon sets](#icon-sets). |
 | `temperature_unit` | `"celsius"` (default) or `"fahrenheit"`. |
 
-The changes apply at the next refresh.
+Changes made to the file while the station runs apply at the next refresh.
 
 ## Languages
 
@@ -137,8 +156,9 @@ The dashboard is available in English (`en`), French (`fr`), German (`de`),
 Spanish (`es`), Italian (`it`), Portuguese (`pt`, Brazilian), Dutch (`nl`) and
 Polish (`pl`). Each language is a file in
 [`kindleweather/lib/kindle_weather/locales`](kindleweather/lib/kindle_weather/locales):
-to add one, copy `en.json`, translate the values and name the file after the
-language code. The KUAL menu and the messages of the station are in English.
+to add one, copy `en.json`, translate the values, name the file after the
+language code and add it to the language menu in
+[`settings.py`](kindleweather/lib/kindle_weather/settings.py). The KUAL menu and the messages of the station are in English.
 
 ## Icon sets
 
@@ -174,15 +194,17 @@ hourly refresh, and logged with its details in `station.log`.
 ```
 kindleweather/            the KUAL extension, copied as is to the Kindle
   config.json               settings
-  config.xml, menu.json     KUAL menu: Start weather station, Diagnostic
+  config.xml, menu.json     KUAL menu, written by settings.py
   bin/
     start.sh                  starts station.sh in the background
     station.sh                the hourly loop: Wi-Fi, drawing, display, suspend
     diagnose.sh               the Diagnostic action
+    set.sh                    the settings buttons
     common.sh                 paths, messages and Python lookup
   lib/kindle_weather/       Python package drawing the dashboard, standard library only
     __main__.py               entry point: draws dashboard.png or reports the error
     config.py                 reads config.json
+    settings.py               KUAL menu and settings buttons
     weather.py, dns.py        Open-Meteo requests
     render.py                 dashboard layout
     graphics.py, icons.py     drawn icons and icon sets (icon_fonts/)
