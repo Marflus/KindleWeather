@@ -73,6 +73,8 @@ SETTINGS = {
             120: "Every 2 hours",
             180: "Every 3 hours",
             360: "Every 6 hours",
+            720: "Every 12 hours",
+            1440: "Every 24 hours",
         },
     ),
 }

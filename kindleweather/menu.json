@@ -39,7 +39,9 @@
         {"name": "[x] Every hour", "priority": 3, "action": "sh bin/set.sh refresh 60", "exitmenu": false, "refresh": true},
         {"name": "[ ] Every 2 hours", "priority": 4, "action": "sh bin/set.sh refresh 120", "exitmenu": false, "refresh": true},
         {"name": "[ ] Every 3 hours", "priority": 5, "action": "sh bin/set.sh refresh 180", "exitmenu": false, "refresh": true},
-        {"name": "[ ] Every 6 hours", "priority": 6, "action": "sh bin/set.sh refresh 360", "exitmenu": false, "refresh": true}
+        {"name": "[ ] Every 6 hours", "priority": 6, "action": "sh bin/set.sh refresh 360", "exitmenu": false, "refresh": true},
+        {"name": "[ ] Every 12 hours", "priority": 7, "action": "sh bin/set.sh refresh 720", "exitmenu": false, "refresh": true},
+        {"name": "[ ] Every 24 hours", "priority": 8, "action": "sh bin/set.sh refresh 1440", "exitmenu": false, "refresh": true}
       ]},
       {"name": "All settings in the browser", "priority": 8, "action": "sh bin/web.sh"}
     ]},

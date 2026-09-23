@@ -24,7 +24,7 @@ key is needed.
 ## How it works
 
 ```
-Kindle, every hour (or 15 minutes to 6 hours)
+Kindle, every hour (or 15 minutes to 24 hours)
  1. wake up, Wi-Fi on
  2. Open-Meteo -> forecast -> dashboard.png, drawn by Python with the Kindle's own cairo library
  3. Wi-Fi off, display the dashboard
@@ -175,7 +175,7 @@ can also be edited by hand.
 | `display.icons` | `"classic"` (default), `"weather-icons"` or `"material"`, see [Icon sets](#icon-sets). |
 | `temperature_unit` | `"celsius"` (default) or `"fahrenheit"`. |
 | `clock` | `"24h"` (default) or `"12h"`, with AM and PM. |
-| `refresh_minutes` | Minutes between two refreshes, from 5 to 1440; 60 by default. The menu offers 15 minutes to 6 hours. Frequent refreshes drain the battery faster, and Open-Meteo's forecast changes little within an hour. |
+| `refresh_minutes` | Minutes between two refreshes, from 5 to 1440; 60 by default. The menu offers 15 minutes to 24 hours. Frequent refreshes drain the battery faster, and Open-Meteo's forecast changes little within an hour. |
 
 Changes made to the file while the station runs apply at the next refresh.
 
