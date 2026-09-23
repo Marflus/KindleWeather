@@ -5,7 +5,12 @@ from PIL import ImageChops
 
 from kindle_weather.errors import WEATHER_UNREACHABLE
 from kindle_weather.i18n import LOCALES
-from kindle_weather.render import precipitation_runs, render_dashboard, render_error
+from kindle_weather.render import (
+    legend_kinds,
+    precipitation_runs,
+    render_dashboard,
+    render_error,
+)
 
 ENGLISH, FRENCH = LOCALES["en"], LOCALES["fr"]
 
@@ -46,6 +51,13 @@ def test_precipitation_runs_split_by_kind():
         ("snow", 7, 8),
     ]
     assert precipitation_runs([0, 1, 2, 45]) == []
+
+
+def test_legend_lists_present_kinds_rain_snow_storm():
+    assert legend_kinds([95, 73, 0, 61]) == ["rain", "snow", "storm"]
+    assert legend_kinds([95, 51, 3]) == ["rain", "storm"]
+    assert legend_kinds([71]) == ["snow"]
+    assert legend_kinds([0, 1, 2, 3, 45]) == []
 
 
 def test_renders_without_upcoming_days(forecast):

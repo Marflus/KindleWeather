@@ -53,6 +53,9 @@ FONT_SPECS = {
     "footer": (font_roboto.Roboto, 16),
 }
 
+# Left to right order of the chart legend.
+LEGEND_KINDS = ("rain", "snow", "storm")
+
 # Icon shown in the precipitation banner for each kind.
 BANNER_ICONS = {"snow": 73, "storm": 95, "rain": 63}
 
@@ -181,6 +184,12 @@ def precipitation_runs(codes: list[int]) -> list[tuple[str, int, int]]:
             runs.append((kind, start, end))
         start = end
     return runs
+
+
+def legend_kinds(codes: list[int]) -> list[str]:
+    """Precipitation kinds among codes, in legend order."""
+    present = {precipitation_kind(code) for code in codes}
+    return [kind for kind in LEGEND_KINDS if kind in present]
 
 
 def _shrink_to_fit(draw, text: str, font: ImageFont.FreeTypeFont, max_width: float):
@@ -416,7 +425,7 @@ class _Dashboard:
         for (x, y), (_, entry) in list(zip(points, samples, strict=True))[::3]:
             self._chart_tick(x, y, f"{entry.hour:02d}:00", right, bottom)
 
-        kinds = [kind for kind in PRECIPITATION_KINDS if any(run[0] == kind for run in runs)]
+        kinds = legend_kinds([entry.weather_code for entry in forecast.hours])
         if kinds:
             self._legend(kinds, (left + right) / 2, bottom + px(44))
         return bottom
