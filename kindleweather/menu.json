@@ -2,7 +2,11 @@
   {"name": "KindleWeather", "priority": 1, "items": [
     {"name": "Start weather station", "priority": 1, "action": "sh bin/start.sh"},
     {"name": "Settings", "priority": 2, "items": [
-      {"name": "Language: Francais", "priority": 1, "items": [
+      {"name": "City: Warsaw, PL", "priority": 1, "items": [
+        {"name": "Detect automatically", "priority": 1, "action": "sh bin/city.sh", "exitmenu": false},
+        {"name": "Search in the browser", "priority": 2, "action": "sh bin/web.sh"}
+      ]},
+      {"name": "Language: Francais", "priority": 2, "items": [
         {"name": "[ ] English", "priority": 1, "action": "sh bin/set.sh language en", "exitmenu": false, "refresh": true},
         {"name": "[x] Francais", "priority": 2, "action": "sh bin/set.sh language fr", "exitmenu": false, "refresh": true},
         {"name": "[ ] Deutsch", "priority": 3, "action": "sh bin/set.sh language de", "exitmenu": false, "refresh": true},
@@ -12,23 +16,24 @@
         {"name": "[ ] Nederlands", "priority": 7, "action": "sh bin/set.sh language nl", "exitmenu": false, "refresh": true},
         {"name": "[ ] Polski", "priority": 8, "action": "sh bin/set.sh language pl", "exitmenu": false, "refresh": true}
       ]},
-      {"name": "Orientation: Portrait", "priority": 2, "items": [
+      {"name": "Orientation: Portrait", "priority": 3, "items": [
         {"name": "[x] Portrait", "priority": 1, "action": "sh bin/set.sh orientation portrait", "exitmenu": false, "refresh": true},
         {"name": "[ ] Landscape", "priority": 2, "action": "sh bin/set.sh orientation landscape", "exitmenu": false, "refresh": true}
       ]},
-      {"name": "Icons: Classic", "priority": 3, "items": [
+      {"name": "Icons: Classic", "priority": 4, "items": [
         {"name": "[x] Classic", "priority": 1, "action": "sh bin/set.sh icons classic", "exitmenu": false, "refresh": true},
         {"name": "[ ] Weather Icons", "priority": 2, "action": "sh bin/set.sh icons weather-icons", "exitmenu": false, "refresh": true},
         {"name": "[ ] Material", "priority": 3, "action": "sh bin/set.sh icons material", "exitmenu": false, "refresh": true}
       ]},
-      {"name": "Temperature: Celsius", "priority": 4, "items": [
+      {"name": "Temperature: Celsius", "priority": 5, "items": [
         {"name": "[x] Celsius", "priority": 1, "action": "sh bin/set.sh temperature celsius", "exitmenu": false, "refresh": true},
         {"name": "[ ] Fahrenheit", "priority": 2, "action": "sh bin/set.sh temperature fahrenheit", "exitmenu": false, "refresh": true}
       ]},
-      {"name": "Clock: 24-hour", "priority": 5, "items": [
+      {"name": "Clock: 24-hour", "priority": 6, "items": [
         {"name": "[x] 24-hour", "priority": 1, "action": "sh bin/set.sh clock 24h", "exitmenu": false, "refresh": true},
         {"name": "[ ] 12-hour (AM/PM)", "priority": 2, "action": "sh bin/set.sh clock 12h", "exitmenu": false, "refresh": true}
-      ]}
+      ]},
+      {"name": "All settings in the browser", "priority": 7, "action": "sh bin/web.sh"}
     ]},
     {"name": "Diagnostic", "priority": 3, "action": "sh bin/diagnose.sh"}
   ]}

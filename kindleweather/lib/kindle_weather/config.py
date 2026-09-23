@@ -24,6 +24,9 @@ class Config:
     city: str
     # Two-letter ISO code picking the right city among homonyms, or None.
     country_code: str | None
+    # Open-Meteo's identifier of the city, when chosen from a search: the exact
+    # place, whatever its homonyms.
+    place_id: int | None
     # Screen size in pixels, in portrait.
     display_size: tuple[int, int]
     orientation: str
@@ -53,6 +56,11 @@ def load_config(path: Path) -> Config:
         or (isinstance(country_code, str) and len(country_code) == 2 and country_code.isalpha()),
         "location.country_code must be a two-letter ISO 3166-1 code",
     )
+    place_id = location.get("id")
+    _require(
+        place_id is None or (isinstance(place_id, int) and not isinstance(place_id, bool)),
+        "location.id must be a number",
+    )
 
     display = raw.get("display", {})
     _require(isinstance(display, dict), "display must be an object")
@@ -79,6 +87,7 @@ def load_config(path: Path) -> Config:
         locale=LOCALES[language],
         city=city.strip(),
         country_code=country_code.upper() if country_code else None,
+        place_id=place_id,
         display_size=(width, height),
         orientation=orientation,
         icon_set=icon_set,

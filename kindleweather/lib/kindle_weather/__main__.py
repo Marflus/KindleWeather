@@ -53,7 +53,7 @@ def main() -> None:
 
 def draw(config_path: Path, output: Path) -> None:
     config = load_config(config_path)
-    place = geocode(config.city, config.country_code, config.locale.code)
+    place = geocode(config.city, config.country_code, config.locale.code, config.place_id)
     forecast = fetch_forecast(place, config.temperature_unit)
     image = render_dashboard(
         forecast,

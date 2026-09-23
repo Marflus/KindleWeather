@@ -34,6 +34,16 @@ find_python() {
     done
 }
 
+# Runs a command in the background, in a session of its own, so that it
+# outlives KUAL: KUAL may signal what it started as it closes.
+detach() {
+    if command -v setsid >/dev/null 2>&1; then
+        setsid "$@" </dev/null >>"$LOG" 2>&1 &
+    else
+        nohup "$@" </dev/null >>"$LOG" 2>&1 &
+    fi
+}
+
 # Draws the dashboard with the Python package in lib/, see its __main__.py.
 kindle_weather() {
     PYTHONPATH="$EXTENSION_DIR/lib" "$PYTHON" -m kindle_weather --config "$CONFIG" "$@"

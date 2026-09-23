@@ -18,7 +18,7 @@ key is needed.
 - The next 7 days, with their weather icon and mean temperature
 - A precipitation alert for the next 24 hours: snow, thunderstorm or rain
 - A temperature chart and an hourly table for the next 24 hours, with rain, snow and thunderstorm hours shaded
-- Portrait or landscape, Celsius or Fahrenheit, 24-hour or 12-hour clock, three [icon sets](#icon-sets), eight [languages](#languages), all set from the [KUAL menu](#kual-menu)
+- Portrait or landscape, Celsius or Fahrenheit, 24-hour or 12-hour clock, three [icon sets](#icon-sets), eight [languages](#languages), all set on the Kindle, see [Settings](#settings)
 - An [error code](#error-codes) on the screen when something goes wrong, and a low battery warning
 
 ## How it works
@@ -69,13 +69,13 @@ The station wakes up with the clock at `/dev/rtc1`, as on the Paperwhite 2 and
 3. **Copy the `kindleweather` folder** of the zip into the `extensions` folder
    of the Kindle, next to `documents`, with the Kindle plugged in over USB.
    KUAL creates `extensions` when it is installed; if it is missing, create it.
-4. **Set your city**: open `extensions/kindleweather/config.json` on the Kindle
-   with a text editor, see [Configuration](#configuration).
-5. **Start the station**: eject the Kindle and unplug it, then open
-   **KUAL > KindleWeather**. Choose the language, orientation, icons,
-   temperature unit and clock in **Settings** if needed (see
-   [KUAL menu](#kual-menu)), then press **Start weather station**. KUAL closes, the screen shows "Starting the
-   weather station..." and the dashboard appears within a minute.
+4. **Set your city**: eject the Kindle and unplug it, open
+   **KUAL > KindleWeather > Settings > City**, then press
+   **Detect automatically**, or **Search in the browser** to type its name
+   (see [Settings](#settings)).
+5. **Start the station**: press **KUAL > KindleWeather > Start weather
+   station**. KUAL closes, the screen shows "Starting the weather station..."
+   and the dashboard appears within a minute.
 
 To stop the station and get the normal Kindle back, restart it: hold the power
 button for about 15 seconds.
@@ -107,29 +107,50 @@ scp -r kindleweather root@KINDLE_IP:/mnt/us/extensions/
 ssh root@KINDLE_IP "mv /mnt/us/config.json.bak /mnt/us/extensions/kindleweather/config.json"
 ```
 
-## KUAL menu
+## Settings
+
+Change the settings before starting the station: KUAL is closed while it runs.
+
+### From the KUAL menu
 
 ```
 KindleWeather
   Start weather station
   Settings
+    City: Lyon, FR          > Detect automatically, Search in the browser
     Language: English       > [x] English, [ ] Francais, [ ] Deutsch, [ ] Espanol...
     Orientation: Portrait   > [x] Portrait, [ ] Landscape
     Icons: Classic          > [x] Classic, [ ] Weather Icons, [ ] Material
     Temperature: Celsius    > [x] Celsius, [ ] Fahrenheit
     Clock: 24-hour          > [x] 24-hour, [ ] 12-hour (AM/PM)
+    All settings in the browser
   Diagnostic
 ```
 
-Pressing a value saves it in `config.json`. KUAL then reloads its menu and goes
-back to its first page, where the settings show the new value. Change the
-settings before starting the station: KUAL is closed while it runs.
+Pressing a value saves it. KUAL then reloads its menu and goes back to its
+first page, where the settings show the new value.
+
+**Detect automatically** finds the city from the internet connection, with
+[ipinfo.io](https://ipinfo.io/) or [ip-api.com](https://ip-api.com/): usually
+the nearest large city. The result is written at the top of the screen; the
+menu shows it the next time KUAL opens.
+
+### From the browser
+
+**Search in the browser** and **All settings in the browser** open a settings
+page in the Kindle's browser. Type the name of the city with the Kindle's
+keyboard, press **Search**, then choose it among the cities of that name,
+listed with their region and country. The other settings are on the same page.
+Press **Close the settings page** when done.
+
+The page is served by the Kindle itself, at `http://127.0.0.1:8765/`. A phone
+or a computer on the same Wi-Fi can open it too, at the address given at the
+bottom of the page. It stops after 15 minutes without use.
 
 ## Configuration
 
-Every setting is in `config.json`, in the `kindleweather` folder. The city is
-set there with a text editor; the other settings can also be changed from the
-[KUAL menu](#kual-menu).
+Every setting is saved in `config.json`, in the `kindleweather` folder, which
+can also be edited by hand.
 
 ```json
 {
@@ -146,6 +167,7 @@ set there with a text editor; the other settings can also be changed from the
 | `language` | Language of the dashboard and of the city name, see [Languages](#languages). |
 | `location.city` | City name, looked up with Open-Meteo. |
 | `location.country_code` | Optional two-letter country code (`"FR"`, `"US"`...) to pick the right city among homonyms. |
+| `location.id` | Optional Open-Meteo identifier of the city, set when it is chosen from the settings: the exact place, whatever its homonyms. |
 | `display.width`, `display.height` | Screen size in pixels, in portrait, see [Compatibility](#compatibility). |
 | `display.orientation` | `"portrait"` (default) or `"landscape"`. In landscape, read the Kindle turned a quarter turn clockwise. |
 | `display.icons` | `"classic"` (default), `"weather-icons"` or `"material"`, see [Icon sets](#icon-sets). |
@@ -203,12 +225,15 @@ kindleweather/            the KUAL extension, copied as is to the Kindle
     start.sh                  starts station.sh in the background
     station.sh                the hourly loop: Wi-Fi, drawing, display, suspend
     diagnose.sh               the Diagnostic action
-    set.sh                    the settings buttons
+    set.sh, city.sh           the settings buttons, and Detect automatically
+    web.sh                    opens the settings page in the browser
     common.sh                 paths, messages and Python lookup
   lib/kindle_weather/       Python package drawing the dashboard, standard library only
     __main__.py               entry point: draws dashboard.png or reports the error
     config.py                 reads config.json
     settings.py               KUAL menu and settings buttons
+    web.py                    the settings page
+    location.py               finds the city of the internet connection
     weather.py, dns.py        Open-Meteo requests
     render.py                 dashboard layout
     graphics.py, icons.py     drawn icons and icon sets (icon_fonts/)

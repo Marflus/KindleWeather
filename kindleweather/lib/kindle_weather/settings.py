@@ -1,6 +1,7 @@
 """The KUAL menu, with a Settings submenu, and the changes made from it.
 
 python3 -m kindle_weather.settings SETTING VALUE   changes config.json, then the menu
+python3 -m kindle_weather.settings detect-city     sets the city of the internet connection
 python3 -m kindle_weather.settings                 rewrites the menu from config.json
 
 A settings button runs bin/set.sh, then KUAL reloads the menu a quarter of a
@@ -14,9 +15,12 @@ from __future__ import annotations
 import json
 import os
 import sys
+import unicodedata
 from pathlib import Path
 
 from kindle_weather.config import load_config
+from kindle_weather.location import detect_place
+from kindle_weather.weather import Place
 
 EXTENSION_DIR = Path(__file__).resolve().parents[2]
 CONFIG_PATH = EXTENSION_DIR / "config.json"
@@ -67,12 +71,32 @@ def change(setting: str, value: str) -> None:
     _, keys, values = SETTINGS[setting]
     if value not in values:
         raise ValueError(f"{setting} must be one of {tuple(values)}")
-    raw = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    raw = _read_config()
     *parents, key = keys
     section = raw
     for parent in parents:
         section = section.setdefault(parent, {})
     section[key] = value
+    _write_config(raw)
+
+
+def set_place(place: Place) -> None:
+    """Make place, found by a search or a detection, the city of the dashboard."""
+    raw = _read_config()
+    location = {"city": place.name}
+    if place.country_code:
+        location["country_code"] = place.country_code
+    if place.id is not None:
+        location["id"] = place.id
+    raw["location"] = location
+    _write_config(raw)
+
+
+def _read_config() -> dict:
+    return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+
+
+def _write_config(raw: dict) -> None:
     _write(CONFIG_PATH, json.dumps(raw, indent=2, ensure_ascii=False) + "\n")
 
 
@@ -87,8 +111,25 @@ def write_menu() -> None:
     }
     # A submenu per setting, titled with its current value, which is also
     # marked [x] among the choices. set.sh relies on these names.
-    settings = []
-    for priority, (setting, (title, _, values)) in enumerate(SETTINGS.items(), start=1):
+    city = f"{config.city}, {config.country_code}" if config.country_code else config.city
+    settings = [
+        {
+            "name": f"City: {ascii_fold(city)}",
+            "priority": 1,
+            "items": [
+                # city.sh writes the result on the screen: detecting takes too
+                # long for the menu to reload with it.
+                {
+                    "name": "Detect automatically",
+                    "priority": 1,
+                    "action": "sh bin/city.sh",
+                    "exitmenu": False,
+                },
+                {"name": "Search in the browser", "priority": 2, "action": "sh bin/web.sh"},
+            ],
+        }
+    ]
+    for priority, (setting, (title, _, values)) in enumerate(SETTINGS.items(), start=2):
         choices = [
             {
                 "name": f"[{'x' if value == current[setting] else ' '}] {name}",
@@ -102,6 +143,13 @@ def write_menu() -> None:
         ]
         name = values[current[setting]]
         settings.append({"name": f"{title}: {name}", "priority": priority, "items": choices})
+    settings.append(
+        {
+            "name": "All settings in the browser",
+            "priority": len(settings) + 1,
+            "action": "sh bin/web.sh",
+        }
+    )
     items = [
         {"name": "Start weather station", "priority": 1, "action": "sh bin/start.sh"},
         {"name": "Settings", "priority": 2, "items": settings},
@@ -109,6 +157,12 @@ def write_menu() -> None:
     ]
     menu = {"items": [{"name": "KindleWeather", "priority": 1, "items": items}]}
     _write(MENU_PATH, _menu_json(menu) + "\n")
+
+
+def ascii_fold(text: str) -> str:
+    """Varsovie, Kraków -> Krakow: KUAL and eips only display ASCII reliably."""
+    text = text.translate(str.maketrans({"ł": "l", "Ł": "L", "ß": "ss", "ø": "o", "Ø": "O"}))
+    return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
 
 
 def _menu_json(entry: dict, depth: int = 0) -> str:
@@ -129,7 +183,21 @@ def _write(path: Path, text: str) -> None:
     os.replace(temporary, path)
 
 
+def _detect_city() -> None:
+    """Set the detected city, and print a line saying which for city.sh."""
+    try:
+        place = detect_place(load_config(CONFIG_PATH).locale.code)
+    except Exception as error:
+        print(f"City not detected: {error}", file=sys.stderr)
+        print("City not detected: check the Wi-Fi connection")
+        return
+    set_place(place)
+    print(ascii_fold(f"City: {place.full_name}"))
+
+
 if __name__ == "__main__":
-    if len(sys.argv) == 3:
+    if sys.argv[1:] == ["detect-city"]:
+        _detect_city()
+    elif len(sys.argv) == 3:
         change(sys.argv[1], sys.argv[2])
     write_menu()

@@ -16,6 +16,7 @@ from kindle_weather import dns
 dns.install()
 
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
+PLACE_URL = "https://geocoding-api.open-meteo.com/v1/get"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 REQUEST_TIMEOUT = 20
 HEADERS = {"User-Agent": "KindleWeather"}
@@ -70,6 +71,16 @@ class Place:
     name: str
     latitude: float
     longitude: float
+    # Open-Meteo's identifier of the place, and where it is, for choosing it.
+    id: int | None = None
+    country_code: str | None = None
+    region: str | None = None
+    country: str | None = None
+
+    @property
+    def full_name(self) -> str:
+        """Such as "Paris, Ile-de-France, France"."""
+        return ", ".join(dict.fromkeys(filter(None, (self.name, self.region, self.country))))
 
 
 @dataclass(frozen=True)
@@ -119,27 +130,45 @@ class Forecast:
         return next((kind for kind in PRECIPITATION_KINDS if kind in kinds), None)
 
 
-def geocode(city: str, country_code: str | None, language: str) -> Place:
-    params = {"name": city, "count": 1, "language": language, "format": "json"}
-    if country_code:
-        params["countryCode"] = country_code
-    results = _get_json(GEOCODING_URL, params).get("results")
-    if not results:
+def geocode(city: str, country_code: str | None, language: str, place_id: int | None) -> Place:
+    """The configured place, named in language: by its identifier if chosen from a
+    search, else the best match for its name."""
+    if place_id is not None:
+        return _place(get_json(PLACE_URL, {"id": place_id, "language": language}))
+    places = search_places(city, language, country_code, count=1)
+    if not places:
         where = f"{city}, {country_code}" if country_code else city
         raise LocationNotFound(f"city not found: {where}")
+    return places[0]
+
+
+def search_places(
+    name: str, language: str, country_code: str | None = None, count: int = 10
+) -> list[Place]:
+    """The places matching name, the most populated first."""
+    params = {"name": name, "count": count, "language": language, "format": "json"}
+    if country_code:
+        params["countryCode"] = country_code
+    return [_place(result) for result in get_json(GEOCODING_URL, params).get("results", [])]
+
+
+def _place(result: dict) -> Place:
     try:
-        best = results[0]
         return Place(
-            name=best["name"],
-            latitude=best["latitude"],
-            longitude=best["longitude"],
+            name=result["name"],
+            latitude=result["latitude"],
+            longitude=result["longitude"],
+            id=result.get("id"),
+            country_code=result.get("country_code"),
+            region=result.get("admin1"),
+            country=result.get("country"),
         )
-    except (KeyError, IndexError, TypeError) as error:
+    except (KeyError, TypeError) as error:
         raise WeatherError(f"unexpected geocoding data: {error!r}") from error
 
 
 def fetch_forecast(place: Place, temperature_unit: str) -> Forecast:
-    raw = _get_json(
+    raw = get_json(
         FORECAST_URL,
         {
             "latitude": place.latitude,
@@ -210,7 +239,7 @@ def _clock_time(iso_datetime: str | None) -> str | None:
     return iso_datetime[11:16] if iso_datetime else None
 
 
-def _get_json(url: str, params: dict) -> dict:
+def get_json(url: str, params: dict) -> dict:
     query = urlencode(params)
     try:
         return _request(f"{url}?{query}")

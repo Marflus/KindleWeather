@@ -3,6 +3,8 @@ kindleweather/dashboard.png
 kindleweather/station.log
 kindleweather/station.pid
 kindleweather/diagnostic.txt
+kindleweather/web.pid
+kindleweather/*.tmp
 
 __pycache__/
 .venv/
