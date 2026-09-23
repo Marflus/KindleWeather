@@ -1,11 +1,9 @@
-# Image générée par generate_meteo.py (recréée à chaque exécution)
-meteo.png
+dashboard.png
 
-# Polices téléchargées automatiquement par ensure_fonts()
-Roboto-Regular.ttf
-Roboto-Bold.ttf
-
-# Python
 __pycache__/
-*.pyc
+*.egg-info/
+build/
+dist/
 .venv/
+.pytest_cache/
+.ruff_cache/

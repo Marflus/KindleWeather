@@ -1,0 +1,45 @@
+from pathlib import Path
+
+import pytest
+
+from kindle_meteo.config import ConfigError, load_config, parse_config
+
+VALID = {
+    "language": "en",
+    "location": {"city": "Lyon"},
+    "kindle": {"method": "ssh", "host": "100.64.0.1"},
+}
+
+
+def test_repository_config_is_valid():
+    config = load_config(Path(__file__).parents[1] / "config" / "config.json")
+    assert config.locale.code in ("en", "fr")
+
+
+def test_defaults():
+    config = parse_config(VALID)
+    assert config.display_size == (1072, 1448)
+    assert config.kindle.user == "root"
+    assert config.location.country_code is None
+
+
+@pytest.mark.parametrize(
+    ("override", "message"),
+    [
+        ({"language": "de"}, "language"),
+        ({"location": {"city": " "}}, "location.city"),
+        ({"display": {"width": 0, "height": 1448}}, "display"),
+        ({"kindle": {"method": "ftp"}}, "kindle.method"),
+        ({"kindle": {"method": "ssh", "host": ""}}, "kindle.host"),
+        ({"kindle": {"method": "usb", "mount_path": ""}}, "kindle.mount_path"),
+    ],
+)
+def test_invalid_values_are_rejected(override, message):
+    with pytest.raises(ConfigError, match=message):
+        parse_config({**VALID, **override})
+
+
+def test_unreadable_file(tmp_path):
+    (tmp_path / "config.json").write_text("{not json")
+    with pytest.raises(ConfigError, match="cannot read"):
+        load_config(tmp_path / "config.json")

@@ -1,0 +1,18 @@
+{
+  "language": "fr",
+  "location": {
+    "city": "Warsaw",
+    "country_code": "PL"
+  },
+  "display": {
+    "width": 1072,
+    "height": 1448
+  },
+  "kindle": {
+    "method": "ssh",
+    "host": "100.74.176.86",
+    "user": "root",
+    "ssh_key": "~/.ssh/id_ed25519",
+    "mount_path": ""
+  }
+}
