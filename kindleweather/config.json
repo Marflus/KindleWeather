@@ -10,5 +10,6 @@
     "orientation": "portrait",
     "icons": "classic"
   },
-  "temperature_unit": "celsius"
+  "temperature_unit": "celsius",
+  "clock": "24h"
 }
