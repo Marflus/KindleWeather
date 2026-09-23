@@ -10,6 +10,11 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from urllib.parse import urlencode, urlsplit
 
+from kindle_weather import dns
+
+# The Kindle's Python may fail to resolve names by itself.
+dns.install()
+
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 REQUEST_TIMEOUT = 20

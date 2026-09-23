@@ -15,7 +15,7 @@ import math
 import struct
 import sys
 import zlib
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from functools import lru_cache
 from pathlib import Path
 
@@ -46,20 +46,112 @@ class _FontExtents(ctypes.Structure):
     ]
 
 
-LIBRARY_FOLDERS = ("/usr/lib", "/lib", "/usr/local/lib", "/usr/lib/arm-linux-gnueabi")
+# System library folders, the Kindle's first.
+LIBRARY_FOLDERS = (
+    "/usr/lib",
+    "/lib",
+    "/usr/local/lib",
+    *sorted(str(path) for path in Path("/usr/lib").glob("*-linux-gnu*")),
+    *sorted(str(path) for path in Path("/lib").glob("*-linux-gnu*")),
+)
+# Loaded by Python itself, never replaced.
+_CORE_LIBRARIES = ("libc.so", "libm.so", "libdl.so", "libpthread.so", "librt.so", "ld-linux")
+
+
+def _system_library(soname: str) -> str | None:
+    for folder in LIBRARY_FOLDERS:
+        path = Path(folder) / soname
+        if path.exists():
+            return str(path)
+    return None
+
+
+def _needed(path: str) -> list[str]:
+    """The DT_NEEDED entries of an ELF shared library: the libraries it links to."""
+    data = Path(path).read_bytes()
+    if data[:4] != b"\x7fELF":
+        return []
+    wide, order = data[4] == 2, "<" if data[5] == 1 else ">"
+    if wide:
+        (header_offset,) = struct.unpack_from(order + "Q", data, 0x20)
+        entry_size, count = struct.unpack_from(order + "HH", data, 0x36)
+    else:
+        (header_offset,) = struct.unpack_from(order + "I", data, 0x1C)
+        entry_size, count = struct.unpack_from(order + "HH", data, 0x2A)
+    loads, dynamic = [], None
+    for index in range(count):
+        offset = header_offset + index * entry_size
+        if wide:
+            kind, _, file_offset, address, _, size = struct.unpack_from(
+                order + "IIQQQQ", data, offset
+            )
+        else:
+            kind, file_offset, address, _, size = struct.unpack_from(order + "IIIII", data, offset)
+        if kind == 1:  # PT_LOAD
+            loads.append((address, file_offset, size))
+        elif kind == 2:  # PT_DYNAMIC
+            dynamic = (file_offset, size)
+    if dynamic is None:
+        return []
+    entry_format = order + ("qQ" if wide else "iI")
+    step = struct.calcsize(entry_format)
+    needed, strings = [], None
+    for offset in range(dynamic[0], dynamic[0] + dynamic[1], step):
+        tag, value = struct.unpack_from(entry_format, data, offset)
+        if tag == 0:  # DT_NULL
+            break
+        if tag == 1:  # DT_NEEDED
+            needed.append(value)
+        elif tag == 5:  # DT_STRTAB, an address
+            strings = next(
+                (
+                    base + value - start
+                    for start, base, size in loads
+                    if start <= value < start + size
+                ),
+                None,
+            )
+    if strings is None:
+        return []
+    return [data[strings + name : data.index(b"\0", strings + name)].decode() for name in needed]
+
+
+def _preload_dependencies(path: str, seen: set[str]) -> None:
+    """Load the system's copies of a library's dependencies, deepest first.
+
+    A Python package may bring its own copies of some libraries, such as
+    NiLuJe's Python for Kindle with its FreeType, found first when cairo is
+    loaded. The Kindle's cairo needs the Kindle's own FreeType: loaded first,
+    by path, it is the copy cairo gets.
+    """
+    try:
+        dependencies = _needed(path)
+    except (OSError, struct.error, ValueError):
+        return
+    for soname in dependencies:
+        if soname in seen or soname.startswith(_CORE_LIBRARIES):
+            continue
+        seen.add(soname)
+        system_path = _system_library(soname)
+        if system_path is None:
+            continue
+        _preload_dependencies(system_path, seen)
+        with suppress(OSError):
+            ctypes.CDLL(system_path, mode=ctypes.RTLD_GLOBAL)
 
 
 def _load(name: str, soname: str) -> ctypes.CDLL:
-    # The Kindle has no ldconfig cache for find_library: try the soname, then
-    # the usual folders, then any version of the library there.
-    candidates = [soname, *(f"{folder}/{soname}" for folder in LIBRARY_FOLDERS)]
+    # The system's copy first, with its own dependencies, then any other.
+    candidates = [_system_library(soname), soname]
     for folder in LIBRARY_FOLDERS:
         candidates += sorted(str(path) for path in Path(folder).glob(f"lib{name}.so*"))
     candidates.append(ctypes.util.find_library(name))
     errors = []
     for candidate in dict.fromkeys(filter(None, candidates)):
+        if candidate.startswith("/"):
+            _preload_dependencies(candidate, set())
         try:
-            return ctypes.CDLL(candidate)
+            return ctypes.CDLL(candidate, mode=ctypes.RTLD_GLOBAL)
         except OSError as error:
             errors.append(str(error))
     # The first errors say why, such as a missing dependency.
@@ -71,8 +163,9 @@ class _Libraries:
     """cairo and FreeType functions, with their C signatures."""
 
     def __init__(self) -> None:
-        cairo = _load("cairo", "libcairo.so.2")
+        # FreeType first, the system's: the copy cairo links to, faces included.
         freetype = _load("freetype", "libfreetype.so.6")
+        cairo = _load("cairo", "libcairo.so.2")
         p, d, i = ctypes.c_void_p, ctypes.c_double, ctypes.c_int
         signatures = {
             "cairo_image_surface_create": (p, [i, i, i]),

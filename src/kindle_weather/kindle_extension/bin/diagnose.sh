@@ -47,6 +47,19 @@ print("ok")' 2>&1 | tail -n 1 | sed "s/^kindle_weather.canvas.CanvasError: //")"
     echo "python file: $(ls -l "$PYTHON" 2>/dev/null)"
     echo "wake-up clock: $(echo /dev/rtc*)"
     echo "wifi: $(lipc-get-prop com.lab126.wifid cmState 2>&1)"
+    echo "resolv.conf: $(tr '\n' ' ' </etc/resolv.conf 2>&1)"
+    if [ -n "$PYTHON" ]; then
+        echo "dns: $(PYTHONPATH="$EXTENSION_DIR/lib" "$PYTHON" -c '
+import socket
+from kindle_weather import dns
+host = "api.open-meteo.com"
+try:
+    socket.getaddrinfo(host, 443)
+    system = "ok"
+except OSError as error:
+    system = "fails (%s)" % error
+print("system %s, direct %s" % (system, dns.resolve(host) or "fails"))' 2>&1 | tail -n 1)"
+    fi
     echo "battery: $(lipc-get-prop com.lab126.powerd battLevel 2>&1) %"
     echo "--- config.json"
     cat "$CONFIG"
@@ -71,7 +84,7 @@ if [ -f "$TEST_IMAGE" ]; then
 else
     /usr/sbin/eips -c
 fi
-grep -E "^(folder|user|setsid|python|drawing|wifi|time|result):" "$REPORT" |
+grep -E "^(folder|user|setsid|python|drawing|wifi|dns|time|result):" "$REPORT" |
     cut -c 1-60 >"$REPORT.summary"
 row=1
 while IFS= read -r line; do
