@@ -7,7 +7,7 @@ from kindle_weather.config import ConfigError, load_config, parse_config
 VALID = {
     "language": "en",
     "location": {"city": "Lyon"},
-    "kindle": {"method": "ssh", "host": "100.64.0.1"},
+    "dashboard_url": "https://example.org/dashboard.png",
 }
 
 
@@ -20,7 +20,6 @@ def test_defaults():
     config = parse_config(VALID)
     assert config.display_size == (1072, 1448)
     assert config.orientation == "portrait"
-    assert config.kindle.user == "root"
     assert config.location.country_code is None
 
 
@@ -31,9 +30,8 @@ def test_defaults():
         ({"location": {"city": " "}}, "location.city"),
         ({"display": {"width": 0, "height": 1448}}, "display"),
         ({"display": {"orientation": "diagonal"}}, "display.orientation"),
-        ({"kindle": {"method": "ftp"}}, "kindle.method"),
-        ({"kindle": {"method": "ssh", "host": ""}}, "kindle.host"),
-        ({"kindle": {"method": "usb", "mount_path": ""}}, "kindle.mount_path"),
+        ({"dashboard_url": None}, "dashboard_url"),
+        ({"dashboard_url": "ftp://example.org/dashboard.png"}, "dashboard_url"),
     ],
 )
 def test_invalid_values_are_rejected(override, message):

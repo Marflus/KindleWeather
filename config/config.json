@@ -9,11 +9,5 @@
     "height": 1448,
     "orientation": "portrait"
   },
-  "kindle": {
-    "method": "ssh",
-    "host": "100.74.176.86",
-    "user": "root",
-    "ssh_key": "~/.ssh/id_ed25519",
-    "mount_path": ""
-  }
+  "dashboard_url": "https://marflus.github.io/KindleWeather/dashboard.png"
 }

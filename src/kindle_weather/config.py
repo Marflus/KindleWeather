@@ -9,7 +9,6 @@ from pathlib import Path
 from kindle_weather.i18n import LOCALES, Locale
 
 DEFAULT_CONFIG_PATH = Path("config/config.json")
-DEPLOY_METHODS = ("ssh", "usb")
 ORIENTATIONS = ("portrait", "landscape")
 
 
@@ -24,21 +23,12 @@ class Location:
 
 
 @dataclass(frozen=True)
-class KindleTarget:
-    method: str
-    host: str | None = None
-    user: str = "root"
-    ssh_key: str | None = None
-    mount_path: str | None = None
-
-
-@dataclass(frozen=True)
 class Config:
     locale: Locale
     location: Location
     display_size: tuple[int, int]
     orientation: str
-    kindle: KindleTarget
+    dashboard_url: str
 
 
 def load_config(path: Path = DEFAULT_CONFIG_PATH) -> Config:
@@ -66,24 +56,18 @@ def parse_config(raw: dict) -> Config:
     orientation = display.get("orientation", "portrait")
     _require(orientation in ORIENTATIONS, f"display.orientation must be one of {ORIENTATIONS}")
 
-    kindle = raw.get("kindle", {})
-    target = KindleTarget(
-        method=kindle.get("method", "ssh"),
-        host=kindle.get("host") or None,
-        user=kindle.get("user") or "root",
-        ssh_key=kindle.get("ssh_key") or None,
-        mount_path=kindle.get("mount_path") or None,
+    url = raw.get("dashboard_url")
+    _require(
+        isinstance(url, str) and url.startswith(("https://", "http://")),
+        "dashboard_url must be an http(s) URL",
     )
-    _require(target.method in DEPLOY_METHODS, f"kindle.method must be one of {DEPLOY_METHODS}")
-    _require(target.method != "ssh" or target.host, "kindle.host is required for ssh")
-    _require(target.method != "usb" or target.mount_path, "kindle.mount_path is required for usb")
 
     return Config(
         locale=LOCALES[language],
         location=Location(city=city.strip(), country_code=location.get("country_code") or None),
         display_size=(width, height),
         orientation=orientation,
-        kindle=target,
+        dashboard_url=url,
     )
 
 

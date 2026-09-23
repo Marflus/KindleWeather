@@ -64,7 +64,7 @@ ENGLISH = Locale(
         "snow": "Snow",
         "updated": "Updated {}",
         "variable": "Variable weather",
-        "kual_show": "Show weather dashboard",
+        "kual_start": "Start weather station",
     },
     weather={
         0: "Clear sky",
@@ -132,7 +132,7 @@ FRENCH = Locale(
         "updated": "Mis à jour le {}",
         "variable": "Temps variable",
         # KUAL menu labels stay ASCII: its menu parser is not known to handle accents.
-        "kual_show": "Afficher le dashboard meteo",
+        "kual_start": "Demarrer la station meteo",
     },
     weather={
         0: "Ciel dégagé",

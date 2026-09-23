@@ -14,7 +14,7 @@ def test_locales_define_the_same_strings():
 
 @pytest.mark.parametrize("locale", LOCALES.values(), ids=LOCALES.keys())
 def test_kual_label_is_ascii(locale):
-    assert locale.labels["kual_show"].isascii()
+    assert locale.labels["kual_start"].isascii()
 
 
 def test_long_dates():
