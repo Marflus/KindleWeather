@@ -15,11 +15,13 @@ from kindle_weather.graphics import (
     GRAY_PALE,
     INK,
     WHITE,
+    draw_asterisk,
+    draw_bolt,
     draw_centered_text,
     draw_diagonal_hatch,
-    draw_dot_grid,
     draw_droplet,
     draw_sun_horizon,
+    draw_symbol_grid,
     draw_weather_icon,
     draw_wind,
     icon_bounds,
@@ -348,10 +350,11 @@ class _Dashboard:
         if kind == "rain":
             draw_diagonal_hatch(draw, box, spacing=px(9), width=px(2))
         elif kind == "storm":
-            draw_diagonal_hatch(draw, box, spacing=px(12), width=px(2))
-            draw_diagonal_hatch(draw, box, spacing=px(12), width=px(2), rising=False)
+            draw_symbol_grid(draw, box, px(22), lambda d, x, y: draw_bolt(d, x, y, px(16)))
         else:
-            draw_dot_grid(draw, box, spacing=px(12), radius=px(2.5))
+            draw_symbol_grid(
+                draw, box, px(17), lambda d, x, y: draw_asterisk(d, x, y, px(5.5), px(1.5))
+            )
         self.image.paste(layer, (0, 0), mask)
 
     def _legend(self, kinds: list[str], center_x: float, top: int) -> None:

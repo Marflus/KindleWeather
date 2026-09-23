@@ -19,6 +19,9 @@ GRAY_DARK, GRAY_MID = 90, 150
 GRAY_LIGHT, GRAY_PALE = 205, 236
 WHITE = 255
 
+# Lightning bolt of the thunderstorm icon, in icon radii from the icon center.
+BOLT_SHAPE = ((0.1, 0.35), (-0.25, 0.95), (0.05, 0.95), (-0.2, 1.5), (0.4, 0.7), (0.1, 0.7))
+
 
 def text_width(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont) -> float:
     left, _, right, _ = draw.textbbox((0, 0), text, font=font)
@@ -71,17 +74,7 @@ def draw_weather_icon(draw, code: int, cx: float, cy: float, r: float) -> None:
             draw.ellipse([x - flake, y - flake, x + flake, y + flake], fill=GRAY_DARK)
     elif code in THUNDERSTORM_CODES:
         draw_cloud(draw, cx, cy - r * 0.2, r * 0.85)
-        draw.polygon(
-            [
-                (cx + r * 0.1, cy + r * 0.35),
-                (cx - r * 0.25, cy + r * 0.95),
-                (cx + r * 0.05, cy + r * 0.95),
-                (cx - r * 0.2, cy + r * 1.5),
-                (cx + r * 0.4, cy + r * 0.7),
-                (cx + r * 0.1, cy + r * 0.7),
-            ],
-            fill=BLACK,
-        )
+        draw.polygon([(cx + r * dx, cy + r * dy) for dx, dy in BOLT_SHAPE], fill=BLACK)
     else:
         draw_sun(draw, cx, cy, r)
 
@@ -165,12 +158,29 @@ def draw_diagonal_hatch(draw, box, spacing, width, rising=True, fill=GRAY_DARK) 
             draw.line([(x, top), (x + rise, bottom)], fill=fill, width=width)
 
 
-def draw_dot_grid(draw, box, spacing, radius, fill=GRAY_DARK) -> None:
+def draw_symbol_grid(draw, box, spacing, draw_symbol) -> None:
+    """Repeat draw_symbol(draw, x, y) over box on a staggered grid."""
     left, top, right, bottom = box
     for row, y in enumerate(range(top + spacing // 2, bottom, spacing)):
         offset = spacing // 2 if row % 2 else 0
         for x in range(left + offset, right, spacing):
-            draw.ellipse([x - radius, y - radius, x + radius, y + radius], fill=fill)
+            draw_symbol(draw, x, y)
+
+
+def draw_asterisk(draw, x, y, radius, width, fill=GRAY_DARK) -> None:
+    for angle in (90, 30, 150):
+        dx = radius * math.cos(math.radians(angle))
+        dy = radius * math.sin(math.radians(angle))
+        draw.line([x - dx, y - dy, x + dx, y + dy], fill=fill, width=width)
+
+
+def draw_bolt(draw, x, y, height, fill=GRAY_DARK) -> None:
+    # BOLT_SHAPE spans 1.15 radii, centered on (0.075, 0.925).
+    scale = height / 1.15
+    draw.polygon(
+        [(x + (dx - 0.075) * scale, y + (dy - 0.925) * scale) for dx, dy in BOLT_SHAPE],
+        fill=fill,
+    )
 
 
 def _three_columns(cx: float, r: float) -> tuple[float, float, float]:
