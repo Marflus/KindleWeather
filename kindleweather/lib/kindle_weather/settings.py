@@ -1,4 +1,4 @@
-"""The KUAL menu, with a submenu per setting, and the changes made from it.
+"""The KUAL menu, with a Settings submenu, and the changes made from it.
 
 python3 -m kindle_weather.settings SETTING VALUE   changes config.json, then the menu
 python3 -m kindle_weather.settings                 rewrites the menu from config.json
@@ -51,6 +51,11 @@ SETTINGS = {
         ("temperature_unit",),
         {"celsius": "Celsius", "fahrenheit": "Fahrenheit"},
     ),
+    "clock": (
+        "Clock",
+        ("clock",),
+        {"24h": "24-hour", "12h": "12-hour (AM/PM)"},
+    ),
 }
 
 
@@ -75,9 +80,11 @@ def write_menu() -> None:
         "orientation": config.orientation,
         "icons": config.icon_set,
         "temperature": config.temperature_unit,
+        "clock": config.clock,
     }
-    items = [{"name": "Start weather station", "priority": 1, "action": "sh bin/start.sh"}]
-    for priority, (setting, (label, _, values)) in enumerate(SETTINGS.items(), start=2):
+    # One submenu per setting, named after its current value.
+    settings = []
+    for priority, (setting, (label, _, values)) in enumerate(SETTINGS.items(), start=1):
         choices = [
             {
                 "name": name,
@@ -90,8 +97,12 @@ def write_menu() -> None:
             for index, (value, name) in enumerate(values.items(), start=1)
         ]
         name = values[current[setting]]
-        items.append({"name": f"{label}: {name}", "priority": priority, "items": choices})
-    items.append({"name": "Diagnostic", "priority": len(items) + 1, "action": "sh bin/diagnose.sh"})
+        settings.append({"name": f"{label}: {name}", "priority": priority, "items": choices})
+    items = [
+        {"name": "Start weather station", "priority": 1, "action": "sh bin/start.sh"},
+        {"name": "Settings", "priority": 2, "items": settings},
+        {"name": "Diagnostic", "priority": 3, "action": "sh bin/diagnose.sh"},
+    ]
     menu = {"items": [{"name": "KindleWeather", "priority": 1, "items": items}]}
     with open(MENU_PATH, "w", encoding="utf-8", newline="\n") as file:
         json.dump(menu, file, indent=2)

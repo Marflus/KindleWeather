@@ -56,7 +56,12 @@ def draw(config_path: Path, output: Path) -> None:
     place = geocode(config.city, config.country_code, config.locale.code)
     forecast = fetch_forecast(place, config.temperature_unit)
     image = render_dashboard(
-        forecast, config.locale, config.display_size, config.orientation, config.icon_set
+        forecast,
+        config.locale,
+        config.display_size,
+        config.orientation,
+        config.icon_set,
+        config.clock,
     )
     image.save(output)
 

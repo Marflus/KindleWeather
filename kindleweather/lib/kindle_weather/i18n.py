@@ -32,8 +32,9 @@ class Locale:
     def format_short_date(self, day: date) -> str:
         return f"{self.short_weekdays[day.weekday()]} {day.day}"
 
-    def format_updated_at(self, moment: datetime) -> str:
-        return self.labels["updated"].format(moment.strftime(self.timestamp))
+    def format_updated_at(self, moment: datetime, time: str) -> str:
+        """The footer, with time the clock time of moment as the dashboard shows it."""
+        return self.labels["updated"].format(moment.strftime(self.timestamp.replace("%H:%M", time)))
 
     def describe(self, weather_code: int) -> str:
         return self.weather.get(weather_code, self.labels["variable"])

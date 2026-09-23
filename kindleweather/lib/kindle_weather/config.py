@@ -11,6 +11,7 @@ from kindle_weather.icons import DEFAULT_ICON_SET, ICON_SETS
 
 ORIENTATIONS = ("portrait", "landscape")
 TEMPERATURE_UNITS = ("celsius", "fahrenheit")
+CLOCKS = ("24h", "12h")
 
 
 class ConfigError(ValueError):
@@ -28,6 +29,8 @@ class Config:
     orientation: str
     icon_set: str
     temperature_unit: str
+    # "24h" or "12h", with AM and PM.
+    clock: str
 
 
 def load_config(path: Path) -> Config:
@@ -69,6 +72,9 @@ def load_config(path: Path) -> Config:
         f"temperature_unit must be one of {TEMPERATURE_UNITS}",
     )
 
+    clock = raw.get("clock", "24h")
+    _require(clock in CLOCKS, f"clock must be one of {CLOCKS}")
+
     return Config(
         locale=LOCALES[language],
         city=city.strip(),
@@ -77,6 +83,7 @@ def load_config(path: Path) -> Config:
         orientation=orientation,
         icon_set=icon_set,
         temperature_unit=temperature_unit,
+        clock=clock,
     )
 
 

@@ -62,7 +62,7 @@ BANNER_ICONS = {"snow": 73, "storm": 95, "rain": 63}
 
 # Start of the hour, temperature, humidity and wind cells, as a share of a table
 # column; wind gets the widest cell since it holds an icon and "km/h".
-TABLE_CELLS = (0, 0.24, 0.47, 0.71)
+TABLE_CELLS = (0, 0.26, 0.48, 0.71)
 
 
 @dataclass(frozen=True)
@@ -115,10 +115,11 @@ def render_dashboard(
     size: tuple[int, int] = SCREEN_SIZE,
     orientation: str = "portrait",
     icon_set: str = DEFAULT_ICON_SET,
+    clock: str = "24h",
 ) -> Picture:
     """Render for a portrait framebuffer of `size`; landscape output is rotated to fit it."""
     canvas = _framebuffer_canvas(size, orientation)
-    return _Dashboard(forecast, locale, LAYOUTS[orientation], icon_set, canvas).render()
+    return _Dashboard(forecast, locale, LAYOUTS[orientation], icon_set, clock, canvas).render()
 
 
 def render_error(
@@ -179,6 +180,20 @@ def _legend_kinds(codes: list[int]) -> list[str]:
     return [kind for kind in LEGEND_KINDS if kind in present]
 
 
+def _time_text(hour: int, minute: int, clock: str) -> str:
+    """ "14:05" with the 24-hour clock, "2:05 PM" with the 12-hour one."""
+    if clock == "12h":
+        return f"{(hour - 1) % 12 + 1}:{minute:02d} {'AM' if hour < 12 else 'PM'}"
+    return f"{hour:02d}:{minute:02d}"
+
+
+def _hour_text(hour: int, clock: str) -> str:
+    """ "14:00" with the 24-hour clock, the shorter "2 PM" with the 12-hour one."""
+    if clock == "12h":
+        return f"{(hour - 1) % 12 + 1} {'AM' if hour < 12 else 'PM'}"
+    return f"{hour:02d}:00"
+
+
 def _shrink_to_fit(draw, text: str, font: Font, max_width: float) -> Font:
     while text_width(draw, text, font) > max_width and font.size > 16:
         font = font.variant(font.size - 1)
@@ -202,12 +217,19 @@ def _draw_symbol(draw, kind: str, x: float, y: float) -> None:
 
 class _Dashboard:
     def __init__(
-        self, forecast: Forecast, locale: Locale, layout: Layout, icon_set: str, canvas: Canvas
+        self,
+        forecast: Forecast,
+        locale: Locale,
+        layout: Layout,
+        icon_set: str,
+        clock: str,
+        canvas: Canvas,
     ):
         self.forecast = forecast
         self.locale = locale
         self.layout = layout
         self.icons = ICON_SETS[icon_set]
+        self.clock = clock
         self.width, self.height = layout.size
         self.draw = canvas
         self.fonts = {name: Font(path, size) for name, (path, size) in FONT_SPECS.items()}
@@ -221,6 +243,13 @@ class _Dashboard:
         y = self._hourly_table(y + 80)
         self._footer(y + self.layout.footer_gap)
         return self.draw.picture()
+
+    def _clock_time(self, text: str | None) -> str:
+        """An "HH:MM" time of the forecast, on the configured clock."""
+        if not text:
+            return "—"
+        hour, minute = text.split(":")
+        return _time_text(int(hour), int(minute), self.clock)
 
     def _separator(self, y: float) -> None:
         self.draw.line([(MARGIN, y), (self.width - MARGIN, y)], fill=GRAY_LIGHT, width=2)
@@ -300,9 +329,9 @@ class _Dashboard:
         wind = round(self.forecast.current.wind_speed)
         # Row by row: sunrise and humidity, then sunset and wind.
         cells = (
-            (labels["sunrise"], self.forecast.sunrise or "—", "sunrise"),
+            (labels["sunrise"], self._clock_time(self.forecast.sunrise), "sunrise"),
             (labels["humidity"], f"{humidity} %", "humidity"),
-            (labels["sunset"], self.forecast.sunset or "—", "sunset"),
+            (labels["sunset"], self._clock_time(self.forecast.sunset), "sunset"),
             (labels["wind"], f"{wind} km/h", "wind"),
         )
         cell_height, icon_size, inset = 64, 34, 14
@@ -408,7 +437,7 @@ class _Dashboard:
         draw.line(points, fill=INK, width=4)
 
         for (x, y), (_, entry) in list(zip(points, samples))[::3]:
-            self._chart_tick(x, y, f"{entry.hour:02d}:00", right, bottom)
+            self._chart_tick(x, y, _hour_text(entry.hour, self.clock), right, bottom)
 
         kinds = _legend_kinds([entry.weather_code for entry in forecast.hours])
         if kinds:
@@ -494,7 +523,10 @@ class _Dashboard:
                     for share in TABLE_CELLS
                 )
                 draw.text(
-                    (hour_x, middle - 12), f"{entry.hour:02d}:00", font=fonts["row"], fill=INK
+                    (hour_x, middle - 12),
+                    _hour_text(entry.hour, self.clock),
+                    font=fonts["row"],
+                    fill=INK,
                 )
                 draw.text(
                     (temp_x, middle - 12),
@@ -538,5 +570,7 @@ class _Dashboard:
         return bottom
 
     def _footer(self, y: int) -> None:
-        text = self.locale.format_updated_at(self.forecast.observed_at)
+        moment = self.forecast.observed_at
+        time = _time_text(moment.hour, moment.minute, self.clock)
+        text = self.locale.format_updated_at(moment, time)
         draw_centered_text(self.draw, self.width // 2, y, text, self.fonts["footer"], GRAY_MID)

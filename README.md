@@ -18,7 +18,7 @@ key is needed.
 - The next 7 days, with their weather icon and mean temperature
 - A precipitation alert for the next 24 hours: snow, thunderstorm or rain
 - A temperature chart and an hourly table for the next 24 hours, with rain, snow and thunderstorm hours shaded
-- Portrait or landscape, Celsius or Fahrenheit, three [icon sets](#icon-sets), eight [languages](#languages)
+- Portrait or landscape, Celsius or Fahrenheit, 24-hour or 12-hour clock, three [icon sets](#icon-sets), eight [languages](#languages), all set from the [KUAL menu](#kual-menu)
 - An [error code](#error-codes) on the screen when something goes wrong, and a low battery warning
 
 ## How it works
@@ -72,9 +72,9 @@ The station wakes up with the clock at `/dev/rtc1`, as on the Paperwhite 2 and
 4. **Set your city**: open `extensions/kindleweather/config.json` on the Kindle
    with a text editor, see [Configuration](#configuration).
 5. **Start the station**: eject the Kindle and unplug it, then open
-   **KUAL > KindleWeather**. Choose the language, orientation, icons and
-   temperature unit if needed (see [KUAL menu](#kual-menu)), then press
-   **Start weather station**. KUAL closes, the screen shows "Starting the
+   **KUAL > KindleWeather**. Choose the language, orientation, icons,
+   temperature unit and clock in **Settings** if needed (see
+   [KUAL menu](#kual-menu)), then press **Start weather station**. KUAL closes, the screen shows "Starting the
    weather station..." and the dashboard appears within a minute.
 
 To stop the station and get the normal Kindle back, restart it: hold the power
@@ -112,10 +112,12 @@ ssh root@KINDLE_IP "mv /mnt/us/config.json.bak /mnt/us/extensions/kindleweather/
 ```
 KindleWeather
   Start weather station
-  Language: English       > English, Francais, Deutsch, Espanol, Italiano, Portugues, Nederlands, Polski
-  Orientation: Portrait   > Portrait, Landscape
-  Icons: Classic          > Classic, Weather Icons, Material
-  Temperature: Celsius    > Celsius, Fahrenheit
+  Settings
+    Language: English       > English, Francais, Deutsch, Espanol, Italiano, Portugues, Nederlands, Polski
+    Orientation: Portrait   > Portrait, Landscape
+    Icons: Classic          > Classic, Weather Icons, Material
+    Temperature: Celsius    > Celsius, Fahrenheit
+    Clock: 24-hour          > 24-hour, 12-hour (AM/PM)
   Diagnostic
 ```
 
@@ -134,7 +136,8 @@ set there with a text editor; the other settings can also be changed from the
   "language": "en",
   "location": { "city": "Lyon", "country_code": "FR" },
   "display": { "width": 1072, "height": 1448, "orientation": "portrait", "icons": "classic" },
-  "temperature_unit": "celsius"
+  "temperature_unit": "celsius",
+  "clock": "24h"
 }
 ```
 
@@ -147,6 +150,7 @@ set there with a text editor; the other settings can also be changed from the
 | `display.orientation` | `"portrait"` (default) or `"landscape"`. In landscape, read the Kindle turned a quarter turn clockwise. |
 | `display.icons` | `"classic"` (default), `"weather-icons"` or `"material"`, see [Icon sets](#icon-sets). |
 | `temperature_unit` | `"celsius"` (default) or `"fahrenheit"`. |
+| `clock` | `"24h"` (default) or `"12h"`, with AM and PM. |
 
 Changes made to the file while the station runs apply at the next refresh.
 
