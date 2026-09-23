@@ -20,16 +20,11 @@ from kindle_weather.graphics import (
     draw_bolt,
     draw_centered_text,
     draw_diagonal_hatch,
-    draw_droplet,
-    draw_sun_horizon,
     draw_symbol_grid,
-    draw_weather_icon,
-    draw_weather_icon_in_box,
-    draw_wind,
-    icon_bounds,
     text_width,
 )
 from kindle_weather.i18n import Locale
+from kindle_weather.icons import DEFAULT_ICON_SET, ICON_SETS
 from kindle_weather.weather import (
     PRECIPITATION_KINDS,
     WINDOW_HOURS,
@@ -119,9 +114,10 @@ def render_dashboard(
     locale: Locale,
     size: tuple[int, int] = SCREEN_SIZE,
     orientation: str = "portrait",
+    icon_set: str = DEFAULT_ICON_SET,
 ) -> Image.Image:
     """Render for a portrait framebuffer of `size`; landscape output is rotated to fit it."""
-    image = _Dashboard(forecast, locale, LAYOUTS[orientation]).render()
+    image = _Dashboard(forecast, locale, LAYOUTS[orientation], icon_set).render()
     return _to_framebuffer(image, size, orientation)
 
 
@@ -191,10 +187,11 @@ def _draw_symbol(draw, kind: str, x: float, y: float) -> None:
 
 
 class _Dashboard:
-    def __init__(self, forecast: Forecast, locale: Locale, layout: Layout):
+    def __init__(self, forecast: Forecast, locale: Locale, layout: Layout, icon_set: str):
         self.forecast = forecast
         self.locale = locale
         self.layout = layout
+        self.icons = ICON_SETS[icon_set]
         self.width, self.height = px(layout.size[0]), px(layout.size[1])
         self.image = Image.new("L", (self.width, self.height), WHITE)
         self.draw = ImageDraw.Draw(self.image)
@@ -244,7 +241,7 @@ class _Dashboard:
             GRAY_DARK,
         )
         icon_top = body_top + place_box[3] - place_box[1] + px(12)
-        draw_weather_icon_in_box(
+        self.icons.draw(
             draw, forecast.today.weather_code, (left, icon_top, left + place_column, body_bottom)
         )
 
@@ -294,21 +291,18 @@ class _Dashboard:
             (labels["sunset"], self.forecast.sunset or "—", "sunset"),
             (labels["wind"], f"{wind} km/h", "wind"),
         )
-        cell_height, icon_r, inset = px(64), px(16), px(14)
+        cell_height, icon_size, inset = px(64), px(34), px(14)
         top = center_y - (cell_height + px(50)) // 2
         # Fixed grid so icons and labels stay aligned across rows of different text widths.
         for i, (label, value, kind) in enumerate(cells):
             row, column = divmod(i, 2)
             cell_left = left + column * (width // 2)
             y = top + row * cell_height
-            icon_cx, icon_cy = cell_left + inset + icon_r, y + px(20)
-            if kind == "humidity":
-                draw_droplet(self.draw, icon_cx, icon_cy, icon_r)
-            elif kind == "wind":
-                draw_wind(self.draw, icon_cx, icon_cy, icon_r)
-            else:
-                draw_sun_horizon(self.draw, icon_cx, icon_cy, icon_r, rising=kind == "sunrise")
-            text_x = cell_left + inset + 2 * icon_r + px(12)
+            icon_left, icon_top = cell_left + inset, y + px(20) - icon_size // 2
+            self.icons.draw(
+                self.draw, kind, (icon_left, icon_top, icon_left + icon_size, icon_top + icon_size)
+            )
+            text_x = icon_left + icon_size + px(10)
             self.draw.text(
                 (text_x, y + px(2)), label, font=self.fonts["panel_label"], fill=GRAY_DARK
             )
@@ -341,7 +335,7 @@ class _Dashboard:
                 right - px(18),
                 temperature_y + temperature_box[1] - px(10),
             )
-            draw_weather_icon_in_box(self.draw, day.weather_code, icon_box)
+            self.icons.draw(self.draw, day.weather_code, icon_box)
         return top + height
 
     def _precipitation_banner(self, top: int) -> int:
@@ -361,18 +355,13 @@ class _Dashboard:
             draw_centered_text(self.draw, self.width // 2, text_y, text, font, INK)
             return top + height
 
-        # Center icon and text as one group; the icon is placed by its actual ink bounds.
-        code, icon_r, gap = BANNER_ICONS[risk], px(13), px(12)
-        icon_left, icon_top, icon_right, icon_bottom = icon_bounds(code, icon_r)
-        icon_width = icon_right - icon_left
+        # Center icon and text as one group, the icon sized by its actual ink.
+        code, gap = BANNER_ICONS[risk], px(12)
+        icon_top, icon_bottom = top + px(9), top + height - px(9)
+        icon_width, _ = self.icons.ink_size(code, (0, icon_top, px(44), icon_bottom))
         group_left = self.width / 2 - (icon_width + gap + box[2] - box[0]) / 2
-        draw_weather_icon(
-            self.draw,
-            code,
-            group_left - icon_left,
-            top + height / 2 - (icon_top + icon_bottom) / 2,
-            icon_r,
-        )
+        icon_box = (group_left, icon_top, group_left + icon_width, icon_bottom)
+        self.icons.draw(self.draw, code, icon_box)
         self.draw.text((group_left + icon_width + gap - box[0], text_y), text, font=font, fill=INK)
         return top + height
 
@@ -486,9 +475,8 @@ class _Dashboard:
                     continue
                 entry = entries[index]
                 column_left = MARGIN + column * (column_width + gap)
-                draw_weather_icon(
-                    draw, entry.weather_code, column_left + icon_zone // 2, middle, px(13)
-                )
+                icon_box = (column_left, middle - px(17), column_left + px(34), middle + px(17))
+                self.icons.draw(draw, entry.weather_code, icon_box)
                 hour_x, temp_x, humidity_x, wind_x = (
                     column_left + icon_zone + round(share * (column_width - icon_zone))
                     for share in TABLE_CELLS
@@ -502,14 +490,24 @@ class _Dashboard:
                     font=fonts["row"],
                     fill=INK,
                 )
-                draw_droplet(draw, humidity_x + px(11), middle, px(11), fill=GRAY_DARK)
+                self.icons.draw(
+                    draw,
+                    "humidity",
+                    (humidity_x, middle - px(13), humidity_x + px(22), middle + px(13)),
+                    fill=GRAY_DARK,
+                )
                 draw.text(
                     (humidity_x + px(28), middle - px(10)),
                     f"{entry.humidity} %",
                     font=fonts["row_small"],
                     fill=GRAY_DARK,
                 )
-                draw_wind(draw, wind_x + px(13), middle, px(13), fill=GRAY_DARK)
+                self.icons.draw(
+                    draw,
+                    "wind",
+                    (wind_x, middle - px(13), wind_x + px(26), middle + px(13)),
+                    fill=GRAY_DARK,
+                )
                 draw.text(
                     (wind_x + px(30), middle - px(10)),
                     f"{round(entry.wind_speed)} km/h",

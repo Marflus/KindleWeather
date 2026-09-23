@@ -7,7 +7,8 @@
   "display": {
     "width": 1072,
     "height": 1448,
-    "orientation": "portrait"
+    "orientation": "portrait",
+    "icons": "classic"
   },
   "temperature_unit": "celsius",
   "dashboard_url": "https://marflus.github.io/KindleWeather/dashboard.png"

@@ -59,6 +59,8 @@ def render(config: Config, output: Path) -> None:
         )
         image.save(output)
         raise WeatherError(f"{error} ({WEATHER_ERROR_CODE} screen written to {output})") from error
-    image = render_dashboard(forecast, config.locale, config.display_size, config.orientation)
+    image = render_dashboard(
+        forecast, config.locale, config.display_size, config.orientation, config.icon_set
+    )
     image.save(output)
     print(f"Dashboard for {place.name} written to {output}")

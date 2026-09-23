@@ -8,8 +8,8 @@ data every hour. The Kindle downloads it, displays it, and sleeps until the
 next refresh.
 
 <p align="center">
-  <img src="preview/portrait-en.png" alt="Portrait dashboard" height="420">
-  <img src="preview/landscape-en.png" alt="Landscape dashboard" height="420">
+  <img src="preview/classic/portrait.png" alt="Portrait dashboard" height="420">
+  <img src="preview/classic/landscape.png" alt="Landscape dashboard" height="420">
 </p>
 <p align="center"><sub>Portrait and landscape layouts, rendered from sample data.</sub></p>
 
@@ -20,6 +20,7 @@ next refresh.
 - Precipitation alert for the next 24 hours with its icon, by priority: snow, then thunderstorm, then rain
 - Temperature chart and 2-hourly table for the next 24 hours, starting at the current hour; rain, thunderstorm and snow hours get distinct patterns
 - Portrait or landscape layout, Celsius or Fahrenheit
+- Three icon sets to choose from (see [Icon sets](#icon-sets))
 - Display in 8 languages (see [Languages](#languages))
 - Error screen and error codes when the weather data or the connection is missing
 - City set by name; its coordinates and localized name come from the Open-Meteo geocoding API
@@ -106,7 +107,7 @@ To stop the station, hold the power button until the Kindle restarts (10 to
 {
   "language": "en",
   "location": { "city": "Lyon", "country_code": "FR" },
-  "display": { "width": 1072, "height": 1448, "orientation": "portrait" },
+  "display": { "width": 1072, "height": 1448, "orientation": "portrait", "icons": "classic" },
   "temperature_unit": "celsius",
   "dashboard_url": "https://you.github.io/KindleWeather/dashboard.png"
 }
@@ -119,6 +120,7 @@ To stop the station, hold the power button until the Kindle restarts (10 to
 | `location.country_code` | Optional ISO 3166-1 alpha-2 code (`"FR"`, `"US"`...) to pick the right city among homonyms. |
 | `display.width`, `display.height` | Screen resolution in pixels, in portrait (see [Compatibility](#compatibility)). |
 | `display.orientation` | `"portrait"` (default) or `"landscape"`. In landscape, read the Kindle turned a quarter turn clockwise. |
+| `display.icons` | `"classic"` (default), `"weather-icons"` or `"material"`, see [Icon sets](#icon-sets). |
 | `temperature_unit` | `"celsius"` (default) or `"fahrenheit"`. |
 | `dashboard_url` | Where the Kindle downloads the dashboard. Any HTTP(S) host works, not only GitHub Pages. |
 
@@ -133,11 +135,20 @@ Polish (`pl`). Each language is a JSON file in
 [`src/kindle_weather/locales`](src/kindle_weather/locales): to add one, copy
 `en.json`, translate the values and name the file after the language code.
 
-<p align="center">
-  <img src="preview/portrait-fr.png" alt="Portrait dashboard in French" height="320">
-  <img src="preview/landscape-fr.png" alt="Landscape dashboard in French" height="320">
-</p>
-<p align="center"><sub>The same sample data displayed in French.</sub></p>
+## Icon sets
+
+Set `display.icons` to pick the icons. Previews of each set, in portrait and
+landscape, are in [`preview/`](preview).
+
+| `classic` | `weather-icons` | `material` |
+|---|---|---|
+| <img src="preview/classic/portrait.png" alt="Classic icons" width="260"> | <img src="preview/weather-icons/portrait.png" alt="Weather Icons" width="260"> | <img src="preview/material/portrait.png" alt="Material Design Icons" width="260"> |
+| Filled shapes drawn by the renderer, with shades of gray. | Outline icons from [Weather Icons](https://erikflowers.github.io/weather-icons/). | Rounded icons from [Material Design Icons](https://pictogrammers.com/library/mdi/). |
+
+The icon fonts are vendored in
+[`src/kindle_weather/icon_fonts`](src/kindle_weather/icon_fonts) with their
+licenses. To add a set, map the WMO weather codes and the four detail icons to
+glyphs in [`icons.py`](src/kindle_weather/icons.py).
 
 ## Error codes
 
@@ -161,9 +172,10 @@ kindle-weather install MOUNT_PATH                # install the KUAL extension
 ```
 .github/workflows/    ci.yml (lint, tests), publish.yml (hourly dashboard)
 config/               config.json, the only file to edit
-preview/              dashboard previews, portrait and landscape, in English and French
+preview/              dashboard previews, portrait and landscape, one folder per icon set
 kindle/extension/     KUAL extension; bin/station.sh is the weather station loop
-src/kindle_weather/   Python package: config, weather, i18n (locales/*.json), graphics, render, install
+src/kindle_weather/   Python package: config, weather, i18n (locales/*.json), graphics,
+                      icons (icon_fonts/*.ttf), render, install
 tests/                pytest suite, runs offline
 ```
 
@@ -200,6 +212,10 @@ CI runs these checks on every push and pull request.
 - Weather data by [Open-Meteo](https://open-meteo.com/), under CC BY 4.0.
 - [Roboto](https://github.com/googlefonts/roboto) font, packaged for Python by
   [Pimoroni](https://github.com/pimoroni/fonts-python).
+- [Weather Icons](https://github.com/erikflowers/weather-icons) by Erik
+  Flowers, under the SIL Open Font License 1.1.
+- [Material Design Icons](https://github.com/Templarian/MaterialDesign) by
+  Pictogrammers, under the Apache License 2.0 (weather glyphs only).
 - [KUAL](https://www.mobileread.com/forums/showthread.php?t=203326) and the
   MobileRead community for the Kindle jailbreak tooling.
 

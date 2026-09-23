@@ -20,6 +20,7 @@ def test_defaults():
     config = parse_config(VALID)
     assert config.display_size == (1072, 1448)
     assert config.orientation == "portrait"
+    assert config.icon_set == "classic"
     assert config.temperature_unit == "celsius"
     assert config.location.country_code is None
 
@@ -31,6 +32,7 @@ def test_defaults():
         ({"location": {"city": " "}}, "location.city"),
         ({"display": {"width": 0, "height": 1448}}, "display"),
         ({"display": {"orientation": "diagonal"}}, "display.orientation"),
+        ({"display": {"icons": "emoji"}}, "display.icons"),
         ({"temperature_unit": "kelvin"}, "temperature_unit"),
         ({"dashboard_url": None}, "dashboard_url"),
         ({"dashboard_url": "ftp://example.org/dashboard.png"}, "dashboard_url"),

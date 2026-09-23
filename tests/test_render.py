@@ -29,6 +29,13 @@ def test_language_changes_the_output(forecast):
     assert ImageChops.difference(english, french).getbbox() is not None
 
 
+@pytest.mark.parametrize("icon_set", ["weather-icons", "material"])
+def test_icon_set_changes_the_output(forecast, icon_set):
+    classic = render_dashboard(forecast, ENGLISH)
+    other = render_dashboard(forecast, ENGLISH, icon_set=icon_set)
+    assert ImageChops.difference(classic, other).getbbox() is not None
+
+
 def test_precipitation_runs_split_by_kind():
     codes = [0, 61, 63, 95, 96, 51, 3, 73, 0]
     assert precipitation_runs(codes) == [

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from kindle_weather.i18n import LOCALES, Locale
+from kindle_weather.icons import DEFAULT_ICON_SET, ICON_SETS
 
 DEFAULT_CONFIG_PATH = Path("config/config.json")
 ORIENTATIONS = ("portrait", "landscape")
@@ -29,6 +30,7 @@ class Config:
     location: Location
     display_size: tuple[int, int]
     orientation: str
+    icon_set: str
     temperature_unit: str
     dashboard_url: str
 
@@ -57,6 +59,8 @@ def parse_config(raw: dict) -> Config:
     )
     orientation = display.get("orientation", "portrait")
     _require(orientation in ORIENTATIONS, f"display.orientation must be one of {ORIENTATIONS}")
+    icon_set = display.get("icons", DEFAULT_ICON_SET)
+    _require(icon_set in ICON_SETS, f"display.icons must be one of {tuple(ICON_SETS)}")
 
     temperature_unit = raw.get("temperature_unit", "celsius")
     _require(
@@ -75,6 +79,7 @@ def parse_config(raw: dict) -> Config:
         location=Location(city=city.strip(), country_code=location.get("country_code") or None),
         display_size=(width, height),
         orientation=orientation,
+        icon_set=icon_set,
         temperature_unit=temperature_unit,
         dashboard_url=url,
     )

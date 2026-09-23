@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from PIL import Image, ImageChops, ImageDraw, ImageFont
+from PIL import ImageDraw, ImageFont
 
 from kindle_weather.weather import (
     DRIZZLE_CODES,
@@ -137,29 +137,6 @@ def draw_sun_horizon(draw, cx, cy, r, rising: bool, fill=INK) -> None:
         draw.polygon(
             [(cx - head, tip - head), (cx + head, tip - head), (cx, tip + head)], fill=fill
         )
-
-
-def icon_bounds(code: int, r: float) -> tuple[int, int, int, int]:
-    """Ink bounding box of a weather icon, relative to the center it is drawn at."""
-    size = math.ceil(r * 6)
-    scratch = Image.new("L", (size, size), WHITE)
-    draw_weather_icon(ImageDraw.Draw(scratch), code, size / 2, size / 2, r)
-    left, top, right, bottom = ImageChops.invert(scratch).getbbox()
-    return left - size / 2, top - size / 2, right - size / 2, bottom - size / 2
-
-
-def draw_weather_icon_in_box(draw, code: int, box) -> None:
-    """Draw the largest icon whose ink fits in box, centered on it."""
-    left, top, right, bottom = box
-    reference = 100
-    ink_left, ink_top, ink_right, ink_bottom = icon_bounds(code, reference)
-    r = reference * min(
-        (right - left) / (ink_right - ink_left), (bottom - top) / (ink_bottom - ink_top)
-    )
-    ink_left, ink_top, ink_right, ink_bottom = icon_bounds(code, r)
-    cx = (left + right) / 2 - (ink_left + ink_right) / 2
-    cy = (top + bottom) / 2 - (ink_top + ink_bottom) / 2
-    draw_weather_icon(draw, code, cx, cy, r)
 
 
 def draw_diagonal_hatch(draw, box, spacing, width, rising=True, fill=GRAY_DARK) -> None:
