@@ -1,5 +1,9 @@
 name: Publish dashboard
 
+# Optional: publishes the dashboard on GitHub Pages for Kindles set up to
+# download it (dashboard_url in config/config.json). Without dashboard_url,
+# the Kindle draws its own dashboard and this workflow does nothing.
+
 on:
   schedule:
     # Hourly, off the top of the hour when GitHub's scheduler is busiest.
@@ -23,15 +27,22 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}dashboard.png
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - id: mode
+        run: echo "publish=$(jq -r 'has("dashboard_url")' config/config.json)" >> "$GITHUB_OUTPUT"
+      - if: steps.mode.outputs.publish == 'true'
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - run: pip install .
+      - if: steps.mode.outputs.publish == 'true'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libcairo2 libfreetype6
+      - if: steps.mode.outputs.publish == 'true'
+        run: pip install .
       # When rendering fails, render still writes an error screen (E1 to E6)
       # and fails; publish it anyway so the Kindle shows the error.
-      - run: kindle-weather render --output site/dashboard.png
+      - if: steps.mode.outputs.publish == 'true'
+        run: kindle-weather render --output site/dashboard.png
       - id: upload
-        if: ${{ !cancelled() && hashFiles('site/dashboard.png') != '' }}
+        if: ${{ !cancelled() && steps.mode.outputs.publish == 'true' && hashFiles('site/dashboard.png') != '' }}
         uses: actions/upload-pages-artifact@v3
         with:
           path: site

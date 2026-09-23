@@ -1,4 +1,4 @@
-"""Installs the KUAL extension on a Kindle mounted as a USB drive."""
+"""Installs the KUAL extension, with the Python package that draws the dashboard, on a Kindle."""
 
 from __future__ import annotations
 
@@ -11,11 +11,12 @@ import unicodedata
 from collections.abc import Iterable
 from pathlib import Path
 
+from kindle_weather.config import Config
 from kindle_weather.errors import KINDLE_ERRORS
-from kindle_weather.i18n import Locale
 
 EXTENSION_NAME = "kindleweather"
-DEFAULT_EXTENSION_SOURCE = Path(__file__).parent / "kindle_extension"
+PACKAGE_DIR = Path(__file__).parent
+DEFAULT_EXTENSION_SOURCE = PACKAGE_DIR / "kindle_extension"
 # Letters that Unicode decomposition does not reduce to ASCII.
 _ASCII_REPLACEMENTS = str.maketrans({"ł": "l", "Ł": "L", "ß": "ss"})
 
@@ -24,13 +25,41 @@ class InstallError(RuntimeError):
     pass
 
 
-def install_extension(source: Path, mount_path: Path, locale: Locale, dashboard_url: str) -> Path:
+def install_extension(
+    mount_path: Path,
+    config: Config,
+    config_path: Path,
+    source: Path = DEFAULT_EXTENSION_SOURCE,
+) -> Path:
+    """Copy the extension to the Kindle drive at mount_path; return its folder."""
     extensions = mount_path / "extensions"
     if not extensions.is_dir():
         raise InstallError(f"{extensions} not found: is the Kindle mounted and KUAL installed?")
     target = extensions / EXTENSION_NAME
-    shutil.copytree(source, target, dirs_exist_ok=True)
+    build_extension(target, config, config_path, source)
+    return target
 
+
+def build_extension(
+    target: Path, config: Config, config_path: Path, source: Path = DEFAULT_EXTENSION_SOURCE
+) -> None:
+    """Lay out the extension folder: scripts, Python package, configuration, KUAL files."""
+    shutil.copytree(source, target, dirs_exist_ok=True)
+    package = target / "lib" / "kindle_weather"
+    if package.exists():
+        shutil.rmtree(package)
+    shutil.copytree(
+        PACKAGE_DIR,
+        package,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", source.name),
+    )
+    shutil.copyfile(config_path, target / "config.json")
+    write_kual_files(target, config)
+
+
+def write_kual_files(target: Path, config: Config) -> None:
+    """The KUAL menu and settings.sh, in the configured language."""
+    labels = config.locale.labels
     menu = {
         "items": [
             {
@@ -38,7 +67,7 @@ def install_extension(source: Path, mount_path: Path, locale: Locale, dashboard_
                 "priority": 1,
                 "items": [
                     {
-                        "name": ascii_fold(locale.labels["kual_start"]),
+                        "name": ascii_fold(labels["kual_start"]),
                         "priority": 1,
                         # setsid keeps the loop alive once it stops KUAL and the interface.
                         "action": "setsid sh bin/station.sh &",
@@ -48,14 +77,12 @@ def install_extension(source: Path, mount_path: Path, locale: Locale, dashboard_
         ]
     }
     _write_unix_text(target / "menu.json", json.dumps(menu, indent=2) + "\n")
-    labels = locale.labels
-    settings = {"DASHBOARD_URL": dashboard_url}
+    settings = {"DASHBOARD_URL": config.dashboard_url or ""}
     for name, error in KINDLE_ERRORS.items():
         settings[name] = ascii_fold(f"{labels['error']} {error.code}: {labels[error.label]}")
     settings["LOW_BATTERY_WARNING"] = ascii_fold(labels["low_battery"])
     lines = "".join(f"{name}={shlex.quote(value)}\n" for name, value in settings.items())
     _write_unix_text(target / "settings.sh", lines)
-    return target
 
 
 def find_kindle(candidates: Iterable[Path] | None = None) -> Path:
@@ -93,4 +120,5 @@ def ascii_fold(text: str) -> str:
 
 
 def _write_unix_text(path: Path, text: str) -> None:
-    path.write_text(text, encoding="utf-8", newline="\n")
+    with open(path, "w", encoding="utf-8", newline="\n") as file:
+        file.write(text)

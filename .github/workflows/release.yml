@@ -1,0 +1,28 @@
+name: Release
+
+# Push a tag such as v2.0.0 to publish kindleweather.zip, the extension to
+# copy to the Kindle, as a GitHub release.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install .
+      - run: python scripts/package.py
+      - run: >
+          gh release create "$GITHUB_REF_NAME" dist/kindleweather.zip
+          --title "KindleWeather $GITHUB_REF_NAME"
+          --notes "Copy the extensions folder of kindleweather.zip to the root of the Kindle drive, then edit extensions/kindleweather/config.json. See the README."
+        env:
+          GH_TOKEN: ${{ github.token }}

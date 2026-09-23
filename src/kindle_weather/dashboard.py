@@ -6,8 +6,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from PIL import Image
-
+from kindle_weather.canvas import Picture
 from kindle_weather.config import load_config
 from kindle_weather.errors import ErrorCode, classify, describe
 from kindle_weather.i18n import LOCALES, Locale
@@ -17,7 +16,8 @@ from kindle_weather.weather import fetch_forecast, geocode, parse_forecast
 
 @dataclass(frozen=True)
 class Dashboard:
-    image: Image.Image
+    image: Picture
+    locale: Locale
     place_name: str | None = None
     # Set when image is an error screen.
     error: Exception | None = None
@@ -25,6 +25,14 @@ class Dashboard:
     @property
     def failure(self) -> ErrorCode | None:
         return classify(self.error) if self.error else None
+
+    @property
+    def message(self) -> str | None:
+        """One line for the error, in the display language."""
+        if self.error is None:
+            return None
+        labels = self.locale.labels
+        return f"{labels['error']} {self.failure.code}: {labels[self.failure.label]}"
 
     @property
     def summary(self) -> str:
@@ -42,16 +50,18 @@ def build_dashboard(config_path: Path) -> Dashboard:
         image = render_dashboard(
             forecast, config.locale, config.display_size, config.orientation, config.icon_set
         )
-        return Dashboard(image, place_name=place.name)
+        return Dashboard(image, config.locale, place_name=place.name)
     except Exception as error:
         failure, detail = classify(error), describe(error)
         if config:
+            locale = config.locale
             screen = render_error(
-                failure, config.locale, config.display_size, config.orientation, detail=detail
+                failure, locale, config.display_size, config.orientation, detail=detail
             )
         else:
-            screen = render_error(failure, fallback_locale(config_path), detail=detail)
-        return Dashboard(screen, error=error)
+            locale = fallback_locale(config_path)
+            screen = render_error(failure, locale, detail=detail)
+        return Dashboard(screen, locale, error=error)
 
 
 def fallback_locale(config_path: Path) -> Locale:

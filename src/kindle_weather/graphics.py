@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import math
 
-from PIL import ImageDraw, ImageFont
-
 from kindle_weather.weather import (
     DRIZZLE_CODES,
     FOG_CODES,
@@ -23,7 +21,7 @@ WHITE = 255
 BOLT_SHAPE = ((0.1, 0.35), (-0.25, 0.95), (0.05, 0.95), (-0.2, 1.5), (0.4, 0.7), (0.1, 0.7))
 
 
-def text_width(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont) -> float:
+def text_width(draw, text: str, font) -> float:
     left, _, right, _ = draw.textbbox((0, 0), text, font=font)
     return right - left
 

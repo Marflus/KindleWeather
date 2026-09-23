@@ -2,10 +2,11 @@
 
 [![CI](https://github.com/Marflus/KindleWeather/actions/workflows/ci.yml/badge.svg)](https://github.com/Marflus/KindleWeather/actions/workflows/ci.yml)
 
-Turn a jailbroken Kindle into a battery-powered weather station. A computer on
-your network, such as a Raspberry Pi, renders a grayscale dashboard tuned for
-e-ink from [Open-Meteo](https://open-meteo.com/) data. Every hour, the Kindle
-downloads it, displays it, and sleeps until the next refresh.
+Turn a jailbroken Kindle into a standalone, battery-powered weather station.
+Every hour the Kindle wakes up, fetches the forecast from
+[Open-Meteo](https://open-meteo.com/), draws a grayscale dashboard tuned for
+e-ink, displays it and goes back to sleep. No computer, server or account is
+needed once it is installed.
 
 <p align="center">
   <img src="preview/classic/portrait.png" alt="Portrait dashboard" height="380">
@@ -22,37 +23,38 @@ downloads it, displays it, and sleeps until the next refresh.
 - Portrait or landscape layout, Celsius or Fahrenheit
 - Three icon sets to choose from (see [Icon sets](#icon-sets))
 - Display in 8 languages (see [Languages](#languages))
-- Error screen and error codes for each failure: weather service, location, configuration, Wi-Fi, download, outdated dashboard; low battery warning
+- Error codes for each failure: weather service, location, configuration, Wi-Fi; low battery warning
 - City set by name; its coordinates and localized name come from the Open-Meteo geocoding API
-- Hourly refresh, with the Kindle suspended to RAM in between
-- Guided setup, no account or API key needed
+- Hourly refresh, with the Kindle suspended to RAM in between; no API key needed
 
 ## How it works
 
 ```
-Computer on your network                   Kindle, every hour
- kindle-weather serve            <-------   1. Wi-Fi on, request dashboard.png
-   Open-Meteo -> dashboard.png   ------->   2. Wi-Fi off, display it (eips)
-                                            3. suspend to RAM, wake up 1 hour later
+Kindle, every hour
+ 1. wake up, Wi-Fi on
+ 2. Open-Meteo -> forecast -> draw dashboard.png (Python, with the Kindle's own cairo)
+ 3. Wi-Fi off, display it (eips)
+ 4. suspend to RAM until the next hour
 ```
-
-The computer renders a fresh dashboard each time the Kindle asks for it.
-Without a computer that stays on, GitHub Actions can render it every hour and
-publish it on GitHub Pages instead, see
-[the alternative](#alternative-publish-with-github-actions).
 
 The station is a KUAL extension. When started, it stops Amazon's interface and
 background services, so nothing covers the dashboard and the battery lasts.
 Between refreshes the Kindle is suspended to RAM and woken up by its real-time
 clock; the e-ink screen keeps the image without power. To get the normal
 Kindle back, restart it. The approach comes from
-[kindle-weatherstation](https://github.com/mattzzw/kindle-weatherstation).
+[kindle-weatherstation](https://github.com/mattzzw/kindle-weatherstation),
+which also draws its dashboard on the Kindle.
+
+The dashboard is drawn by a small Python package that uses only Python's
+standard library and the cairo and FreeType libraries the Kindle already
+ships for its interface: nothing to compile or download besides Python itself.
 
 ## Compatibility
 
-You need a **jailbroken** Kindle with **KUAL** and Wi-Fi. Whether a jailbreak
-exists depends on your firmware version: see [Kindle Modding](https://kindlemodding.org/)
-and the [MobileRead Kindle Developer's Corner](https://www.mobileread.com/forums/forumdisplay.php?f=150).
+You need a **jailbroken** Kindle with **KUAL**, **MRPI** and Wi-Fi. Whether a
+jailbreak exists depends on your firmware version: see
+[Kindle Modding](https://kindlemodding.org/) and the
+[MobileRead Kindle Developer's Corner](https://www.mobileread.com/forums/forumdisplay.php?f=150).
 
 | Model | Screen | Notes |
 |---|---|---|
@@ -69,117 +71,57 @@ Paperwhite 2 and 3; on other models, check `RTC` in
 
 ## Installation
 
-You need:
+### 1. Install Python on the Kindle
 
-- a jailbroken Kindle with KUAL, see [Compatibility](#compatibility);
-- a computer that stays on, on the same network as the Kindle: a Raspberry
-  Pi, a NAS, a home server or a PC left on;
-- Python 3.10 or newer on that computer.
+With the Kindle jailbroken and KUAL and MRPI installed, install NiLuJe's
+**Python 3** package with MRPI: see
+[Python on Kindle](https://wiki.mobileread.com/wiki/Python_on_Kindle) on the
+MobileRead wiki. Pick the package matching your firmware. Python 3.9 or newer
+is required; no extra module is needed.
 
-### 1. Install KindleWeather on the computer
+### 2. Copy KindleWeather to the Kindle
+
+1. Download `kindleweather.zip` from the
+   [latest release](https://github.com/Marflus/KindleWeather/releases/latest).
+2. Plug the Kindle in over USB and copy the `extensions` folder of the zip to
+   the root of the Kindle drive, next to its `documents` folder. It merges
+   with the `extensions` folder already there for KUAL.
+3. Open `extensions/kindleweather/config.json` on the Kindle drive with a text
+   editor and set your city and language, see [Configuration](#configuration).
+4. Eject the Kindle.
+
+<details>
+<summary>Or install from a computer with Python</summary>
+
+With Python 3.9 or newer on the computer:
 
 ```bash
 pipx install git+https://github.com/Marflus/KindleWeather.git
+kindle-weather init      # a few questions: language, city (checked online), Kindle model...
+kindle-weather install   # with the Kindle plugged in over USB; the drive is found automatically
 ```
 
-[pipx](https://pipx.pypa.io/) installs the `kindle-weather` command in its own
-environment. `pip install git+https://github.com/Marflus/KindleWeather.git`
-works too.
-
-### 2. Configure it
-
-```bash
-kindle-weather init
-```
-
-Answer a few questions: language, city (checked online), Kindle model,
-orientation, temperature unit and icons. Press Enter to keep the suggested
-value. The dashboard address defaults to this computer, for example
-`http://192.168.1.20:8080/dashboard.png`.
-
-The configuration is saved in `~/.config/kindle-weather/config.json`
-(`%APPDATA%\kindle-weather\config.json` on Windows). Run `kindle-weather init`
-again to change it, or edit the file, see [Configuration](#configuration).
-
-### 3. Install the station on the Kindle
-
-Plug the Kindle in over USB, then run:
-
-```bash
-kindle-weather install
-```
-
-The Kindle drive is found automatically; if not, pass its path, such as
+`kindle-weather init` saves the configuration in
+`~/.config/kindle-weather/config.json` (`%APPDATA%\kindle-weather\config.json`
+on Windows), and `kindle-weather install` copies it to the Kindle with the
+extension. If the drive is not found, pass its path:
 `kindle-weather install E:/` or `kindle-weather install /media/you/Kindle`.
-Eject the Kindle and restart it so KUAL picks up the new extension.
 
-### 4. Serve the dashboard
+</details>
 
-```bash
-kindle-weather serve
-```
+### 3. Start the station
 
-Open the address it prints, without `dashboard.png`, in a browser to check the
-dashboard. Leave the command running: the Kindle downloads its dashboard from
-it every hour. On Windows, allow Python through the firewall on private
-networks when asked.
-
-Give the computer a fixed address on your network (a DHCP reservation in your
-router settings), since the Kindle keeps the address it was installed with.
-
-To start the server with the computer on Linux, including Raspberry Pi OS,
-create `~/.config/systemd/user/kindle-weather.service`:
-
-```ini
-[Unit]
-Description=KindleWeather dashboard server
-After=network-online.target
-
-[Service]
-ExecStart=%h/.local/bin/kindle-weather serve
-Restart=on-failure
-
-[Install]
-WantedBy=default.target
-```
-
-Then enable it, and keep it running after you log out:
-
-```bash
-systemctl --user enable --now kindle-weather
-sudo loginctl enable-linger $USER
-```
-
-### 5. Start the station
-
-Open **KUAL > KindleWeather > Start weather station**. The interface
-disappears and the dashboard shows up within a minute. A log is kept in
+Restart the Kindle so KUAL picks up the new extension, then open
+**KUAL > KindleWeather > Start weather station**. The interface disappears and
+the dashboard shows up within a minute. A log is kept in
 `extensions/kindleweather/station.log` on the Kindle drive.
 
 To stop the station, hold the power button until the Kindle restarts (10 to
 20 seconds).
 
-### Alternative: publish with GitHub Actions
-
-Without a computer that stays on, a GitHub workflow can render the dashboard
-every hour and publish it on GitHub Pages.
-
-1. Fork this repository and edit [`config/config.json`](config/config.json).
-   Set `dashboard_url` to your GitHub Pages address:
-   `https://<user>.github.io/<repository>/dashboard.png`.
-2. In **Settings > Pages**, set **Source** to **GitHub Actions**. GitHub Pages
-   requires a public repository on the free plan.
-3. Run **Actions > Publish dashboard > Run workflow**, then open `dashboard_url`
-   in a browser to check the image. The workflow then runs every hour.
-4. From a clone of your fork, install the station on the Kindle:
-   `pip install .`, then `kindle-weather install`. In a clone, commands use
-   `config/config.json`.
-
-GitHub may delay scheduled workflows, so the dashboard can be older than an
-hour, and it disables them after 60 days without activity in the repository
-(error E12 on the Kindle): re-enable the workflow from the **Actions** tab.
-Some Kindles also fail HTTPS connections with their outdated certificates
-(error E10).
+To change the settings later, edit `extensions/kindleweather/config.json` on
+the Kindle drive, then restart the Kindle and start the station again. When
+updating KindleWeather, keep a copy of your `config.json`: the zip replaces it.
 
 ## Configuration
 
@@ -188,8 +130,7 @@ Some Kindles also fail HTTPS connections with their outdated certificates
   "language": "en",
   "location": { "city": "Lyon", "country_code": "FR" },
   "display": { "width": 1072, "height": 1448, "orientation": "portrait", "icons": "classic" },
-  "temperature_unit": "celsius",
-  "dashboard_url": "https://you.github.io/KindleWeather/dashboard.png"
+  "temperature_unit": "celsius"
 }
 ```
 
@@ -202,11 +143,7 @@ Some Kindles also fail HTTPS connections with their outdated certificates
 | `display.orientation` | `"portrait"` (default) or `"landscape"`. In landscape, read the Kindle turned a quarter turn clockwise. |
 | `display.icons` | `"classic"` (default), `"weather-icons"` or `"material"`, see [Icon sets](#icon-sets). |
 | `temperature_unit` | `"celsius"` (default) or `"fahrenheit"`. |
-| `dashboard_url` | Where the Kindle downloads the dashboard: `kindle-weather serve`, GitHub Pages or any HTTP(S) host. |
-
-The other settings apply at the next refresh; after changing `language` or
-`dashboard_url`, run `kindle-weather install` again. With GitHub Actions,
-commit the file.
+| `dashboard_url` | Optional, see [the alternative](#alternative-publish-the-dashboard-with-github-actions). When set, the Kindle downloads its dashboard from this address instead of drawing it. |
 
 ## Languages
 
@@ -229,70 +166,89 @@ Set `display.icons` to pick the icons:
 </p>
 
 Full previews of each set, in portrait and landscape, are in
-[`preview/`](preview).
-
-The icon fonts are vendored in
+[`preview/`](preview). The icon fonts are vendored in
 [`src/kindle_weather/icon_fonts`](src/kindle_weather/icon_fonts) with their
 licenses. To add a set, map the WMO weather codes and the four detail icons to
 glyphs in [`icons.py`](src/kindle_weather/icons.py).
 
 ## Error codes
 
-Errors raised while rendering the dashboard replace it with a full-screen
-error, with a technical detail underneath, so the Kindle shows it. The server
-prints it too; with GitHub Actions, the workflow publishes the screen, then
-fails, so GitHub also notifies you.
+Errors are written on the top line of the last dashboard, and logged in
+`extensions/kindleweather/station.log` with their details. When there is no
+dashboard yet, the Kindle shows a full-screen error instead. Every error is
+retried at the next hourly refresh.
 
 | Code | Meaning | What to do |
 |---|---|---|
-| E1 | The Open-Meteo servers could not be reached (network error or timeout). | Usually temporary. Check [Open-Meteo's status](https://open-meteo.com/) if it lasts. |
-| E2 | Open-Meteo rejected the request (HTTP error, such as 429 when rate-limited). | The detail line quotes Open-Meteo's reason. |
+| E1 | The Open-Meteo servers could not be reached (network error or timeout). | Check that the Wi-Fi network has internet access. Usually temporary otherwise. |
+| E2 | Open-Meteo rejected the request (HTTP error, such as 429 when rate-limited). | The log quotes Open-Meteo's reason. |
 | E3 | The city was not found by the geocoding API. | Check the spelling of `location.city` and `location.country_code`. |
-| E4 | Open-Meteo answered with incomplete or unreadable data. | Usually temporary. |
-| E5 | The configuration is not valid JSON or has an invalid value. | The detail line names the key. Run `kindle-weather init` to rewrite it. |
-| E6 | Unexpected rendering failure. | A bug: the server output or the workflow log has the traceback, please open an issue. |
-
-Errors raised on the Kindle are written on the top line of the last
-dashboard, and logged in `extensions/kindleweather/station.log`.
-
-| Code | Meaning | What to do |
-|---|---|---|
+| E4 | Open-Meteo answered with incomplete or unreadable data, such as a Wi-Fi login page. | Log in to the network from another device, or use another network. |
+| E5 | `config.json` is not valid JSON or has an invalid value. | The log names the key. |
+| E6 | Unexpected failure while drawing the dashboard. | The log has the details; please open an issue. |
 | E7 | No Wi-Fi connection within a minute. | Check that the Kindle remembers the network and is in range. |
-| E8 | The dashboard server could not be reached (DNS, connection or timeout). | Check that `kindle-weather serve` is running and the computer kept its address. With GitHub Pages, check that the network has internet access. |
-| E9 | The server answered with an HTTP error, typically 404. | Check `dashboard_url`, and with GitHub Actions that GitHub Pages is enabled. |
-| E10 | The HTTPS connection failed, often because of the Kindle's outdated certificates. | Update the firmware, or use an `http://` URL. |
-| E11 | The downloaded file is not a PNG image, such as a Wi-Fi login page. | Log in to the network from another device, or use another network. |
-| E12 | The dashboard has not been updated for over 6 hours. | With GitHub Actions, check the **Actions** tab: GitHub disables scheduled workflows after 60 days without activity. |
-| E13 | Any other download error. | The reason is in `station.log`. |
+| E8 | Python 3 is not installed on the Kindle. | Install it with MRPI, see [Installation](#1-install-python-on-the-kindle). |
 
-Every code is retried at the next hourly refresh. Below 10 % battery, the
-Kindle also shows a low battery warning.
+Below 10 % battery, the Kindle also shows a low battery warning.
+
+## Alternative: publish the dashboard with GitHub Actions
+
+The Kindle can also download a dashboard drawn elsewhere instead of drawing
+it itself, which does not need Python on the Kindle. A GitHub workflow of
+this repository can draw it every hour and publish it on GitHub Pages:
+
+1. Fork this repository and edit [`config/config.json`](config/config.json).
+   Add `dashboard_url` with your GitHub Pages address:
+   `https://<user>.github.io/<repository>/dashboard.png`.
+2. In **Settings > Pages**, set **Source** to **GitHub Actions**. GitHub Pages
+   requires a public repository on the free plan.
+3. Run **Actions > Publish dashboard > Run workflow**, then open `dashboard_url`
+   in a browser to check the image. The workflow then runs every hour.
+4. Install the station with `dashboard_url` in the Kindle's `config.json`.
+
+GitHub may delay scheduled workflows, so the dashboard can be older than an
+hour, and it disables them after 60 days without activity in the repository.
+Downloading adds these errors:
+
+| Code | Meaning |
+|---|---|
+| E9 | The dashboard server could not be reached (DNS, connection or timeout). |
+| E10 | The server answered with an HTTP error, typically 404: check `dashboard_url` and that GitHub Pages is enabled. |
+| E11 | The HTTPS connection failed, often because of the Kindle's outdated certificates. |
+| E12 | The downloaded file is not a PNG image, such as a Wi-Fi login page. |
+| E13 | The dashboard has not been updated for over 6 hours: check the **Actions** tab. |
+| E14 | Any other download error; the reason is in `station.log`. |
 
 ## Usage
 
 ```bash
 kindle-weather init                             # create or update the configuration
-kindle-weather install [DRIVE]                  # install the KUAL extension on the Kindle
-kindle-weather serve [--port 8080]              # serve the dashboard on the local network
+kindle-weather install [DRIVE]                  # install the station on the Kindle
 kindle-weather render [--output dashboard.png]  # render the dashboard to a file
 ```
 
-Every command takes `--config PATH` to use another configuration file.
+Every command takes `--config PATH` to use another configuration file. On the
+Kindle, `station.sh` runs `kindle-weather refresh` to draw the dashboard and
+`kindle-weather kual-files` to write the KUAL menu in the configured language.
+Rendering on a computer needs the cairo and FreeType libraries, which Linux
+and macOS usually have.
 
 ## Project structure
 
 ```
-.github/workflows/    ci.yml (lint, tests), publish.yml (GitHub Actions alternative)
+.github/workflows/    ci.yml (lint, tests), release.yml (kindleweather.zip),
+                      publish.yml (GitHub Pages alternative)
 config/               config.json, used in a clone of the repository
-preview/              dashboard previews, one folder per icon set; scripts/previews.py makes them
-src/kindle_weather/   Python package
+preview/              dashboard previews, one folder per icon set
+scripts/              previews.py (makes preview/), package.py (makes dist/kindleweather.zip)
+src/kindle_weather/   Python package, standard library only; it runs on the Kindle
   cli.py                commands
-  wizard.py             kindle-weather init
-  server.py             kindle-weather serve
   dashboard.py          dashboard or error screen for the configuration
   config.py, weather.py, errors.py, i18n.py (locales/*.json)
-  render.py, graphics.py, icons.py (icon_fonts/*.ttf)
-  install.py, kindle_extension/  KUAL extension; bin/station.sh is the station loop
+  render.py, graphics.py, icons.py (icon_fonts/), fonts/ (Roboto)
+  canvas.py             drawing with the system's cairo and FreeType, through ctypes
+  wizard.py, install.py kindle-weather init and install
+  kindle_extension/     KUAL extension; bin/station.sh is the station loop
 tests/                pytest suite, runs offline
 ```
 
@@ -304,15 +260,15 @@ pytest
 ruff check . && ruff format --check .
 shellcheck --shell=sh --severity=warning src/kindle_weather/kindle_extension/bin/*.sh
 python scripts/previews.py    # regenerate the previews
+python scripts/package.py     # build dist/kindleweather.zip
 ```
 
-CI runs these checks on every push and pull request.
+CI runs these checks on Python 3.9 and 3.12 on every push and pull request.
+Push a `v*` tag to publish `kindleweather.zip` as a release.
 
 ## Known limitations
 
 - While the station runs, the Kindle cannot be used as an e-reader.
-- The computer running `kindle-weather serve` must be on when the Kindle
-  wakes up; otherwise the Kindle keeps the last dashboard and shows E8.
 - If the Kindle does not wake up by itself, press the power button: the
   station refreshes, then goes back to sleep. Check `RTC` in `station.sh`
   for your model.
@@ -327,12 +283,11 @@ CI runs these checks on every push and pull request.
   and [kindle-kt3_weatherdisplay_battery-optimized](https://github.com/nicoh88/kindle-kt3_weatherdisplay_battery-optimized)
   by nicoh88.
 - Weather data by [Open-Meteo](https://open-meteo.com/), under CC BY 4.0.
-- [Roboto](https://github.com/googlefonts/roboto) font, packaged for Python by
-  [Pimoroni](https://github.com/pimoroni/fonts-python).
+- [Roboto](https://github.com/googlefonts/roboto) font by Google, under the
+  Apache License 2.0.
 - [Weather Icons](https://github.com/erikflowers/weather-icons) by Erik
   Flowers, under the SIL Open Font License 1.1.
 - [Material Design Icons](https://github.com/Templarian/MaterialDesign) by
   Pictogrammers, under the Apache License 2.0 (weather glyphs only).
-- [KUAL](https://www.mobileread.com/forums/showthread.php?t=203326) and the
-  MobileRead community for the Kindle jailbreak tooling.
-
+- [KUAL](https://www.mobileread.com/forums/showthread.php?t=203326), NiLuJe's
+  Python package and the MobileRead community for the Kindle jailbreak tooling.

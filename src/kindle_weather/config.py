@@ -34,7 +34,8 @@ class Config:
     orientation: str
     icon_set: str
     temperature_unit: str
-    dashboard_url: str
+    # Set when the Kindle downloads its dashboard instead of drawing it.
+    dashboard_url: str | None = None
 
 
 def default_config_path() -> Path:
@@ -95,9 +96,9 @@ def parse_config(raw: dict) -> Config:
         f"temperature_unit must be one of {TEMPERATURE_UNITS}",
     )
 
-    url = raw.get("dashboard_url")
+    url = raw.get("dashboard_url") or None
     _require(
-        isinstance(url, str) and url.startswith(("https://", "http://")),
+        url is None or (isinstance(url, str) and url.startswith(("https://", "http://"))),
         "dashboard_url must be an http(s) URL",
     )
 

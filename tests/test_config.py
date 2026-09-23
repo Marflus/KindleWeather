@@ -38,13 +38,18 @@ def test_defaults():
         ({"display": {"orientation": "diagonal"}}, "display.orientation"),
         ({"display": {"icons": "emoji"}}, "display.icons"),
         ({"temperature_unit": "kelvin"}, "temperature_unit"),
-        ({"dashboard_url": None}, "dashboard_url"),
+        ({"dashboard_url": 42}, "dashboard_url"),
         ({"dashboard_url": "ftp://example.org/dashboard.png"}, "dashboard_url"),
     ],
 )
 def test_invalid_values_are_rejected(override, message):
     with pytest.raises(ConfigError, match=message):
         parse_config({**VALID, **override})
+
+
+def test_dashboard_url_is_optional():
+    config = parse_config({"location": {"city": "Lyon"}})
+    assert config.dashboard_url is None
 
 
 def test_country_code_is_normalized():

@@ -1,9 +1,9 @@
 from dataclasses import replace
 
 import pytest
-from PIL import ImageChops
 
 from kindle_weather.errors import WEATHER_UNREACHABLE
+from kindle_weather.graphics import INK, WHITE
 from kindle_weather.i18n import LOCALES
 from kindle_weather.render import (
     legend_kinds,
@@ -18,28 +18,28 @@ ENGLISH, FRENCH = LOCALES["en"], LOCALES["fr"]
 @pytest.mark.parametrize("orientation", ["portrait", "landscape"])
 def test_output_fits_the_portrait_framebuffer(forecast, orientation):
     image = render_dashboard(forecast, ENGLISH, size=(1236, 1648), orientation=orientation)
-    assert image.mode == "L"
     assert image.size == (1236, 1648)
-    assert image.getextrema() == (0, 255)
+    assert len(image.pixels) == 1236 * 1648
+    assert image.extrema() == (0, 255)
 
 
 def test_landscape_differs_from_portrait(forecast):
     portrait = render_dashboard(forecast, ENGLISH)
     landscape = render_dashboard(forecast, ENGLISH, orientation="landscape")
-    assert ImageChops.difference(portrait, landscape).getbbox() is not None
+    assert portrait.pixels != landscape.pixels
 
 
 def test_language_changes_the_output(forecast):
     english = render_dashboard(forecast, ENGLISH)
     french = render_dashboard(forecast, FRENCH)
-    assert ImageChops.difference(english, french).getbbox() is not None
+    assert english.pixels != french.pixels
 
 
 @pytest.mark.parametrize("icon_set", ["weather-icons", "material"])
 def test_icon_set_changes_the_output(forecast, icon_set):
     classic = render_dashboard(forecast, ENGLISH)
     other = render_dashboard(forecast, ENGLISH, icon_set=icon_set)
-    assert ImageChops.difference(classic, other).getbbox() is not None
+    assert classic.pixels != other.pixels
 
 
 def test_precipitation_runs_split_by_kind():
@@ -75,4 +75,12 @@ def test_error_screen_fits_the_framebuffer(orientation):
         detail="ConnectionError: api.open-meteo.com " * 10,
     )
     assert image.size == (1072, 1448)
-    assert image.getextrema() == (0, 255)
+    assert image.extrema() == (INK, WHITE)
+
+
+def test_landscape_is_turned_to_be_read_with_the_kindle_turned_clockwise(forecast):
+    landscape = render_dashboard(forecast, ENGLISH, orientation="landscape")
+    upright = landscape.rotated(clockwise=True)
+    assert upright.size == (1448, 1072)
+    # The date sits at the top of the upright dashboard.
+    assert upright.ink_bbox()[1] < 60

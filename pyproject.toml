@@ -7,12 +7,10 @@ name = "kindle-weather"
 dynamic = ["version"]
 description = "Weather station for jailbroken Kindle e-readers."
 readme = "README.md"
-requires-python = ">=3.10"
-dependencies = [
-    "requests>=2.32",
-    "pillow>=10.4",
-    "font-roboto==0.0.1",
-]
+requires-python = ">=3.9"
+# Standard library only, so the package also runs on the Kindle. Drawing uses
+# the system's cairo and FreeType libraries.
+dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6"]
@@ -27,11 +25,11 @@ version = { attr = "kindle_weather.__version__" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-kindle_weather = ["locales/*.json", "icon_fonts/*", "kindle_extension/**/*"]
+kindle_weather = ["locales/*.json", "fonts/*", "icon_fonts/*", "kindle_extension/**/*"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py39"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]

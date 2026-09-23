@@ -10,6 +10,5 @@
     "orientation": "portrait",
     "icons": "classic"
   },
-  "temperature_unit": "celsius",
-  "dashboard_url": "https://marflus.github.io/KindleWeather/dashboard.png"
+  "temperature_unit": "celsius"
 }

@@ -3,18 +3,20 @@
 from __future__ import annotations
 
 import argparse
+import sys
+import traceback
 from pathlib import Path
 
 from kindle_weather.config import ConfigError, default_config_path, load_config
-from kindle_weather.dashboard import build_dashboard
+from kindle_weather.dashboard import build_dashboard, fallback_locale
 from kindle_weather.errors import RENDER_FAILED, describe
 from kindle_weather.install import (
-    DEFAULT_EXTENSION_SOURCE,
     InstallError,
+    ascii_fold,
     find_kindle,
     install_extension,
+    write_kual_files,
 )
-from kindle_weather.server import DEFAULT_PORT, serve
 from kindle_weather.wizard import run_wizard
 
 
@@ -29,29 +31,32 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--config",
         type=Path,
-        help="configuration file (default: %(default)s)",
         default=default_config_path(),
+        help="configuration file (default: %(default)s)",
     )
     commands = parser.add_subparsers(dest="command", required=True)
 
     commands.add_parser("init", help="create the configuration by answering a few questions")
 
     install_parser = commands.add_parser(
-        "install", help="install the KUAL extension on a Kindle plugged in over USB"
+        "install", help="install the station on a Kindle plugged in over USB"
     )
     install_parser.add_argument(
         "mount_path", type=Path, nargs="?", help="Kindle drive, found automatically if omitted"
     )
-    install_parser.add_argument("--extension", type=Path, default=DEFAULT_EXTENSION_SOURCE)
-
-    serve_parser = commands.add_parser(
-        "serve", help="serve the dashboard to the Kindle over the local network"
-    )
-    serve_parser.add_argument("--host", default="0.0.0.0")
-    serve_parser.add_argument("--port", type=int, default=DEFAULT_PORT)
 
     render_parser = commands.add_parser("render", help="render the dashboard to a file")
     render_parser.add_argument("--output", type=Path, default=Path("dashboard.png"))
+
+    # Run on the Kindle by station.sh.
+    refresh_parser = commands.add_parser(
+        "refresh", help="(Kindle) render the dashboard, print the error to display if any"
+    )
+    refresh_parser.add_argument("--output", type=Path, required=True)
+    kual_parser = commands.add_parser(
+        "kual-files", help="(Kindle) write the KUAL menu and settings.sh of the configuration"
+    )
+    kual_parser.add_argument("extension_dir", type=Path)
 
     args = parser.parse_args(argv)
     try:
@@ -60,18 +65,16 @@ def main(argv: list[str] | None = None) -> int:
             print("Next: plug in the Kindle over USB and run `kindle-weather install`.")
         elif args.command == "install":
             config = load_config(args.config)
-            mount_path = args.mount_path or find_kindle()
-            target = install_extension(
-                args.extension, mount_path, config.locale, config.dashboard_url
-            )
+            target = install_extension(args.mount_path or find_kindle(), config, args.config)
             print(f"Installed to {target}. Eject the Kindle, then start it from KUAL.")
-            if config.dashboard_url.startswith("http://"):
-                print("Keep `kindle-weather serve` running so the Kindle finds its dashboard.")
-        elif args.command == "serve":
-            load_config(args.config)
-            serve(args.config, args.host, args.port)
-        else:
+        elif args.command == "render":
             render(args.config, args.output)
+        elif args.command == "refresh":
+            message = refresh(args.config, args.output)
+            if message:
+                print(ascii_fold(message))
+        else:
+            write_kual_files(args.extension_dir, load_config(args.config))
     except (ConfigError, RenderError, InstallError) as error:
         parser.exit(1, f"error: {error}\n")
     except (EOFError, KeyboardInterrupt):
@@ -93,3 +96,30 @@ def render(config_path: Path, output: Path) -> None:
             f"{dashboard.failure.code}: {describe(dashboard.error)}"
             f" (error screen written to {output})"
         )
+
+
+def refresh(config_path: Path, output: Path) -> str | None:
+    """Update the Kindle's dashboard; return the error line to show on it, if any.
+
+    On error the last dashboard stays, with the line on top; the error screen
+    is written only when there is no dashboard yet. Details go to stderr, the
+    station's log.
+    """
+    try:
+        dashboard = build_dashboard(config_path)
+    except Exception:
+        # Even the error screen failed, such as without cairo.
+        traceback.print_exc()
+        labels = fallback_locale(config_path).labels
+        return f"{labels['error']} {RENDER_FAILED.code}: {labels[RENDER_FAILED.label]}"
+    if dashboard.error is None:
+        dashboard.image.save(output)
+        return None
+    print(dashboard.summary, file=sys.stderr)
+    if dashboard.failure is RENDER_FAILED:
+        traceback.print_exception(
+            type(dashboard.error), dashboard.error, dashboard.error.__traceback__
+        )
+    if not output.exists():
+        dashboard.image.save(output)
+    return dashboard.message

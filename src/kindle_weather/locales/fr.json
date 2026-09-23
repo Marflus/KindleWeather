@@ -27,6 +27,7 @@
     "error_config": "Configuration invalide",
     "error_render": "Échec du rendu du tableau de bord",
     "error_wifi": "Pas de connexion Wi-Fi",
+    "error_python": "Python 3 absent, installez-le avec MRPI",
     "error_server": "Serveur du tableau de bord injoignable",
     "error_not_found": "Tableau de bord introuvable sur le serveur",
     "error_secure": "Échec de la connexion sécurisée",

@@ -1,9 +1,15 @@
+import io
+import json
 import math
+import struct
 from datetime import datetime
+from pathlib import Path
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 import pytest
 
+from kindle_weather import weather
 from kindle_weather.weather import parse_forecast
 
 TIMEZONE = "Europe/Warsaw"
@@ -18,6 +24,7 @@ def raw_forecast():
     times = [f"2026-09-{day}T{hour:02d}:00" for day in (23, 24) for hour in range(24)]
     return {
         "timezone": TIMEZONE,
+        "utc_offset_seconds": 7200,
         "daily": {
             "time": [f"2026-09-{day}" for day in range(23, 31)],
             "weather_code": [63, 3, 0, 2, 61, 95, 71, 1],
@@ -40,3 +47,26 @@ def raw_forecast():
 @pytest.fixture
 def forecast(raw_forecast):
     return parse_forecast(raw_forecast, "Varsovie", now=NOW)
+
+
+@pytest.fixture
+def http(monkeypatch):
+    """Stands in for Open-Meteo: queue answers (JSON data or an exception) in http.answers."""
+    exchange = SimpleNamespace(urls=[], answers=[])
+
+    def fake_urlopen(request, timeout):
+        exchange.urls.append(request.full_url)
+        answer = exchange.answers.pop(0)
+        if isinstance(answer, BaseException):
+            raise answer
+        return io.BytesIO(answer if isinstance(answer, bytes) else json.dumps(answer).encode())
+
+    monkeypatch.setattr(weather.urllib.request, "urlopen", fake_urlopen)
+    return exchange
+
+
+def png_size(path) -> tuple[int, int]:
+    """Width and height from a PNG header."""
+    header = Path(path).read_bytes()[:24]
+    assert header.startswith(b"\x89PNG")
+    return struct.unpack(">II", header[16:24])

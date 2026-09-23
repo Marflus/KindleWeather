@@ -27,6 +27,7 @@
     "error_config": "Ungültige Konfiguration",
     "error_render": "Erstellen des Dashboards fehlgeschlagen",
     "error_wifi": "Keine WLAN-Verbindung",
+    "error_python": "Python 3 fehlt, mit MRPI installieren",
     "error_server": "Dashboard-Server nicht erreichbar",
     "error_not_found": "Dashboard auf dem Server nicht gefunden",
     "error_secure": "Sichere Verbindung fehlgeschlagen",

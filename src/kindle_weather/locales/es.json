@@ -27,6 +27,7 @@
     "error_config": "Configuración no válida",
     "error_render": "Error al generar el panel",
     "error_wifi": "Sin conexión Wi-Fi",
+    "error_python": "Falta Python 3, instálelo con MRPI",
     "error_server": "Servidor del panel inaccesible",
     "error_not_found": "Panel no encontrado en el servidor",
     "error_secure": "Error de conexión segura",

@@ -1,11 +1,27 @@
+import io
+import socket
+import ssl
+import urllib.error
 from dataclasses import replace
 from datetime import date, datetime
+from urllib.parse import parse_qs, urlsplit
 from zoneinfo import ZoneInfo
 
 import pytest
 
-from kindle_weather import weather
-from kindle_weather.weather import LocationNotFound, WeatherError, geocode, parse_forecast
+from kindle_weather.weather import (
+    FORECAST_URL as FORECAST,
+)
+from kindle_weather.weather import (
+    LocationNotFound,
+    Place,
+    ServiceError,
+    ServiceUnreachable,
+    WeatherError,
+    fetch_forecast,
+    geocode,
+    parse_forecast,
+)
 
 
 def test_window_starts_at_the_current_hour(forecast):
@@ -57,42 +73,52 @@ def test_parse_forecast_rejects_data_without_today(raw_forecast):
         parse_forecast(raw_forecast, "Varsovie", now=new_year)
 
 
-class FakeResponse:
-    def __init__(self, payload):
-        self.payload = payload
-
-    def raise_for_status(self):
-        pass
-
-    def json(self):
-        return self.payload
-
-
-def test_geocode_returns_localized_name(monkeypatch):
-    calls = []
-
-    def fake_get(url, params, **kwargs):
-        calls.append(params)
-        return FakeResponse(
-            {"results": [{"name": "Varsovie", "latitude": 52.2, "longitude": 21.0}]}
-        )
-
-    monkeypatch.setattr(weather.requests, "get", fake_get)
+def test_geocode_returns_localized_name(http):
+    http.answers.append({"results": [{"name": "Varsovie", "latitude": 52.2, "longitude": 21.0}]})
     place = geocode("Warsaw", "PL", "fr")
 
     assert place.name == "Varsovie"
-    assert calls[0]["countryCode"] == "PL"
-    assert calls[0]["language"] == "fr"
+    query = parse_qs(urlsplit(http.urls[0]).query)
+    assert query["countryCode"] == ["PL"]
+    assert query["language"] == ["fr"]
 
 
-def test_geocode_unknown_city(monkeypatch):
-    monkeypatch.setattr(weather.requests, "get", lambda *args, **kwargs: FakeResponse({}))
+def test_geocode_unknown_city(http):
+    http.answers.append({})
     with pytest.raises(LocationNotFound, match="city not found: Atlantis, GR"):
         geocode("Atlantis", "GR", "en")
 
 
-def test_geocode_rejects_malformed_results(monkeypatch):
-    payload = {"results": [{"name": "Lyon"}]}
-    monkeypatch.setattr(weather.requests, "get", lambda *args, **kwargs: FakeResponse(payload))
+def test_geocode_rejects_malformed_results(http):
+    http.answers.append({"results": [{"name": "Lyon"}]})
     with pytest.raises(WeatherError, match="unexpected geocoding data"):
+        geocode("Lyon", None, "en")
+
+
+def test_unreachable_service(http):
+    http.answers.append(urllib.error.URLError(socket.timeout("timed out")))
+    with pytest.raises(ServiceUnreachable, match=r"geocoding-api\.open-meteo\.com: timed out"):
+        geocode("Lyon", None, "en")
+
+
+def test_http_error_quotes_the_open_meteo_reason(http):
+    body = b'{"error": true, "reason": "Latitude must be in range of -90 to 90"}'
+    http.answers.append(urllib.error.HTTPError(FORECAST, 400, "Bad Request", {}, io.BytesIO(body)))
+    with pytest.raises(
+        ServiceError, match="HTTP 400 Bad Request: Latitude must be in range of -90 to 90"
+    ):
+        fetch_forecast(Place("Nowhere", 91, 0))
+
+
+def test_outdated_certificates_fall_back_to_http(http, raw_forecast):
+    certificate = ssl.SSLCertVerificationError("certificate verify failed")
+    http.answers.extend([urllib.error.URLError(certificate), raw_forecast])
+    assert fetch_forecast(Place("Lyon", 45.7, 4.8)) == raw_forecast
+    assert http.urls[0].startswith("https://api.open-meteo.com/")
+    assert http.urls[1].startswith("http://api.open-meteo.com/")
+
+
+def test_answer_that_is_not_json(http):
+    http.answers.append(b"<html>Wi-Fi login</html>")
+    with pytest.raises(WeatherError, match="did not answer with JSON"):
         geocode("Lyon", None, "en")

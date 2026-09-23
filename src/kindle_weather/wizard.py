@@ -6,13 +6,10 @@ import json
 from collections.abc import Callable
 from pathlib import Path
 
-import requests
-
 from kindle_weather.config import ORIENTATIONS, TEMPERATURE_UNITS, parse_config
 from kindle_weather.i18n import LOCALES
 from kindle_weather.icons import DEFAULT_ICON_SET, ICON_SETS
-from kindle_weather.server import dashboard_url
-from kindle_weather.weather import WeatherError, geocode
+from kindle_weather.weather import LocationNotFound, ServiceUnreachable, geocode
 
 # Screen size in portrait of each Kindle model, see the README.
 MODELS = (
@@ -51,16 +48,15 @@ def run_wizard(
     unit = current.get("temperature_unit", "celsius")
     unit = _choose(ask, say, "Temperature unit", TEMPERATURE_UNITS, unit)
     icons = _choose(ask, say, "Icons", tuple(ICON_SETS), display.get("icons", DEFAULT_ICON_SET))
-    # Served by this computer; GitHub Pages users type their Pages address instead.
-    url = _ask(ask, "Dashboard URL", dashboard_url())
 
     config = {
         "language": language,
         "location": {"city": city, **({"country_code": country_code} if country_code else {})},
         "display": {"width": width, "height": height, "orientation": orientation, "icons": icons},
         "temperature_unit": unit,
-        "dashboard_url": url,
     }
+    if current.get("dashboard_url"):
+        config["dashboard_url"] = current["dashboard_url"]
     parse_config(config)
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n", "utf-8")
@@ -76,11 +72,11 @@ def _ask_city(ask, say, language: str, location: dict) -> tuple[str, str | None]
             continue
         try:
             place = geocode(city, None, language)
-        except WeatherError:
+        except LocationNotFound:
             say(f"  {city} was not found, check the spelling.")
             city = None
             continue
-        except requests.RequestException:
+        except ServiceUnreachable:
             say("  Open-Meteo cannot be reached: the city will be checked when rendering.")
             return city, location.get("country_code")
         say(f"  Found {place.name}, {place.country or '?'} ({place.country_code or '?'}).")

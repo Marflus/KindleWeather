@@ -8,14 +8,12 @@ from __future__ import annotations
 
 import math
 from abc import ABC, abstractmethod
-from functools import lru_cache
 from pathlib import Path
+from typing import Union
 
-from PIL import Image, ImageChops, ImageDraw, ImageFont
-
+from kindle_weather.canvas import Canvas, Font
 from kindle_weather.graphics import (
     INK,
-    WHITE,
     draw_droplet,
     draw_sun_horizon,
     draw_weather_icon,
@@ -27,7 +25,7 @@ FONT_DIR = Path(__file__).parent / "icon_fonts"
 DEFAULT_ICON_SET = "classic"
 
 # A WMO weather code, or one of DETAIL_ICONS.
-Icon = int | str
+Icon = Union[int, str]
 Box = tuple[float, float, float, float]
 
 
@@ -39,18 +37,15 @@ class IconSet(ABC):
     def _paint(self, draw, icon: Icon, x: float, y: float, size: float, fill: int) -> None:
         """Paint icon at size; the ink stays within 3 * size of (x, y)."""
 
-    def _quantize(self, size: float) -> float:
-        return size
-
     def _bounds(self, icon: Icon, size: float) -> Box:
         """Ink bounds of icon painted at size, relative to the point it is painted at."""
         key = (icon, size)
         if key not in self._bounds_cache:
-            # Measured on a scratch image: font bounding boxes include the advance, not ink.
+            # Measured on a scratch canvas: the ink of drawn shapes and glyphs alike.
             extent = math.ceil(size * 3)
-            scratch = Image.new("L", (2 * extent, 2 * extent), WHITE)
-            self._paint(ImageDraw.Draw(scratch), icon, extent, extent, size, INK)
-            left, top, right, bottom = ImageChops.invert(scratch).getbbox()
+            scratch = Canvas(2 * extent, 2 * extent)
+            self._paint(scratch, icon, extent, extent, size, INK)
+            left, top, right, bottom = scratch.picture().ink_bbox()
             self._bounds_cache[key] = (left - extent, top - extent, right - extent, bottom - extent)
         return self._bounds_cache[key]
 
@@ -61,7 +56,7 @@ class IconSet(ABC):
         scale = min(
             (right - left) / (ink_right - ink_left), (bottom - top) / (ink_bottom - ink_top)
         )
-        return self._quantize(reference * scale)
+        return reference * scale
 
     def ink_size(self, icon: Icon, box: Box) -> tuple[float, float]:
         """Width and height of the ink draw() would put in box."""
@@ -108,16 +103,8 @@ class FontIcons(IconSet):
             return chr(self.details[icon])
         return chr(self.weather.get(icon, self.fallback))
 
-    def _quantize(self, size: float) -> float:
-        return max(1, math.floor(size))
-
     def _paint(self, draw, icon: Icon, x: float, y: float, size: float, fill: int) -> None:
-        draw.text((x, y), self._glyph(icon), font=_font(self.font_path, int(size)), fill=fill)
-
-
-@lru_cache(maxsize=64)
-def _font(path: str, size: int) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype(path, size)
+        draw.text((x, y), self._glyph(icon), font=Font(self.font_path, size), fill=fill)
 
 
 def _by_code(groups: dict[tuple[int, ...], int]) -> dict[int, int]:

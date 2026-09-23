@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
+import ssl
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
-from datetime import date, datetime
-from zoneinfo import ZoneInfo
-
-import requests
+from datetime import date, datetime, timedelta, timezone
+from urllib.parse import urlencode, urlsplit
 
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
@@ -43,6 +45,18 @@ class WeatherError(RuntimeError):
 
 class LocationNotFound(WeatherError):
     pass
+
+
+class ServiceUnreachable(WeatherError):
+    """No answer from Open-Meteo: network error or timeout."""
+
+    def __init__(self, message: str, tls: bool = False):
+        super().__init__(message)
+        self.tls = tls
+
+
+class ServiceError(WeatherError):
+    """Open-Meteo answered with an HTTP error."""
 
 
 @dataclass(frozen=True)
@@ -140,7 +154,8 @@ def parse_forecast(raw: dict, place_name: str, now: datetime | None = None) -> F
 
 
 def _parse_forecast(raw: dict, place_name: str, now: datetime | None) -> Forecast:
-    now = now or datetime.now(ZoneInfo(raw["timezone"]))
+    # The offset rather than the zone name: the Kindle has no time zone database.
+    now = now or datetime.now(timezone(timedelta(seconds=raw["utc_offset_seconds"])))
     hourly, daily = raw["hourly"], raw["daily"]
 
     def hour_entry(index: int) -> HourlyForecast:
@@ -187,6 +202,39 @@ def _clock_time(iso_datetime: str | None) -> str | None:
 
 
 def _get_json(url: str, params: dict) -> dict:
-    response = requests.get(url, params=params, headers=HEADERS, timeout=REQUEST_TIMEOUT)
-    response.raise_for_status()
-    return response.json()
+    query = urlencode(params)
+    try:
+        return _request(f"{url}?{query}")
+    except ServiceUnreachable as error:
+        if not error.tls:
+            raise
+    # The Kindle's certificates may be too old for the server's: fall back to HTTP.
+    return _request(f"http://{url.split('://', 1)[1]}?{query}")
+
+
+def _request(url: str) -> dict:
+    host = urlsplit(url).hostname
+    request = urllib.request.Request(url, headers=HEADERS)
+    try:
+        with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT) as response:
+            body = response.read()
+    except urllib.error.HTTPError as error:
+        raise ServiceError(_http_error_message(error)) from error
+    except (urllib.error.URLError, OSError) as error:
+        reason = getattr(error, "reason", error)
+        tls = isinstance(reason, ssl.SSLError)
+        raise ServiceUnreachable(f"{host}: {reason}", tls=tls) from error
+    try:
+        return json.loads(body)
+    except ValueError as error:
+        raise WeatherError(f"{host} did not answer with JSON") from error
+
+
+def _http_error_message(error: urllib.error.HTTPError) -> str:
+    message = f"HTTP {error.code} {error.reason or ''}".rstrip()
+    try:
+        # Open-Meteo explains rejected requests in a "reason" field.
+        reason = json.loads(error.read()).get("reason")
+    except (ValueError, AttributeError, OSError):
+        reason = None
+    return f"{message}: {reason}" if reason else message

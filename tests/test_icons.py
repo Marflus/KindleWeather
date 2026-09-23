@@ -1,6 +1,6 @@
 import pytest
-from PIL import Image, ImageChops, ImageDraw, ImageFont
 
+from kindle_weather.canvas import Canvas, Font
 from kindle_weather.i18n import LOCALES
 from kindle_weather.icons import DETAIL_ICONS, ICON_SETS
 
@@ -12,9 +12,9 @@ BOXES = [(20, 30, 80, 70), (10, 10, 40, 90)]
 @pytest.mark.parametrize("icon", [*WEATHER_CODES, 12345, *DETAIL_ICONS])
 @pytest.mark.parametrize("box", BOXES)
 def test_icon_is_drawn_inside_its_box(name, icon, box):
-    image = Image.new("L", (100, 100), 255)
-    ICON_SETS[name].draw(ImageDraw.Draw(image), icon, box)
-    ink = ImageChops.invert(image).getbbox()
+    canvas = Canvas(100, 100)
+    ICON_SETS[name].draw(canvas, icon, box)
+    ink = canvas.picture().ink_bbox()
     assert ink is not None
     left, top, right, bottom = box
     assert left - 1 <= ink[0] and top - 1 <= ink[1]
@@ -25,9 +25,9 @@ def test_icon_is_drawn_inside_its_box(name, icon, box):
 
 
 def _render_glyph(icons, glyph):
-    image = Image.new("L", (60, 60), 255)
-    ImageDraw.Draw(image).text((5, 5), glyph, font=ImageFont.truetype(icons.font_path, 40))
-    return image
+    canvas = Canvas(60, 60)
+    canvas.text((5, 5), glyph, font=Font(icons.font_path, 40), fill=0)
+    return canvas.picture().pixels
 
 
 @pytest.mark.parametrize("name", ["weather-icons", "material"])
@@ -36,12 +36,10 @@ def test_font_sets_map_every_icon_to_a_real_glyph(name):
     assert set(WEATHER_CODES) <= set(icons.weather)
     missing = _render_glyph(icons, chr(0xE000))
     for icon in [*WEATHER_CODES, *DETAIL_ICONS]:
-        glyph = _render_glyph(icons, icons._glyph(icon))
-        assert ImageChops.difference(glyph, missing).getbbox() is not None, icon
+        assert _render_glyph(icons, icons._glyph(icon)) != missing, icon
 
 
 def test_unknown_detail_icon_is_rejected():
-    image = Image.new("L", (50, 50), 255)
     for icons in ICON_SETS.values():
         with pytest.raises(KeyError):
-            icons.draw(ImageDraw.Draw(image), "moon", (0, 0, 50, 50))
+            icons.draw(Canvas(50, 50), "moon", (0, 0, 50, 50))

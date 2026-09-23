@@ -27,6 +27,7 @@
     "error_config": "Nieprawidłowa konfiguracja",
     "error_render": "Nie udało się wygenerować pulpitu",
     "error_wifi": "Brak połączenia Wi-Fi",
+    "error_python": "Brak Pythona 3, zainstaluj go przez MRPI",
     "error_server": "Serwer pulpitu niedostępny",
     "error_not_found": "Nie znaleziono pulpitu na serwerze",
     "error_secure": "Błąd bezpiecznego połączenia",

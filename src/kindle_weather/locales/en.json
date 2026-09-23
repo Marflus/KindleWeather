@@ -27,6 +27,7 @@
     "error_config": "Invalid configuration",
     "error_render": "Dashboard rendering failed",
     "error_wifi": "No Wi-Fi connection",
+    "error_python": "Python 3 is missing, install it with MRPI",
     "error_server": "Dashboard server unreachable",
     "error_not_found": "Dashboard not found on the server",
     "error_secure": "Secure connection failed",
