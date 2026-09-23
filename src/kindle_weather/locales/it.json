@@ -20,10 +20,21 @@
     "variable": "Tempo variabile",
     "kual_start": "Avvia la stazione meteo",
     "error": "Errore",
-    "error_weather": "Dati meteo non disponibili",
+    "error_unreachable": "Servizio meteo non raggiungibile",
+    "error_service": "Errore del servizio meteo",
+    "error_location": "Località non trovata, controlla la configurazione",
+    "error_data": "Dati meteo non validi",
+    "error_config": "Configurazione non valida",
+    "error_render": "Generazione della dashboard non riuscita",
     "error_wifi": "Nessuna connessione Wi-Fi",
+    "error_server": "Server della dashboard non raggiungibile",
+    "error_not_found": "Dashboard non trovata sul server",
+    "error_secure": "Connessione sicura non riuscita",
+    "error_invalid_file": "File della dashboard non valido",
+    "error_outdated": "Dashboard non aggiornata",
     "error_download": "Download della dashboard non riuscito",
-    "error_retry": "Nuovo tentativo tra un'ora"
+    "error_retry": "Nuovo tentativo tra un'ora",
+    "low_battery": "Batteria scarica"
   },
   "weather": {
     "0": "Cielo sereno",

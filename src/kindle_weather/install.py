@@ -8,6 +8,7 @@ import shutil
 import unicodedata
 from pathlib import Path
 
+from kindle_weather.errors import KINDLE_ERRORS
 from kindle_weather.i18n import Locale
 
 EXTENSION_NAME = "kindleweather"
@@ -45,11 +46,10 @@ def install_extension(source: Path, mount_path: Path, locale: Locale, dashboard_
     }
     _write_unix_text(target / "menu.json", json.dumps(menu, indent=2) + "\n")
     labels = locale.labels
-    settings = {
-        "DASHBOARD_URL": dashboard_url,
-        "WIFI_ERROR": ascii_fold(f"{labels['error']} E2: {labels['error_wifi']}"),
-        "DOWNLOAD_ERROR": ascii_fold(f"{labels['error']} E3: {labels['error_download']}"),
-    }
+    settings = {"DASHBOARD_URL": dashboard_url}
+    for name, error in KINDLE_ERRORS.items():
+        settings[name] = ascii_fold(f"{labels['error']} {error.code}: {labels[error.label]}")
+    settings["LOW_BATTERY_WARNING"] = ascii_fold(labels["low_battery"])
     lines = "".join(f"{name}={shlex.quote(value)}\n" for name, value in settings.items())
     _write_unix_text(target / "settings.sh", lines)
     return target

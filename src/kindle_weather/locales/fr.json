@@ -20,10 +20,21 @@
     "variable": "Temps variable",
     "kual_start": "Démarrer la station météo",
     "error": "Erreur",
-    "error_weather": "Données météo indisponibles",
+    "error_unreachable": "Service météo injoignable",
+    "error_service": "Erreur du service météo",
+    "error_location": "Lieu introuvable, vérifiez la configuration",
+    "error_data": "Données météo invalides",
+    "error_config": "Configuration invalide",
+    "error_render": "Échec du rendu du tableau de bord",
     "error_wifi": "Pas de connexion Wi-Fi",
+    "error_server": "Serveur du tableau de bord injoignable",
+    "error_not_found": "Tableau de bord introuvable sur le serveur",
+    "error_secure": "Échec de la connexion sécurisée",
+    "error_invalid_file": "Fichier du tableau de bord invalide",
+    "error_outdated": "Tableau de bord périmé",
     "error_download": "Échec du téléchargement du tableau de bord",
-    "error_retry": "Nouvel essai dans une heure"
+    "error_retry": "Nouvel essai dans une heure",
+    "low_battery": "Batterie faible"
   },
   "weather": {
     "0": "Ciel dégagé",

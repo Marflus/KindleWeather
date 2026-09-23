@@ -41,6 +41,10 @@ class WeatherError(RuntimeError):
     pass
 
 
+class LocationNotFound(WeatherError):
+    pass
+
+
 @dataclass(frozen=True)
 class Place:
     name: str
@@ -96,9 +100,13 @@ def geocode(city: str, country_code: str | None, language: str) -> Place:
         params["countryCode"] = country_code
     results = _get_json(GEOCODING_URL, params).get("results")
     if not results:
-        raise WeatherError(f"city not found: {city}")
-    best = results[0]
-    return Place(name=best["name"], latitude=best["latitude"], longitude=best["longitude"])
+        where = f"{city}, {country_code}" if country_code else city
+        raise LocationNotFound(f"city not found: {where}")
+    try:
+        best = results[0]
+        return Place(name=best["name"], latitude=best["latitude"], longitude=best["longitude"])
+    except (KeyError, IndexError, TypeError) as error:
+        raise WeatherError(f"unexpected geocoding data: {error!r}") from error
 
 
 def fetch_forecast(place: Place, temperature_unit: str = "celsius") -> dict:

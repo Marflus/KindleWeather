@@ -20,10 +20,21 @@
     "variable": "Variable weather",
     "kual_start": "Start weather station",
     "error": "Error",
-    "error_weather": "Weather data unavailable",
+    "error_unreachable": "Weather service unreachable",
+    "error_service": "Weather service error",
+    "error_location": "Location not found, check the configuration",
+    "error_data": "Invalid weather data",
+    "error_config": "Invalid configuration",
+    "error_render": "Dashboard rendering failed",
     "error_wifi": "No Wi-Fi connection",
+    "error_server": "Dashboard server unreachable",
+    "error_not_found": "Dashboard not found on the server",
+    "error_secure": "Secure connection failed",
+    "error_invalid_file": "Invalid dashboard file",
+    "error_outdated": "Dashboard out of date",
     "error_download": "Dashboard download failed",
-    "error_retry": "Next attempt in one hour"
+    "error_retry": "Next attempt in one hour",
+    "low_battery": "Low battery"
   },
   "weather": {
     "0": "Clear sky",

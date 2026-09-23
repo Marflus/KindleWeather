@@ -3,6 +3,7 @@ from dataclasses import replace
 import pytest
 from PIL import ImageChops
 
+from kindle_weather.errors import WEATHER_UNREACHABLE
 from kindle_weather.i18n import LOCALES
 from kindle_weather.render import precipitation_runs, render_dashboard, render_error
 
@@ -54,6 +55,12 @@ def test_renders_without_upcoming_days(forecast):
 
 @pytest.mark.parametrize("orientation", ["portrait", "landscape"])
 def test_error_screen_fits_the_framebuffer(orientation):
-    image = render_error("E1", FRENCH, size=(1072, 1448), orientation=orientation)
+    image = render_error(
+        WEATHER_UNREACHABLE,
+        FRENCH,
+        size=(1072, 1448),
+        orientation=orientation,
+        detail="ConnectionError: api.open-meteo.com " * 10,
+    )
     assert image.size == (1072, 1448)
     assert image.getextrema() == (0, 255)

@@ -20,10 +20,21 @@
     "variable": "Tiempo variable",
     "kual_start": "Iniciar la estación meteorológica",
     "error": "Error",
-    "error_weather": "Datos meteorológicos no disponibles",
+    "error_unreachable": "Servicio meteorológico inaccesible",
+    "error_service": "Error del servicio meteorológico",
+    "error_location": "Ubicación no encontrada, revise la configuración",
+    "error_data": "Datos meteorológicos no válidos",
+    "error_config": "Configuración no válida",
+    "error_render": "Error al generar el panel",
     "error_wifi": "Sin conexión Wi-Fi",
+    "error_server": "Servidor del panel inaccesible",
+    "error_not_found": "Panel no encontrado en el servidor",
+    "error_secure": "Error de conexión segura",
+    "error_invalid_file": "Archivo del panel no válido",
+    "error_outdated": "Panel desactualizado",
     "error_download": "Error al descargar el panel",
-    "error_retry": "Nuevo intento en una hora"
+    "error_retry": "Nuevo intento en una hora",
+    "low_battery": "Batería baja"
   },
   "weather": {
     "0": "Cielo despejado",

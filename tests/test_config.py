@@ -30,6 +30,9 @@ def test_defaults():
     [
         ({"language": "xx"}, "language"),
         ({"location": {"city": " "}}, "location.city"),
+        ({"location": "Lyon"}, "location"),
+        ({"location": {"city": "Lyon", "country_code": "FRA"}}, "location.country_code"),
+        ({"display": [1072, 1448]}, "display"),
         ({"display": {"width": 0, "height": 1448}}, "display"),
         ({"display": {"orientation": "diagonal"}}, "display.orientation"),
         ({"display": {"icons": "emoji"}}, "display.icons"),
@@ -41,6 +44,16 @@ def test_defaults():
 def test_invalid_values_are_rejected(override, message):
     with pytest.raises(ConfigError, match=message):
         parse_config({**VALID, **override})
+
+
+def test_country_code_is_normalized():
+    config = parse_config({**VALID, "location": {"city": "Lyon", "country_code": "fr"}})
+    assert config.location.country_code == "FR"
+
+
+def test_configuration_must_be_an_object():
+    with pytest.raises(ConfigError, match="JSON object"):
+        parse_config(["en"])
 
 
 def test_unreadable_file(tmp_path):

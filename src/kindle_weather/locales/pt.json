@@ -20,10 +20,21 @@
     "variable": "Tempo instável",
     "kual_start": "Iniciar a estação meteorológica",
     "error": "Erro",
-    "error_weather": "Dados meteorológicos indisponíveis",
+    "error_unreachable": "Serviço meteorológico inacessível",
+    "error_service": "Erro do serviço meteorológico",
+    "error_location": "Local não encontrado, verifique a configuração",
+    "error_data": "Dados meteorológicos inválidos",
+    "error_config": "Configuração inválida",
+    "error_render": "Falha ao gerar o painel",
     "error_wifi": "Sem conexão Wi-Fi",
+    "error_server": "Servidor do painel inacessível",
+    "error_not_found": "Painel não encontrado no servidor",
+    "error_secure": "Falha na conexão segura",
+    "error_invalid_file": "Arquivo do painel inválido",
+    "error_outdated": "Painel desatualizado",
     "error_download": "Falha ao baixar o painel",
-    "error_retry": "Nova tentativa em uma hora"
+    "error_retry": "Nova tentativa em uma hora",
+    "low_battery": "Bateria fraca"
   },
   "weather": {
     "0": "Céu limpo",

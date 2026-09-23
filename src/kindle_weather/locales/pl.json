@@ -20,10 +20,21 @@
     "variable": "Zmienna pogoda",
     "kual_start": "Uruchom stację pogodową",
     "error": "Błąd",
-    "error_weather": "Brak danych pogodowych",
+    "error_unreachable": "Serwis pogodowy niedostępny",
+    "error_service": "Błąd serwisu pogodowego",
+    "error_location": "Nie znaleziono lokalizacji, sprawdź konfigurację",
+    "error_data": "Nieprawidłowe dane pogodowe",
+    "error_config": "Nieprawidłowa konfiguracja",
+    "error_render": "Nie udało się wygenerować pulpitu",
     "error_wifi": "Brak połączenia Wi-Fi",
+    "error_server": "Serwer pulpitu niedostępny",
+    "error_not_found": "Nie znaleziono pulpitu na serwerze",
+    "error_secure": "Błąd bezpiecznego połączenia",
+    "error_invalid_file": "Nieprawidłowy plik pulpitu",
+    "error_outdated": "Pulpit nieaktualny",
     "error_download": "Nie udało się pobrać pulpitu",
-    "error_retry": "Kolejna próba za godzinę"
+    "error_retry": "Kolejna próba za godzinę",
+    "low_battery": "Niski poziom baterii"
   },
   "weather": {
     "0": "Bezchmurnie",

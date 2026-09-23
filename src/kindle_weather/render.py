@@ -9,6 +9,7 @@ from itertools import groupby
 import font_roboto
 from PIL import Image, ImageDraw, ImageFont
 
+from kindle_weather.errors import ErrorCode
 from kindle_weather.graphics import (
     GRAY_DARK,
     GRAY_LIGHT,
@@ -122,22 +123,31 @@ def render_dashboard(
 
 
 def render_error(
-    code: str,
+    error: ErrorCode,
     locale: Locale,
     size: tuple[int, int] = SCREEN_SIZE,
     orientation: str = "portrait",
     moment: datetime | None = None,
+    detail: str | None = None,
 ) -> Image.Image:
-    """Full-screen error shown instead of the dashboard when there is no weather data."""
+    """Full-screen error shown instead of the dashboard when it cannot be rendered."""
     width, height = (px(value) for value in LAYOUTS[orientation].size)
     image = Image.new("L", (width, height), WHITE)
     draw = ImageDraw.Draw(image)
     labels = locale.labels
+    max_width = width - 2 * MARGIN
+    title_font = ImageFont.truetype(font_roboto.RobotoBold, px(90))
+    message = labels[error.label]
+    message_font = ImageFont.truetype(font_roboto.RobotoBold, px(34))
     lines = [
-        (f"{labels['error']} {code}", ImageFont.truetype(font_roboto.RobotoBold, px(90)), INK),
-        (labels["error_weather"], ImageFont.truetype(font_roboto.RobotoBold, px(34)), INK),
+        (f"{labels['error']} {error.code}", title_font, INK),
+        (message, _shrink_to_fit(draw, message, message_font, max_width), INK),
         (labels["error_retry"], ImageFont.truetype(font_roboto.Roboto, px(26)), GRAY_DARK),
     ]
+    if detail:
+        detail_font = ImageFont.truetype(font_roboto.Roboto, px(20))
+        detail = _truncate(draw, " ".join(detail.split()), detail_font, max_width)
+        lines.append((detail, detail_font, GRAY_MID))
     boxes = [draw.textbbox((0, 0), text, font=font) for text, font, _ in lines]
     gap = px(36)
     y = (height - sum(box[3] - box[1] for box in boxes) - gap * (len(lines) - 1)) / 2
@@ -177,6 +187,14 @@ def _shrink_to_fit(draw, text: str, font: ImageFont.FreeTypeFont, max_width: flo
     while text_width(draw, text, font) > max_width and font.size > px(16):
         font = font.font_variant(size=font.size - px(1))
     return font
+
+
+def _truncate(draw, text: str, font: ImageFont.FreeTypeFont, max_width: float) -> str:
+    if text_width(draw, text, font) <= max_width:
+        return text
+    while text and text_width(draw, text + "…", font) > max_width:
+        text = text[:-1]
+    return text.rstrip() + "…"
 
 
 def _draw_symbol(draw, kind: str, x: float, y: float) -> None:

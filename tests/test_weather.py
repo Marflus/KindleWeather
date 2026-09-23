@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from kindle_weather import weather
-from kindle_weather.weather import WeatherError, geocode, parse_forecast
+from kindle_weather.weather import LocationNotFound, WeatherError, geocode, parse_forecast
 
 
 def test_window_starts_at_the_current_hour(forecast):
@@ -87,5 +87,12 @@ def test_geocode_returns_localized_name(monkeypatch):
 
 def test_geocode_unknown_city(monkeypatch):
     monkeypatch.setattr(weather.requests, "get", lambda *args, **kwargs: FakeResponse({}))
-    with pytest.raises(WeatherError, match="city not found"):
-        geocode("Atlantis", None, "en")
+    with pytest.raises(LocationNotFound, match="city not found: Atlantis, GR"):
+        geocode("Atlantis", "GR", "en")
+
+
+def test_geocode_rejects_malformed_results(monkeypatch):
+    payload = {"results": [{"name": "Lyon"}]}
+    monkeypatch.setattr(weather.requests, "get", lambda *args, **kwargs: FakeResponse(payload))
+    with pytest.raises(WeatherError, match="unexpected geocoding data"):
+        geocode("Lyon", None, "en")

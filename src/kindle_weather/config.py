@@ -44,14 +44,23 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> Config:
 
 
 def parse_config(raw: dict) -> Config:
+    _require(isinstance(raw, dict), "the configuration must be a JSON object")
     language = raw.get("language", "en")
     _require(language in LOCALES, f"language must be one of {sorted(LOCALES)}")
 
     location = raw.get("location", {})
+    _require(isinstance(location, dict), "location must be an object")
     city = location.get("city")
     _require(isinstance(city, str) and city.strip(), "location.city is required")
+    country_code = location.get("country_code") or None
+    _require(
+        country_code is None
+        or (isinstance(country_code, str) and len(country_code) == 2 and country_code.isalpha()),
+        "location.country_code must be a two-letter ISO 3166-1 code",
+    )
 
     display = raw.get("display", {})
+    _require(isinstance(display, dict), "display must be an object")
     width, height = display.get("width", 1072), display.get("height", 1448)
     _require(
         isinstance(width, int) and isinstance(height, int) and width > 0 and height > 0,
@@ -76,7 +85,9 @@ def parse_config(raw: dict) -> Config:
 
     return Config(
         locale=LOCALES[language],
-        location=Location(city=city.strip(), country_code=location.get("country_code") or None),
+        location=Location(
+            city=city.strip(), country_code=country_code.upper() if country_code else None
+        ),
         display_size=(width, height),
         orientation=orientation,
         icon_set=icon_set,

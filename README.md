@@ -22,7 +22,7 @@ next refresh.
 - Portrait or landscape layout, Celsius or Fahrenheit
 - Three icon sets to choose from (see [Icon sets](#icon-sets))
 - Display in 8 languages (see [Languages](#languages))
-- Error screen and error codes when the weather data or the connection is missing
+- Error screen and error codes for each failure: weather service, location, configuration, Wi-Fi, download, outdated dashboard; low battery warning
 - City set by name; its coordinates and localized name come from the Open-Meteo geocoding API
 - Hourly refresh, with the Kindle suspended to RAM in between
 
@@ -152,13 +152,34 @@ glyphs in [`icons.py`](src/kindle_weather/icons.py).
 
 ## Error codes
 
-| Code | Shown | Meaning |
-|---|---|---|
-| E1 | Full screen | The weather data could not be fetched or read when the dashboard was rendered. The workflow publishes this screen and fails, so GitHub notifies you. |
-| E2 | Top of the last dashboard | The Kindle could not connect to Wi-Fi. |
-| E3 | Top of the last dashboard | The Kindle could not download the dashboard. The reason is in `station.log`. |
+Errors raised while rendering the dashboard replace it with a full-screen
+error, with a technical detail underneath. The workflow still publishes that
+screen, then fails, so GitHub also notifies you.
 
-Every code is retried at the next hourly refresh.
+| Code | Meaning | What to do |
+|---|---|---|
+| E1 | The Open-Meteo servers could not be reached (network error or timeout). | Usually temporary. Check [Open-Meteo's status](https://open-meteo.com/) if it lasts. |
+| E2 | Open-Meteo rejected the request (HTTP error, such as 429 when rate-limited). | The detail line quotes Open-Meteo's reason. |
+| E3 | The city was not found by the geocoding API. | Check the spelling of `location.city` and `location.country_code`. |
+| E4 | Open-Meteo answered with incomplete or unreadable data. | Usually temporary. |
+| E5 | `config/config.json` is not valid JSON or has an invalid value. | The detail line names the key. |
+| E6 | Unexpected rendering failure. | A bug: the workflow log has the traceback, please open an issue. |
+
+Errors raised on the Kindle are written on the top line of the last
+dashboard, and logged in `extensions/kindleweather/station.log`.
+
+| Code | Meaning | What to do |
+|---|---|---|
+| E7 | No Wi-Fi connection within a minute. | Check that the Kindle remembers the network and is in range. |
+| E8 | The dashboard server could not be reached (DNS, connection or timeout). | Check that the Wi-Fi network has internet access. |
+| E9 | The server answered with an HTTP error, typically 404. | Check `dashboard_url` and that GitHub Pages is enabled. |
+| E10 | The HTTPS connection failed, often because of the Kindle's outdated certificates. | Update the firmware, or use an `http://` URL. |
+| E11 | The downloaded file is not a PNG image, such as a Wi-Fi login page. | Log in to the network from another device, or use another network. |
+| E12 | The dashboard has not been published for over 6 hours. | Check the **Actions** tab: GitHub disables scheduled workflows after 60 days without activity. |
+| E13 | Any other download error. | The reason is in `station.log`. |
+
+Every code is retried at the next hourly refresh. Below 10 % battery, the
+Kindle also shows a low battery warning.
 
 ## Usage
 
@@ -174,7 +195,7 @@ kindle-weather install MOUNT_PATH                # install the KUAL extension
 config/               config.json, the only file to edit
 preview/              dashboard previews, portrait and landscape, one folder per icon set
 kindle/extension/     KUAL extension; bin/station.sh is the weather station loop
-src/kindle_weather/   Python package: config, weather, i18n (locales/*.json), graphics,
+src/kindle_weather/   Python package: config, weather, errors, i18n (locales/*.json), graphics,
                       icons (icon_fonts/*.ttf), render, install
 tests/                pytest suite, runs offline
 ```

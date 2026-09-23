@@ -20,10 +20,21 @@
     "variable": "Wechselhaft",
     "kual_start": "Wetterstation starten",
     "error": "Fehler",
-    "error_weather": "Wetterdaten nicht verfügbar",
+    "error_unreachable": "Wetterdienst nicht erreichbar",
+    "error_service": "Fehler des Wetterdienstes",
+    "error_location": "Ort nicht gefunden, Konfiguration prüfen",
+    "error_data": "Ungültige Wetterdaten",
+    "error_config": "Ungültige Konfiguration",
+    "error_render": "Erstellen des Dashboards fehlgeschlagen",
     "error_wifi": "Keine WLAN-Verbindung",
+    "error_server": "Dashboard-Server nicht erreichbar",
+    "error_not_found": "Dashboard auf dem Server nicht gefunden",
+    "error_secure": "Sichere Verbindung fehlgeschlagen",
+    "error_invalid_file": "Ungültige Dashboard-Datei",
+    "error_outdated": "Dashboard veraltet",
     "error_download": "Download des Dashboards fehlgeschlagen",
-    "error_retry": "Nächster Versuch in einer Stunde"
+    "error_retry": "Nächster Versuch in einer Stunde",
+    "low_battery": "Akku schwach"
   },
   "weather": {
     "0": "Klarer Himmel",

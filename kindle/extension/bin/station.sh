@@ -7,18 +7,21 @@ EXTENSION_DIR=/mnt/us/extensions/kindleweather
 IMAGE="$EXTENSION_DIR/dashboard.png"
 LOG="$EXTENSION_DIR/station.log"
 REFRESH_SECONDS=3600
+# A dashboard older than this means the hourly workflow stopped publishing.
+OUTDATED_SECONDS=21600
+LOW_BATTERY_PERCENT=10
 # Wake-capable real-time clock of the Paperwhite 2 and 3.
 RTC=/dev/rtc1
 
-# Defines DASHBOARD_URL and the WIFI_ERROR (E2) and DOWNLOAD_ERROR (E3)
-# messages. Written by `kindle-weather install`.
+# Defines DASHBOARD_URL, the error messages (E7 to E13) and
+# LOW_BATTERY_WARNING. Written by `kindle-weather install`.
 . "$EXTENSION_DIR/settings.sh"
 
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >>"$LOG"
 }
 
-# Show the last dashboard, with an error message on its top line if any.
+# Show the last dashboard, with the non-empty messages on its top lines.
 show() {
     lipc-set-prop com.lab126.powerd flIntensity 0
     for rotation in /sys/devices/platform/*_epdc_fb/graphics/fb0/rotate; do
@@ -29,7 +32,12 @@ show() {
     else
         /usr/sbin/eips -c
     fi
-    [ -n "$1" ] && /usr/sbin/eips 1 0 "$1"
+    line=0
+    for message in "$@"; do
+        [ -n "$message" ] || continue
+        /usr/sbin/eips 1 "$line" "$message"
+        line=$((line + 1))
+    done
 }
 
 wait_for_wifi() {
@@ -39,6 +47,43 @@ wait_for_wifi() {
         tries=$((tries + 1))
         sleep 1
     done
+}
+
+# Download the dashboard to $IMAGE, or set $error.
+download() {
+    # -R dates the file from the server, to tell when it was last published.
+    curl -fsSL -R -o "$IMAGE.part" "$DASHBOARD_URL" 2>>"$LOG"
+    case $? in
+        0) ;;
+        6 | 7 | 28) error="$SERVER_ERROR" ;;
+        22) error="$NOT_FOUND_ERROR" ;;
+        35 | 51 | 53 | 54 | 58 | 59 | 60 | 64 | 66 | 77 | 80 | 82 | 83 | 90 | 91)
+            error="$SECURE_ERROR" ;;
+        *) error="$DOWNLOAD_ERROR" ;;
+    esac
+    if [ -z "$error" ] && ! head -c 8 "$IMAGE.part" | grep -q PNG; then
+        # Typically a Wi-Fi login page instead of the image.
+        error="$INVALID_FILE_ERROR"
+    fi
+    if [ -n "$error" ]; then
+        rm -f "$IMAGE.part"
+        return
+    fi
+    mv "$IMAGE.part" "$IMAGE"
+    log "dashboard updated"
+
+    published=$(date -r "$IMAGE" +%s 2>/dev/null)
+    now=$(date +%s)
+    if [ -n "$published" ] && [ $((now - published)) -gt "$OUTDATED_SECONDS" ]; then
+        error="$OUTDATED_ERROR"
+    fi
+}
+
+battery_warning() {
+    level=$(lipc-get-prop com.lab126.powerd battLevel 2>/dev/null)
+    if [ -n "$level" ] && [ "$level" -le "$LOW_BATTERY_PERCENT" ] 2>/dev/null; then
+        echo "$LOW_BATTERY_WARNING ($level %)"
+    fi
 }
 
 # Without the interface nothing can draw a screensaver over the dashboard,
@@ -52,18 +97,16 @@ log "station started"
 while true; do
     error=""
     lipc-set-prop com.lab126.cmd wirelessEnable 1
-    if ! wait_for_wifi; then
-        error="$WIFI_ERROR"
-    elif curl -fsS -o "$IMAGE.part" "$DASHBOARD_URL" 2>>"$LOG"; then
-        mv "$IMAGE.part" "$IMAGE"
-        log "dashboard updated"
+    if wait_for_wifi; then
+        download
     else
-        rm -f "$IMAGE.part"
-        error="$DOWNLOAD_ERROR"
+        error="$WIFI_ERROR"
     fi
     lipc-set-prop com.lab126.cmd wirelessEnable 0
+    warning=$(battery_warning)
     [ -n "$error" ] && log "$error"
-    show "$error"
+    [ -n "$warning" ] && log "$warning"
+    show "$error" "$warning"
 
     # Suspending right after a screen update can hang some models.
     sleep 3
