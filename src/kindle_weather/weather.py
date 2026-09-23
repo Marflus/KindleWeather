@@ -54,8 +54,13 @@ class HourlyForecast:
     wind_speed: float
 
 
+WINDOW_HOURS = 24
+
+
 @dataclass(frozen=True)
 class DailyForecast:
+    """Today's summary, and the next 24 hours starting at the current hour."""
+
     place_name: str
     observed_at: datetime
     weather_code: int
@@ -64,14 +69,12 @@ class DailyForecast:
     sunrise: str | None
     sunset: str | None
     hours: list[HourlyForecast]
-    next_midnight: HourlyForecast | None
-
-    def at(self, hour: int) -> HourlyForecast | None:
-        return next((entry for entry in self.hours if entry.hour == hour), None)
+    # The hour right after the window, which closes the temperature curve.
+    window_end: HourlyForecast | None
 
     @property
     def precipitation_risk(self) -> str | None:
-        """Most important precipitation kind expected today, if any."""
+        """Most important precipitation kind expected in the next 24 hours, if any."""
         kinds = {precipitation_kind(entry.weather_code) for entry in self.hours}
         return next((kind for kind in PRECIPITATION_KINDS if kind in kinds), None)
 
@@ -115,10 +118,12 @@ def parse_forecast(raw: dict, place_name: str, now: datetime | None = None) -> D
             wind_speed=hourly["wind_speed_10m"][index],
         )
 
-    indexes = [i for i, time in enumerate(hourly["time"]) if time.startswith(today)]
-    if not indexes:
-        raise WeatherError(f"no hourly forecast for {today}")
-    next_index = indexes[-1] + 1
+    current_hour = now.strftime("%Y-%m-%dT%H:00")
+    try:
+        start = hourly["time"].index(current_hour)
+    except ValueError:
+        raise WeatherError(f"no hourly forecast for {current_hour}") from None
+    end = start + WINDOW_HOURS
     day = daily["time"].index(today)
 
     return DailyForecast(
@@ -129,8 +134,8 @@ def parse_forecast(raw: dict, place_name: str, now: datetime | None = None) -> D
         temperature_min=daily["temperature_2m_min"][day],
         sunrise=_clock_time(daily["sunrise"][day]),
         sunset=_clock_time(daily["sunset"][day]),
-        hours=[entry(i) for i in indexes],
-        next_midnight=entry(next_index) if next_index < len(hourly["time"]) else None,
+        hours=[entry(i) for i in range(start, min(end, len(hourly["time"])))],
+        window_end=entry(end) if end < len(hourly["time"]) else None,
     )
 
 

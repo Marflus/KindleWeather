@@ -2,6 +2,7 @@
 # Weather station loop: download the dashboard, display it, then suspend the
 # Kindle until the next refresh. Amazon's interface is stopped for good:
 # restart the Kindle to get it back.
+# Adapted from https://github.com/mattzzw/kindle-weatherstation by mattzzw.
 EXTENSION_DIR=/mnt/us/extensions/kindleweather
 IMAGE="$EXTENSION_DIR/dashboard.png"
 LOG="$EXTENSION_DIR/station.log"

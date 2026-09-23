@@ -28,7 +28,12 @@ from kindle_weather.graphics import (
     text_width,
 )
 from kindle_weather.i18n import Locale
-from kindle_weather.weather import PRECIPITATION_KINDS, DailyForecast, precipitation_kind
+from kindle_weather.weather import (
+    PRECIPITATION_KINDS,
+    WINDOW_HOURS,
+    DailyForecast,
+    precipitation_kind,
+)
 
 SUPERSAMPLING = 2
 SCREEN_SIZE = (1072, 1448)
@@ -62,7 +67,7 @@ class Layout:
     header_top: int
     panel_width: int
     chart_height: int
-    table_hours: tuple[tuple[int, ...], ...]
+    table_columns: int
     row_height: int
     column_gap: int
     footer_gap: int
@@ -74,7 +79,7 @@ LAYOUTS = {
         header_top=56,
         panel_width=340,
         chart_height=336,
-        table_hours=((2, 4, 6, 8, 10, 12), (14, 16, 18, 20, 22, 0)),
+        table_columns=2,
         row_height=66,
         column_gap=40,
         footer_gap=54,
@@ -84,7 +89,7 @@ LAYOUTS = {
         header_top=40,
         panel_width=520,
         chart_height=170,
-        table_hours=((2, 4, 6, 8), (10, 12, 14, 16), (18, 20, 22, 0)),
+        table_columns=3,
         row_height=60,
         column_gap=24,
         footer_gap=40,
@@ -296,9 +301,9 @@ class _Dashboard:
         top = separator_y + px(30)
         bottom = top + px(self.layout.chart_height)
 
-        samples = [(h.hour / 24, h) for h in forecast.hours]
-        if forecast.next_midnight:
-            samples.append((1.0, forecast.next_midnight))
+        samples = [(i / WINDOW_HOURS, h) for i, h in enumerate(forecast.hours)]
+        if forecast.window_end:
+            samples.append((1.0, forecast.window_end))
         low = min(h.temperature for _, h in samples)
         high = max(h.temperature for _, h in samples)
         span = max(high - low, 1)
@@ -319,13 +324,8 @@ class _Dashboard:
         self._pattern_under_curve(points, runs, (left, top, right, bottom))
         draw.line(points, fill=INK, width=px(4), joint="curve")
 
-        for hour in range(0, 24, 3):
-            entry = forecast.at(hour)
-            if entry:
-                x = left + hour / 24 * (right - left)
-                self._chart_tick(x, y_of(entry.temperature), f"{hour:02d}:00", right, bottom)
-        if forecast.next_midnight:
-            self._chart_tick(*points[-1], "00:00", right, bottom)
+        for (x, y), (_, entry) in list(zip(points, samples, strict=True))[::3]:
+            self._chart_tick(x, y, f"{entry.hour:02d}:00", right, bottom)
 
         kinds = [kind for kind in PRECIPITATION_KINDS if any(run[0] == kind for run in runs)]
         if kinds:
@@ -385,21 +385,24 @@ class _Dashboard:
     def _hourly_table(self, separator_y: int) -> int:
         draw, fonts = self.draw, self.fonts
         self._separator(separator_y)
-        columns = self.layout.table_hours
+        # Every other hour of the window, read down each column.
+        entries = self.forecast.hours[::2]
+        columns = self.layout.table_columns
+        rows = -(-len(entries) // columns)
         row_height = px(self.layout.row_height)
         top, gap, icon_zone = separator_y + px(18), px(self.layout.column_gap), px(42)
-        column_width = (self.width - 2 * MARGIN - (len(columns) - 1) * gap) // len(columns)
+        column_width = (self.width - 2 * MARGIN - (columns - 1) * gap) // columns
 
-        for row in range(len(columns[0])):
+        for row in range(rows):
             y = top + row * row_height
             middle = y + row_height // 2
             if row % 2:
                 draw.rectangle([MARGIN, y, self.width - MARGIN, y + row_height], fill=GRAY_PALE)
-            for column, hours in enumerate(columns):
-                hour = hours[row]
-                entry = self.forecast.next_midnight if hour == 0 else self.forecast.at(hour)
-                if entry is None:
+            for column in range(columns):
+                index = column * rows + row
+                if index >= len(entries):
                     continue
+                entry = entries[index]
                 column_left = MARGIN + column * (column_width + gap)
                 draw_weather_icon(
                     draw, entry.weather_code, column_left + icon_zone // 2, middle, px(13)
@@ -408,7 +411,9 @@ class _Dashboard:
                     column_left + icon_zone + round(share * (column_width - icon_zone))
                     for share in TABLE_CELLS
                 )
-                draw.text((hour_x, middle - px(12)), f"{hour:02d}:00", font=fonts["row"], fill=INK)
+                draw.text(
+                    (hour_x, middle - px(12)), f"{entry.hour:02d}:00", font=fonts["row"], fill=INK
+                )
                 draw.text(
                     (temp_x, middle - px(12)),
                     f"{round(entry.temperature)}°C",
@@ -430,8 +435,8 @@ class _Dashboard:
                     fill=GRAY_DARK,
                 )
 
-        bottom = top + len(columns[0]) * row_height
-        for column in range(1, len(columns)):
+        bottom = top + rows * row_height
+        for column in range(1, columns):
             divider_x = MARGIN + column * (column_width + gap) - gap // 2
             draw.line(
                 [(divider_x, top + px(6)), (divider_x, bottom - px(6))],

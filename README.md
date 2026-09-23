@@ -18,8 +18,8 @@ next refresh.
 ## Features
 
 - Today's conditions, min/max, sunrise and sunset, average humidity and wind
-- Precipitation alert with its icon, by priority: snow, then thunderstorm, then rain
-- 24-hour temperature chart marking rain, thunderstorm and snow hours with distinct patterns, and a 2-hourly table
+- Precipitation alert for the next 24 hours with its icon, by priority: snow, then thunderstorm, then rain
+- Temperature chart and 2-hourly table for the next 24 hours, starting at the current hour; rain, thunderstorm and snow hours get distinct patterns
 - Portrait or landscape layout, English or French
 - City set by name; its coordinates and localized name come from the Open-Meteo geocoding API
 - Hourly refresh, with the Kindle suspended to RAM in between
@@ -161,6 +161,21 @@ CI runs these checks on every push and pull request.
   station refreshes, then goes back to sleep. Check `RTC` in `station.sh`
   for your model.
 
+## Credits
+
+- The weather station loop (stopping the Kindle interface, waking up with the
+  real-time clock, suspending to RAM) is adapted from
+  [kindle-weatherstation](https://github.com/mattzzw/kindle-weatherstation) by
+  [mattzzw](https://github.com/mattzzw), itself based on
+  [Matthew Petroff's Kindle weather display](https://mpetroff.net/2012/09/kindle-weather-display/)
+  and [kindle-kt3_weatherdisplay_battery-optimized](https://github.com/nicoh88/kindle-kt3_weatherdisplay_battery-optimized)
+  by nicoh88.
+- Weather data by [Open-Meteo](https://open-meteo.com/), under CC BY 4.0.
+- [Roboto](https://github.com/googlefonts/roboto) font, packaged for Python by
+  [Pimoroni](https://github.com/pimoroni/fonts-python).
+- [KUAL](https://www.mobileread.com/forums/showthread.php?t=203326) and the
+  MobileRead community for the Kindle jailbreak tooling.
+
 ---
 
 # Français
@@ -174,8 +189,8 @@ rafraîchissement suivant.
 ## Fonctionnalités
 
 - Conditions du jour, minimales et maximales, lever et coucher du soleil, humidité et vent moyens
-- Alerte de précipitations avec son icône, par priorité : neige, puis orage, puis pluie
-- Courbe des températures sur 24 heures, avec un motif différent pour les heures de pluie, d'orage et de neige, et tableau toutes les 2 heures
+- Alerte de précipitations pour les 24 prochaines heures avec son icône, par priorité : neige, puis orage, puis pluie
+- Courbe des températures et tableau toutes les 2 heures pour les 24 prochaines heures, à partir de l'heure actuelle ; les heures de pluie, d'orage et de neige ont chacune leur motif
 - Affichage en portrait ou en paysage, en anglais ou en français
 - Ville définie par son nom : ses coordonnées et son nom traduit viennent de l'API de géocodage d'Open-Meteo
 - Rafraîchissement toutes les heures, avec la Kindle en veille profonde entre deux mises à jour
@@ -319,3 +334,18 @@ La CI exécute ces vérifications à chaque push et pull request.
 - Si la Kindle ne se réveille pas toute seule, appuyer sur le bouton
   d'alimentation : la station se met à jour puis se rendort. Vérifier `RTC`
   dans `station.sh` pour votre modèle.
+
+## Remerciements
+
+- La boucle de la station météo (arrêt de l'interface de la Kindle, réveil par
+  l'horloge interne, veille profonde) est adaptée de
+  [kindle-weatherstation](https://github.com/mattzzw/kindle-weatherstation) de
+  [mattzzw](https://github.com/mattzzw), lui-même inspiré de
+  [l'écran météo Kindle de Matthew Petroff](https://mpetroff.net/2012/09/kindle-weather-display/)
+  et de [kindle-kt3_weatherdisplay_battery-optimized](https://github.com/nicoh88/kindle-kt3_weatherdisplay_battery-optimized)
+  de nicoh88.
+- Données météo fournies par [Open-Meteo](https://open-meteo.com/), sous licence CC BY 4.0.
+- Police [Roboto](https://github.com/googlefonts/roboto), empaquetée pour Python
+  par [Pimoroni](https://github.com/pimoroni/fonts-python).
+- [KUAL](https://www.mobileread.com/forums/showthread.php?t=203326) et la
+  communauté MobileRead pour les outils de jailbreak Kindle.

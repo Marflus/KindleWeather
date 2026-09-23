@@ -8,16 +8,23 @@ from kindle_weather import weather
 from kindle_weather.weather import WeatherError, geocode, parse_forecast
 
 
-def test_parse_forecast_keeps_today_and_next_midnight(forecast):
-    assert [entry.hour for entry in forecast.hours] == list(range(24))
-    assert forecast.next_midnight.hour == 0
+def test_window_starts_at_the_current_hour(forecast):
+    # conftest.NOW is 06:04: the window runs from 06:00 to 05:00 the next day.
+    assert [entry.hour for entry in forecast.hours] == [*range(6, 24), *range(6)]
+    assert forecast.hours[4].weather_code == 61
+    assert forecast.window_end.hour == 6
+
+
+def test_summary_describes_today(forecast):
     assert forecast.temperature_max == 18.4
     assert (forecast.sunrise, forecast.sunset) == ("06:32", "18:41")
 
 
-def test_forecast_lookup(forecast):
-    assert forecast.at(10).weather_code == 61
-    assert forecast.at(24) is None
+def test_window_is_cut_short_at_the_end_of_the_data(raw_forecast):
+    evening = datetime(2026, 9, 24, 20, 0, tzinfo=ZoneInfo("Europe/Warsaw"))
+    forecast = parse_forecast(raw_forecast, "Varsovie", now=evening)
+    assert [entry.hour for entry in forecast.hours] == [20, 21, 22, 23]
+    assert forecast.window_end is None
 
 
 @pytest.mark.parametrize(
