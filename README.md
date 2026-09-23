@@ -265,6 +265,8 @@ python scripts/package.py     # build dist/kindleweather.zip
 
 CI runs these checks on Python 3.9 and 3.12 on every push and pull request.
 To publish `kindleweather.zip` as a release, push a `v*` tag or run the **Release** workflow.
+The repository owner can run the **My Kindle** workflow to get the extension
+with `config/config.json`, ready to copy, and a preview of the dashboard.
 
 ## Known limitations
 

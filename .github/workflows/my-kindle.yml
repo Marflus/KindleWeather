@@ -1,0 +1,86 @@
+name: My Kindle
+
+# For the owner of the repository: builds the extension with config/config.json,
+# ready to copy to the Kindle, and a preview of the dashboard with today's
+# forecast. Run it from the Actions tab; the inputs override config/config.json
+# for this run only. Download the "my-kindle" artifact, then copy its
+# extensions folder to the root of the Kindle drive.
+
+on:
+  workflow_dispatch:
+    inputs:
+      city:
+        description: "City (empty: keep config/config.json)"
+        required: false
+      country_code:
+        description: "Country code, such as PL (empty: keep)"
+        required: false
+      language:
+        description: "Language"
+        type: choice
+        options: [keep, de, en, es, fr, it, nl, pl, pt]
+        default: keep
+      orientation:
+        description: "Orientation"
+        type: choice
+        options: [keep, portrait, landscape]
+        default: keep
+      icons:
+        description: "Icons"
+        type: choice
+        options: [keep, classic, weather-icons, material]
+        default: keep
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    if: github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq libcairo2 libfreetype6
+      - run: pip install .
+      - name: Apply the inputs to config/config.json
+        env:
+          CITY: ${{ inputs.city }}
+          COUNTRY_CODE: ${{ inputs.country_code }}
+          LANGUAGE: ${{ inputs.language }}
+          ORIENTATION: ${{ inputs.orientation }}
+          ICONS: ${{ inputs.icons }}
+        run: |
+          python - <<'EOF'
+          import json, os
+          from pathlib import Path
+
+          path = Path("config/config.json")
+          config = json.loads(path.read_text(encoding="utf-8"))
+          location = config.setdefault("location", {})
+          display = config.setdefault("display", {})
+          if os.environ["CITY"]:
+              location["city"] = os.environ["CITY"]
+              location.pop("country_code", None)
+          if os.environ["COUNTRY_CODE"]:
+              location["country_code"] = os.environ["COUNTRY_CODE"]
+          if os.environ["LANGUAGE"] != "keep":
+              config["language"] = os.environ["LANGUAGE"]
+          if os.environ["ORIENTATION"] != "keep":
+              display["orientation"] = os.environ["ORIENTATION"]
+          if os.environ["ICONS"] != "keep":
+              display["icons"] = os.environ["ICONS"]
+          path.write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+          print(path.read_text(encoding="utf-8"))
+          EOF
+      # Also checks the city online: the run fails on an error screen.
+      - run: kindle-weather --config config/config.json render --output my-kindle/preview.png
+      - run: |
+          python scripts/package.py --config config/config.json
+          unzip -q dist/kindleweather.zip -d my-kindle
+      - uses: actions/upload-artifact@v4
+        with:
+          name: my-kindle
+          path: my-kindle
