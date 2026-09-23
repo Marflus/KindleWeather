@@ -4,10 +4,9 @@ python3 -m kindle_weather.settings SETTING VALUE   changes config.json, then the
 python3 -m kindle_weather.settings detect-city     sets the city of the internet connection
 python3 -m kindle_weather.settings                 rewrites the menu from config.json
 
-A settings button runs bin/set.sh, then KUAL reloads the menu a quarter of a
-second later. That is too soon for Python: set.sh first updates the menu with
-sed, which the one-button-per-line layout of menu.json makes simple, then runs
-this module.
+A settings button runs bin/set.sh and confirms the change in KUAL's status
+line. KUAL keeps the submenu open: reloading the menu would take it back to
+its first page. The submenu titles show the new values the next time KUAL opens.
 """
 
 from __future__ import annotations
@@ -132,20 +131,20 @@ def _write_config(raw: dict) -> None:
 def write_menu() -> None:
     config = load_config(CONFIG_PATH)
     current = current_values(config)
-    # A submenu per setting, titled with its current value, which is also
-    # marked [x] among the choices. set.sh relies on these names.
+    # A submenu per setting, titled with its current value.
     city = f"{config.city}, {config.country_code}" if config.country_code else config.city
     settings = [
         {
             "name": f"City: {ascii_fold(city)}",
             "priority": 1,
             "items": [
-                # city.sh writes the result on the screen: detecting takes too
-                # long for the menu to reload with it.
+                # city.sh writes the result at the top of the screen.
                 {
                     "name": "Detect automatically",
                     "priority": 1,
                     "action": "sh bin/city.sh",
+                    "internal": "status Detecting the city...",
+                    "status": False,
                     "exitmenu": False,
                 },
                 {"name": "Search in the browser", "priority": 2, "action": "sh bin/web.sh"},
@@ -155,12 +154,14 @@ def write_menu() -> None:
     for priority, (setting, (title, _, values)) in enumerate(SETTINGS.items(), start=2):
         choices = [
             {
-                "name": f"[{'x' if value == current[setting] else ' '}] {name}",
+                "name": name,
                 "priority": index,
                 "action": f"sh bin/set.sh {setting} {value}",
-                # Stay in KUAL, and reload the menu to show the change.
+                # Stay in the submenu, with the change in the status line
+                # ("status": false keeps KUAL from writing the command there).
+                "internal": f"status {title}: {name}, saved",
+                "status": False,
                 "exitmenu": False,
-                "refresh": True,
             }
             for index, (value, name) in enumerate(values.items(), start=1)
         ]
@@ -181,23 +182,13 @@ def write_menu() -> None:
         {"name": "Diagnostic", "priority": 3, "action": "sh bin/diagnose.sh"},
     ]
     menu = {"items": [{"name": "KindleWeather", "priority": 1, "items": items}]}
-    _write(MENU_PATH, _menu_json(menu) + "\n")
+    _write(MENU_PATH, json.dumps(menu, indent=2) + "\n")
 
 
 def ascii_fold(text: str) -> str:
     """Varsovie, Kraków -> Krakow: KUAL and eips only display ASCII reliably."""
     text = text.translate(str.maketrans({"ł": "l", "Ł": "L", "ß": "ss", "ø": "o", "Ø": "O"}))
     return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
-
-
-def _menu_json(entry: dict, depth: int = 0) -> str:
-    """JSON with one button per line, for set.sh to edit with sed."""
-    indent = "  " * depth
-    if "items" not in entry:
-        return indent + json.dumps(entry)
-    fields = json.dumps({key: value for key, value in entry.items() if key != "items"})[1:-1]
-    children = ",\n".join(_menu_json(child, depth + 1) for child in entry["items"])
-    return f'{indent}{{{fields}{", " if fields else ""}"items": [\n{children}\n{indent}]}}'
 
 
 def _write(path: Path, text: str) -> None:

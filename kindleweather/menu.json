@@ -1,50 +1,286 @@
-{"items": [
-  {"name": "KindleWeather", "priority": 1, "items": [
-    {"name": "Start weather station", "priority": 1, "action": "sh bin/start.sh"},
-    {"name": "Settings", "priority": 2, "items": [
-      {"name": "City: Warsaw, PL", "priority": 1, "items": [
-        {"name": "Detect automatically", "priority": 1, "action": "sh bin/city.sh", "exitmenu": false},
-        {"name": "Search in the browser", "priority": 2, "action": "sh bin/web.sh"}
-      ]},
-      {"name": "Language: Francais", "priority": 2, "items": [
-        {"name": "[ ] English", "priority": 1, "action": "sh bin/set.sh language en", "exitmenu": false, "refresh": true},
-        {"name": "[x] Francais", "priority": 2, "action": "sh bin/set.sh language fr", "exitmenu": false, "refresh": true},
-        {"name": "[ ] Deutsch", "priority": 3, "action": "sh bin/set.sh language de", "exitmenu": false, "refresh": true},
-        {"name": "[ ] Espanol", "priority": 4, "action": "sh bin/set.sh language es", "exitmenu": false, "refresh": true},
-        {"name": "[ ] Italiano", "priority": 5, "action": "sh bin/set.sh language it", "exitmenu": false, "refresh": true},
-        {"name": "[ ] Portugues", "priority": 6, "action": "sh bin/set.sh language pt", "exitmenu": false, "refresh": true},
-        {"name": "[ ] Nederlands", "priority": 7, "action": "sh bin/set.sh language nl", "exitmenu": false, "refresh": true},
-        {"name": "[ ] Polski", "priority": 8, "action": "sh bin/set.sh language pl", "exitmenu": false, "refresh": true}
-      ]},
-      {"name": "Orientation: Portrait", "priority": 3, "items": [
-        {"name": "[x] Portrait", "priority": 1, "action": "sh bin/set.sh orientation portrait", "exitmenu": false, "refresh": true},
-        {"name": "[ ] Landscape", "priority": 2, "action": "sh bin/set.sh orientation landscape", "exitmenu": false, "refresh": true}
-      ]},
-      {"name": "Icons: Classic", "priority": 4, "items": [
-        {"name": "[x] Classic", "priority": 1, "action": "sh bin/set.sh icons classic", "exitmenu": false, "refresh": true},
-        {"name": "[ ] Weather Icons", "priority": 2, "action": "sh bin/set.sh icons weather-icons", "exitmenu": false, "refresh": true},
-        {"name": "[ ] Material", "priority": 3, "action": "sh bin/set.sh icons material", "exitmenu": false, "refresh": true}
-      ]},
-      {"name": "Temperature: Celsius", "priority": 5, "items": [
-        {"name": "[x] Celsius", "priority": 1, "action": "sh bin/set.sh temperature celsius", "exitmenu": false, "refresh": true},
-        {"name": "[ ] Fahrenheit", "priority": 2, "action": "sh bin/set.sh temperature fahrenheit", "exitmenu": false, "refresh": true}
-      ]},
-      {"name": "Clock: 24-hour", "priority": 6, "items": [
-        {"name": "[x] 24-hour", "priority": 1, "action": "sh bin/set.sh clock 24h", "exitmenu": false, "refresh": true},
-        {"name": "[ ] 12-hour (AM/PM)", "priority": 2, "action": "sh bin/set.sh clock 12h", "exitmenu": false, "refresh": true}
-      ]},
-      {"name": "Refresh: Every hour", "priority": 7, "items": [
-        {"name": "[ ] Every 15 minutes", "priority": 1, "action": "sh bin/set.sh refresh 15", "exitmenu": false, "refresh": true},
-        {"name": "[ ] Every 30 minutes", "priority": 2, "action": "sh bin/set.sh refresh 30", "exitmenu": false, "refresh": true},
-        {"name": "[x] Every hour", "priority": 3, "action": "sh bin/set.sh refresh 60", "exitmenu": false, "refresh": true},
-        {"name": "[ ] Every 2 hours", "priority": 4, "action": "sh bin/set.sh refresh 120", "exitmenu": false, "refresh": true},
-        {"name": "[ ] Every 3 hours", "priority": 5, "action": "sh bin/set.sh refresh 180", "exitmenu": false, "refresh": true},
-        {"name": "[ ] Every 6 hours", "priority": 6, "action": "sh bin/set.sh refresh 360", "exitmenu": false, "refresh": true},
-        {"name": "[ ] Every 12 hours", "priority": 7, "action": "sh bin/set.sh refresh 720", "exitmenu": false, "refresh": true},
-        {"name": "[ ] Every 24 hours", "priority": 8, "action": "sh bin/set.sh refresh 1440", "exitmenu": false, "refresh": true}
-      ]},
-      {"name": "All settings in the browser", "priority": 8, "action": "sh bin/web.sh"}
-    ]},
-    {"name": "Diagnostic", "priority": 3, "action": "sh bin/diagnose.sh"}
-  ]}
-]}
+{
+  "items": [
+    {
+      "name": "KindleWeather",
+      "priority": 1,
+      "items": [
+        {
+          "name": "Start weather station",
+          "priority": 1,
+          "action": "sh bin/start.sh"
+        },
+        {
+          "name": "Settings",
+          "priority": 2,
+          "items": [
+            {
+              "name": "City: Warsaw, PL",
+              "priority": 1,
+              "items": [
+                {
+                  "name": "Detect automatically",
+                  "priority": 1,
+                  "action": "sh bin/city.sh",
+                  "internal": "status Detecting the city...",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Search in the browser",
+                  "priority": 2,
+                  "action": "sh bin/web.sh"
+                }
+              ]
+            },
+            {
+              "name": "Language: Francais",
+              "priority": 2,
+              "items": [
+                {
+                  "name": "English",
+                  "priority": 1,
+                  "action": "sh bin/set.sh language en",
+                  "internal": "status Language: English, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Francais",
+                  "priority": 2,
+                  "action": "sh bin/set.sh language fr",
+                  "internal": "status Language: Francais, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Deutsch",
+                  "priority": 3,
+                  "action": "sh bin/set.sh language de",
+                  "internal": "status Language: Deutsch, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Espanol",
+                  "priority": 4,
+                  "action": "sh bin/set.sh language es",
+                  "internal": "status Language: Espanol, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Italiano",
+                  "priority": 5,
+                  "action": "sh bin/set.sh language it",
+                  "internal": "status Language: Italiano, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Portugues",
+                  "priority": 6,
+                  "action": "sh bin/set.sh language pt",
+                  "internal": "status Language: Portugues, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Nederlands",
+                  "priority": 7,
+                  "action": "sh bin/set.sh language nl",
+                  "internal": "status Language: Nederlands, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Polski",
+                  "priority": 8,
+                  "action": "sh bin/set.sh language pl",
+                  "internal": "status Language: Polski, saved",
+                  "status": false,
+                  "exitmenu": false
+                }
+              ]
+            },
+            {
+              "name": "Orientation: Portrait",
+              "priority": 3,
+              "items": [
+                {
+                  "name": "Portrait",
+                  "priority": 1,
+                  "action": "sh bin/set.sh orientation portrait",
+                  "internal": "status Orientation: Portrait, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Landscape",
+                  "priority": 2,
+                  "action": "sh bin/set.sh orientation landscape",
+                  "internal": "status Orientation: Landscape, saved",
+                  "status": false,
+                  "exitmenu": false
+                }
+              ]
+            },
+            {
+              "name": "Icons: Classic",
+              "priority": 4,
+              "items": [
+                {
+                  "name": "Classic",
+                  "priority": 1,
+                  "action": "sh bin/set.sh icons classic",
+                  "internal": "status Icons: Classic, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Weather Icons",
+                  "priority": 2,
+                  "action": "sh bin/set.sh icons weather-icons",
+                  "internal": "status Icons: Weather Icons, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Material",
+                  "priority": 3,
+                  "action": "sh bin/set.sh icons material",
+                  "internal": "status Icons: Material, saved",
+                  "status": false,
+                  "exitmenu": false
+                }
+              ]
+            },
+            {
+              "name": "Temperature: Celsius",
+              "priority": 5,
+              "items": [
+                {
+                  "name": "Celsius",
+                  "priority": 1,
+                  "action": "sh bin/set.sh temperature celsius",
+                  "internal": "status Temperature: Celsius, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Fahrenheit",
+                  "priority": 2,
+                  "action": "sh bin/set.sh temperature fahrenheit",
+                  "internal": "status Temperature: Fahrenheit, saved",
+                  "status": false,
+                  "exitmenu": false
+                }
+              ]
+            },
+            {
+              "name": "Clock: 24-hour",
+              "priority": 6,
+              "items": [
+                {
+                  "name": "24-hour",
+                  "priority": 1,
+                  "action": "sh bin/set.sh clock 24h",
+                  "internal": "status Clock: 24-hour, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "12-hour (AM/PM)",
+                  "priority": 2,
+                  "action": "sh bin/set.sh clock 12h",
+                  "internal": "status Clock: 12-hour (AM/PM), saved",
+                  "status": false,
+                  "exitmenu": false
+                }
+              ]
+            },
+            {
+              "name": "Refresh: Every hour",
+              "priority": 7,
+              "items": [
+                {
+                  "name": "Every 15 minutes",
+                  "priority": 1,
+                  "action": "sh bin/set.sh refresh 15",
+                  "internal": "status Refresh: Every 15 minutes, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Every 30 minutes",
+                  "priority": 2,
+                  "action": "sh bin/set.sh refresh 30",
+                  "internal": "status Refresh: Every 30 minutes, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Every hour",
+                  "priority": 3,
+                  "action": "sh bin/set.sh refresh 60",
+                  "internal": "status Refresh: Every hour, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Every 2 hours",
+                  "priority": 4,
+                  "action": "sh bin/set.sh refresh 120",
+                  "internal": "status Refresh: Every 2 hours, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Every 3 hours",
+                  "priority": 5,
+                  "action": "sh bin/set.sh refresh 180",
+                  "internal": "status Refresh: Every 3 hours, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Every 6 hours",
+                  "priority": 6,
+                  "action": "sh bin/set.sh refresh 360",
+                  "internal": "status Refresh: Every 6 hours, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Every 12 hours",
+                  "priority": 7,
+                  "action": "sh bin/set.sh refresh 720",
+                  "internal": "status Refresh: Every 12 hours, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Every 24 hours",
+                  "priority": 8,
+                  "action": "sh bin/set.sh refresh 1440",
+                  "internal": "status Refresh: Every 24 hours, saved",
+                  "status": false,
+                  "exitmenu": false
+                }
+              ]
+            },
+            {
+              "name": "All settings in the browser",
+              "priority": 8,
+              "action": "sh bin/web.sh"
+            }
+          ]
+        },
+        {
+          "name": "Diagnostic",
+          "priority": 3,
+          "action": "sh bin/diagnose.sh"
+        }
+      ]
+    }
+  ]
+}

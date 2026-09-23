@@ -118,18 +118,20 @@ KindleWeather
   Start weather station
   Settings
     City: Lyon, FR          > Detect automatically, Search in the browser
-    Language: English       > [x] English, [ ] Francais, [ ] Deutsch, [ ] Espanol...
-    Orientation: Portrait   > [x] Portrait, [ ] Landscape
-    Icons: Classic          > [x] Classic, [ ] Weather Icons, [ ] Material
-    Temperature: Celsius    > [x] Celsius, [ ] Fahrenheit
-    Clock: 24-hour          > [x] 24-hour, [ ] 12-hour (AM/PM)
-    Refresh: Every hour     > [ ] Every 15 minutes, [ ] Every 30 minutes, [x] Every hour...
+    Language: English       > English, Francais, Deutsch, Espanol...
+    Orientation: Portrait   > Portrait, Landscape
+    Icons: Classic          > Classic, Weather Icons, Material
+    Temperature: Celsius    > Celsius, Fahrenheit
+    Clock: 24-hour          > 24-hour, 12-hour (AM/PM)
+    Refresh: Every hour     > Every 15 minutes, Every 30 minutes, Every hour... Every 24 hours
     All settings in the browser
   Diagnostic
 ```
 
-Pressing a value saves it. KUAL then reloads its menu and goes back to its
-first page, where the settings show the new value.
+Pressing a value saves it, and KUAL's status line confirms it, such as
+"Orientation: Landscape, saved". The submenu stays open; the titles show the
+new values the next time KUAL opens (reloading the menu at once would take
+KUAL back to its first page).
 
 **Detect automatically** finds the city from the internet connection, with
 [ipinfo.io](https://ipinfo.io/) or [ip-api.com](https://ip-api.com/): usually
@@ -144,9 +146,9 @@ keyboard, press **Search**, then choose it among the cities of that name,
 listed with their region and country. The other settings are on the same page.
 Press **Close the settings page** when done.
 
-The page is served by the Kindle itself, at `http://127.0.0.1:8765/`. A phone
-or a computer on the same Wi-Fi can open it too, at the address given at the
-bottom of the page. It stops after 15 minutes without use.
+The page is served by the Kindle itself, on port 8765 of its Wi-Fi address,
+such as `http://192.168.1.23:8765/`. A phone or a computer on the same Wi-Fi
+can open it too, at the address given at the bottom of the page. It stops after 15 minutes without use.
 
 ## Configuration
 
