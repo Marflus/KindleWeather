@@ -49,13 +49,16 @@ class IconSet(ABC):
         return self._bounds_cache[key]
 
     def _fit(self, icon: Icon, box: Box) -> float:
+        """The size at which the ink of icon fits box."""
         left, top, right, bottom = box
+        width, height = right - left, bottom - top
+        if isinstance(icon, int):
+            # Weather icons fit a square, so that they all get the same size: a
+            # wide one, like the cloud, would otherwise grow larger in a wide box.
+            width = height = min(width, height)
         reference = 100
         ink_left, ink_top, ink_right, ink_bottom = self._bounds(icon, reference)
-        scale = min(
-            (right - left) / (ink_right - ink_left), (bottom - top) / (ink_bottom - ink_top)
-        )
-        return reference * scale
+        return reference * min(width / (ink_right - ink_left), height / (ink_bottom - ink_top))
 
     def ink_size(self, icon: Icon, box: Box) -> tuple[float, float]:
         """Width and height of the ink draw() would put in box."""
