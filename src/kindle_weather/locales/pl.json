@@ -19,6 +19,7 @@
     "updated": "Zaktualizowano {}",
     "variable": "Zmienna pogoda",
     "kual_start": "Uruchom stację pogodową",
+    "kual_diagnostic": "Diagnostyka",
     "starting": "Uruchamianie stacji pogodowej...",
     "error": "Błąd",
     "error_unreachable": "Serwis pogodowy niedostępny",

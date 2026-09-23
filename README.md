@@ -74,7 +74,7 @@ Paperwhite 2 and 3; on other models, check `RTC` in
 With the Kindle jailbroken and KUAL and MRPI installed, install NiLuJe's
 **Python 3** package with MRPI: see
 [Python on Kindle](https://wiki.mobileread.com/wiki/Python_on_Kindle) on the
-MobileRead wiki. Pick the package matching your firmware. Python 3.9 or newer
+MobileRead wiki. Pick the package matching your firmware. Python 3.8 or newer
 is required; no extra module is needed.
 
 ### 2. Copy KindleWeather to the Kindle
@@ -92,7 +92,7 @@ is required; no extra module is needed.
 <details>
 <summary>Or install from a computer with Python</summary>
 
-With Python 3.9 or newer on the computer:
+With Python 3.8 or newer on the computer:
 
 ```bash
 pipx install git+https://github.com/Marflus/KindleWeather.git
@@ -111,12 +111,18 @@ extension. If the drive is not found, pass its path:
 ### 3. Start the station
 
 Restart the Kindle so KUAL picks up the new extension, then open
-**KUAL > KindleWeather > Start weather station**. The interface disappears and
-the dashboard shows up within a minute. A log is kept in
-`extensions/kindleweather/station.log` on the Kindle drive.
+**KUAL > KindleWeather > Start weather station**. KUAL closes, then the screen
+shows "Starting the weather station..." and the dashboard within a minute or
+two. A log is kept in `extensions/kindleweather/station.log` on the Kindle
+drive.
 
 To stop the station, hold the power button until the Kindle restarts (10 to
 20 seconds).
+
+If the station does not start, run **KUAL > KindleWeather > Diagnostic**. It
+checks Python, drawing, Wi-Fi and the configuration, draws a test dashboard
+without stopping the Kindle interface, sums up on the screen, and writes the
+details to `extensions/kindleweather/diagnostic.txt`.
 
 To change the settings later, edit `extensions/kindleweather/config.json` on
 the Kindle drive, then restart the Kindle and start the station again. When
@@ -216,7 +222,8 @@ src/kindle_weather/   Python package, standard library only; it runs on the Kind
   render.py, graphics.py, icons.py (icon_fonts/), fonts/ (Roboto)
   canvas.py             drawing with the system's cairo and FreeType, through ctypes
   wizard.py, install.py kindle-weather init and install
-  kindle_extension/     KUAL extension; bin/station.sh is the station loop
+  kindle_extension/     KUAL extension: bin/start.sh (Start), bin/station.sh (station loop),
+                        bin/diagnose.sh (Diagnostic)
 ```
 
 ## Development
@@ -228,7 +235,7 @@ python scripts/previews.py    # regenerate the previews
 python scripts/package.py     # build dist/kindleweather.zip
 ```
 
-The code must run on Python 3.9, the oldest the Kindle may have. To publish a
+The code must run on Python 3.8, the oldest the Kindle may have. To publish a
 new version, build `dist/kindleweather.zip` and attach it to a GitHub release.
 
 ## Known limitations

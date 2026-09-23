@@ -9,7 +9,7 @@ from __future__ import annotations
 import math
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Union
+from typing import Tuple, Union
 
 from kindle_weather.canvas import Canvas, Font
 from kindle_weather.graphics import (
@@ -26,7 +26,7 @@ DEFAULT_ICON_SET = "classic"
 
 # A WMO weather code, or one of DETAIL_ICONS.
 Icon = Union[int, str]
-Box = tuple[float, float, float, float]
+Box = Tuple[float, float, float, float]
 
 
 class IconSet(ABC):

@@ -19,6 +19,7 @@
     "updated": "Bijgewerkt op {}",
     "variable": "Wisselvallig",
     "kual_start": "Weerstation starten",
+    "kual_diagnostic": "Diagnose",
     "starting": "Weerstation wordt gestart...",
     "error": "Fout",
     "error_unreachable": "Weerdienst onbereikbaar",

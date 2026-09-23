@@ -3,36 +3,34 @@
 # Kindle until the next refresh. Amazon's interface is stopped for good:
 # restart the Kindle to get it back.
 # Adapted from https://github.com/mattzzw/kindle-weatherstation by mattzzw.
-EXTENSION_DIR=/mnt/us/extensions/kindleweather
-CONFIG="$EXTENSION_DIR/config.json"
-IMAGE="$EXTENSION_DIR/dashboard.png"
-LOG="$EXTENSION_DIR/station.log"
+. "$(dirname "$0")/common.sh"
 REFRESH_SECONDS=3600
 LOW_BATTERY_PERCENT=10
 # Wake-capable real-time clock of the Paperwhite 2 and 3.
 RTC=/dev/rtc1
 
-log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >>"$LOG"
-}
+# Everything the script and its commands print ends up in the log.
+exec >>"$LOG" 2>&1
+log "station starting in $EXTENSION_DIR, as user $(id -u)"
+echo $$ >"$PID_FILE"
+load_settings
 
-# Everything the script and its commands complain about ends up in the log.
-exec 2>>"$LOG"
-log "station starting"
+# Like kindle-weatherstation: stop the interface first, so nothing draws over
+# the dashboard and the other services do not drain the battery.
+log "stopping the interface: $(stop lab126_gui 2>&1)"
+for job in otaupd phd tmd x todo mcsd archive dynconfig dpmd appmgrd stackdumpd; do
+    stop "$job" >/dev/null 2>&1
+done
+lipc-set-prop com.lab126.powerd preventScreenSaver 1
+/usr/sbin/eips -c
+/usr/sbin/eips 2 30 "$STARTING_MESSAGE"
 
-# Python 3 from MRPI, wherever its package put it.
-find_python() {
-    for candidate in python3 /mnt/us/python3/bin/python3 /mnt/us/python/bin/python3; do
-        if command -v "$candidate" >/dev/null 2>&1; then
-            command -v "$candidate"
-            return
-        fi
-    done
-}
-
-kindle_weather() {
-    PYTHONPATH="$EXTENSION_DIR/lib" "$PYTHON" -m kindle_weather --config "$CONFIG" "$@" 2>>"$LOG"
-}
+PYTHON=$(find_python)
+log "python: ${PYTHON:-not found}"
+# Messages in the configured language, from config.json.
+if [ -n "$PYTHON" ] && kindle_weather kual-files "$EXTENSION_DIR"; then
+    load_settings
+fi
 
 # Show the last dashboard, with the non-empty messages on its top lines.
 show() {
@@ -53,10 +51,24 @@ show() {
     done
 }
 
+wifi_connected() {
+    lipc-get-prop com.lab126.wifid cmState | grep -q CONNECTED
+}
+
 wait_for_wifi() {
     tries=0
-    until lipc-get-prop com.lab126.wifid cmState | grep -q CONNECTED; do
-        [ "$tries" -ge 60 ] && return 1
+    until wifi_connected; do
+        if [ "$tries" -eq 30 ]; then
+            # Without the interface, reconnection may need a push, as
+            # kindle-weatherstation's wifi.sh does: reconnect, then get an address.
+            log "wifi state: $(lipc-get-prop com.lab126.wifid cmState), reconnecting"
+            wpa_cli -i wlan0 reconnect >/dev/null 2>&1
+            udhcpc -i wlan0 -n -q >/dev/null 2>&1
+        fi
+        if [ "$tries" -ge 60 ]; then
+            log "wifi state: $(lipc-get-prop com.lab126.wifid cmState)"
+            return 1
+        fi
         tries=$((tries + 1))
         sleep 1
     done
@@ -78,26 +90,6 @@ battery_warning() {
         echo "$LOW_BATTERY_WARNING ($level %)"
     fi
 }
-
-# Defines the error messages (E7, E8), LOW_BATTERY_WARNING and
-# STARTING_MESSAGE, in the configured language. Written at installation, then again from
-# config.json at each start when Python is available.
-. "$EXTENSION_DIR/settings.sh"
-PYTHON=$(find_python)
-if [ -n "$PYTHON" ] && kindle_weather kual-files "$EXTENSION_DIR"; then
-    . "$EXTENSION_DIR/settings.sh"
-fi
-
-# Without the interface nothing can draw a screensaver over the dashboard,
-# and the other services only drain the battery.
-for job in lab126_gui otaupd phd tmd x todo mcsd archive dynconfig dpmd appmgrd stackdumpd; do
-    stop "$job" >/dev/null 2>&1
-done
-lipc-set-prop com.lab126.powerd preventScreenSaver 1
-log "station started, python: ${PYTHON:-none}"
-# Replace the frozen home screen while Wi-Fi connects and the dashboard is drawn.
-/usr/sbin/eips -c
-/usr/sbin/eips 2 30 "${STARTING_MESSAGE:-KindleWeather...}"
 
 while true; do
     error=""

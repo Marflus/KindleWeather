@@ -72,9 +72,14 @@ def write_kual_files(target: Path, config: Config) -> None:
                     {
                         "name": ascii_fold(labels["kual_start"]),
                         "priority": 1,
-                        # setsid keeps the loop alive once it stops KUAL and the interface.
-                        "action": "setsid sh bin/station.sh &",
-                    }
+                        # start.sh detaches the station from KUAL, which it stops.
+                        "action": "sh bin/start.sh",
+                    },
+                    {
+                        "name": ascii_fold(labels["kual_diagnostic"]),
+                        "priority": 2,
+                        "action": "sh bin/diagnose.sh",
+                    },
                 ],
             }
         ]

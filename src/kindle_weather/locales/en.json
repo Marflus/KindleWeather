@@ -19,6 +19,7 @@
     "updated": "Updated {}",
     "variable": "Variable weather",
     "kual_start": "Start weather station",
+    "kual_diagnostic": "Diagnostic",
     "starting": "Starting the weather station...",
     "error": "Error",
     "error_unreachable": "Weather service unreachable",

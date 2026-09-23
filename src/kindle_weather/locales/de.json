@@ -19,6 +19,7 @@
     "updated": "Aktualisiert am {}",
     "variable": "Wechselhaft",
     "kual_start": "Wetterstation starten",
+    "kual_diagnostic": "Diagnose",
     "starting": "Wetterstation wird gestartet...",
     "error": "Fehler",
     "error_unreachable": "Wetterdienst nicht erreichbar",

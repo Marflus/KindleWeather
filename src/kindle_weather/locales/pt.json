@@ -19,6 +19,7 @@
     "updated": "Atualizado em {}",
     "variable": "Tempo instável",
     "kual_start": "Iniciar a estação meteorológica",
+    "kual_diagnostic": "Diagnóstico",
     "starting": "Iniciando a estação meteorológica...",
     "error": "Erro",
     "error_unreachable": "Serviço meteorológico inacessível",

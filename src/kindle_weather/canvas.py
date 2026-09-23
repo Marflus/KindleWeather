@@ -16,7 +16,7 @@ import struct
 import sys
 import zlib
 from contextlib import contextmanager
-from functools import cache
+from functools import lru_cache
 from pathlib import Path
 
 WHITE = 255
@@ -106,7 +106,7 @@ class _Libraries:
         for name, (restype, argtypes) in signatures.items():
             function = getattr(cairo, name)
             function.restype, function.argtypes = restype, argtypes
-            setattr(self, name.removeprefix("cairo_"), function)
+            setattr(self, name[len("cairo_") :], function)
         self.FT_Init_FreeType = freetype.FT_Init_FreeType
         self.FT_Init_FreeType.argtypes = [ctypes.POINTER(p)]
         self.FT_New_Face = freetype.FT_New_Face
@@ -119,12 +119,12 @@ class _Libraries:
         self.font_options_set_antialias(self.font_options, _ANTIALIAS_GRAY)
 
 
-@cache
+@lru_cache(maxsize=None)
 def _libraries() -> _Libraries:
     return _Libraries()
 
 
-@cache
+@lru_cache(maxsize=None)
 def _font_face(path: str) -> int:
     libs = _libraries()
     face = ctypes.c_void_p()
