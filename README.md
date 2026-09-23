@@ -10,8 +10,8 @@ next refresh.
 **[Version française ci-dessous](#français)**
 
 <p align="center">
-  <img src="docs/preview.png" alt="Portrait dashboard" height="420">
-  <img src="docs/preview-landscape.png" alt="Landscape dashboard" height="420">
+  <img src="preview/portrait-en.png" alt="Portrait dashboard" height="420">
+  <img src="preview/landscape-en.png" alt="Landscape dashboard" height="420">
 </p>
 <p align="center"><sub>Portrait and landscape layouts, rendered from sample data.</sub></p>
 
@@ -137,7 +137,7 @@ kindle-weather install MOUNT_PATH                # install the KUAL extension
 ```
 .github/workflows/    ci.yml (lint, tests), publish.yml (hourly dashboard)
 config/               config.json, the only file to edit
-docs/                 README images
+preview/              dashboard previews, portrait and landscape, in English and French
 kindle/extension/     KUAL extension; bin/station.sh is the weather station loop
 src/kindle_weather/   Python package: config, weather, i18n, graphics, render, install
 tests/                pytest suite, runs offline
@@ -188,6 +188,12 @@ Actions génère chaque heure un tableau de bord en niveaux de gris, adapté à
 l'encre électronique, à partir des données [Open-Meteo](https://open-meteo.com/).
 La Kindle le télécharge, l'affiche, puis se met en veille jusqu'au
 rafraîchissement suivant.
+
+<p align="center">
+  <img src="preview/portrait-fr.png" alt="Tableau de bord en portrait" height="420">
+  <img src="preview/landscape-fr.png" alt="Tableau de bord en paysage" height="420">
+</p>
+<p align="center"><sub>Affichages portrait et paysage, générés à partir de données d'exemple.</sub></p>
 
 ## Fonctionnalités
 
@@ -314,7 +320,7 @@ kindle-weather install CHEMIN_DU_DISQUE          # installer l'extension KUAL
 ```
 .github/workflows/    ci.yml (lint, tests), publish.yml (tableau de bord horaire)
 config/               config.json, le seul fichier à modifier
-docs/                 images du README
+preview/              aperçus du tableau de bord, portrait et paysage, en anglais et en français
 kindle/extension/     extension KUAL ; bin/station.sh est la boucle de la station
 src/kindle_weather/   paquet Python : configuration, météo, traductions, dessin, rendu, installation
 tests/                tests pytest, exécutés hors ligne
