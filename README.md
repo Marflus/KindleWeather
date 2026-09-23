@@ -64,7 +64,7 @@ The station wakes up with the clock at `/dev/rtc1`, as on the Paperwhite 2 and
    For a Paperwhite 2 or later, it is the `Update_python3_..._install_pw2_and_up.bin`
    file of the package: copy it to the `mrpackages` folder of the Kindle, then
    run **KUAL > Helper > Install MR Packages**.
-2. **Download KindleWeather**: [KindleMeteo-main.zip](https://github.com/Marflus/KindleMeteo/archive/refs/heads/main.zip),
+2. **Download KindleWeather**: [KindleWeather-main.zip](https://github.com/Marflus/KindleWeather/archive/refs/heads/main.zip),
    and extract it.
 3. **Copy the `kindleweather` folder** of the zip into the `extensions` folder
    of the Kindle, next to `documents`, with the Kindle plugged in over USB.
