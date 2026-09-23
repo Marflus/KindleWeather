@@ -38,7 +38,7 @@ kindle_weather() {
 show() {
     lipc-set-prop com.lab126.powerd flIntensity 0
     for rotation in /sys/devices/platform/*_epdc_fb/graphics/fb0/rotate; do
-        echo 0 >"$rotation"
+        [ -e "$rotation" ] && echo 0 >"$rotation"
     done
     if [ -f "$IMAGE" ]; then
         /usr/sbin/eips -f -g "$IMAGE"
