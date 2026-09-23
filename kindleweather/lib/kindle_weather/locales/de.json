@@ -17,11 +17,7 @@
     "storm": "Gewitter",
     "snow": "Schnee",
     "updated": "Aktualisiert am {}",
-    "variable": "Wechselhaft",
-    "kual_start": "Wetterstation starten",
-    "kual_diagnostic": "Diagnose",
-    "starting": "Wetterstation wird gestartet...",
-    "low_battery": "Akku schwach"
+    "variable": "Wechselhaft"
   },
   "weather": {
     "0": "Klarer Himmel",

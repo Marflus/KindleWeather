@@ -1,8 +1,9 @@
-dashboard.png
+# Written on the Kindle by the station and the diagnostic.
+kindleweather/dashboard.png
+kindleweather/station.log
+kindleweather/station.pid
+kindleweather/diagnostic.txt
 
 __pycache__/
-*.egg-info/
-build/
-dist/
 .venv/
 .ruff_cache/

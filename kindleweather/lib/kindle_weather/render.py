@@ -31,7 +31,9 @@ from kindle_weather.weather import (
     precipitation_kind,
 )
 
+# The Paperwhite 3 screen, in portrait.
 SCREEN_SIZE = (1072, 1448)
+MARGIN = 50
 FONT_DIR = Path(__file__).parent / "fonts"
 ROBOTO, ROBOTO_BOLD = FONT_DIR / "Roboto-Regular.ttf", FONT_DIR / "Roboto-Bold.ttf"
 
@@ -65,6 +67,8 @@ TABLE_CELLS = (0, 0.24, 0.47, 0.71)
 
 @dataclass(frozen=True)
 class Layout:
+    """Sizes of the dashboard sections for one orientation, in layout units."""
+
     size: tuple[int, int]
     top: int
     card_height: int
@@ -105,9 +109,6 @@ LAYOUTS = {
 }
 
 
-MARGIN = 50
-
-
 def render_dashboard(
     forecast: Forecast,
     locale: Locale,
@@ -122,29 +123,22 @@ def render_dashboard(
 
 def render_error(
     error: ErrorCode,
-    locale: Locale,
+    detail: str,
     size: tuple[int, int] = SCREEN_SIZE,
     orientation: str = "portrait",
-    moment: datetime | None = None,
-    detail: str | None = None,
 ) -> Picture:
-    """Full-screen error shown instead of the dashboard when it cannot be rendered."""
+    """Full-screen error, in English, shown when there is no dashboard to keep."""
     width, height = LAYOUTS[orientation].size
     draw = _framebuffer_canvas(size, orientation)
-    labels = locale.labels
     max_width = width - 2 * MARGIN
-    title_font = Font(ROBOTO_BOLD, 90)
-    message = labels[error.label]
-    message_font = Font(ROBOTO_BOLD, 34)
+    detail_font = Font(ROBOTO, 20)
     lines = [
-        (f"{labels['error']} {error.code}", title_font, INK),
-        (message, _shrink_to_fit(draw, message, message_font, max_width), INK),
-        (labels["error_retry"], Font(ROBOTO, 26), GRAY_DARK),
+        (f"Error {error.code}", Font(ROBOTO_BOLD, 90), INK),
+        (error.text, _shrink_to_fit(draw, error.text, Font(ROBOTO_BOLD, 34), max_width), INK),
+        ("Next attempt in one hour", Font(ROBOTO, 26), GRAY_DARK),
+        (_truncate(draw, " ".join(detail.split()), detail_font, max_width), detail_font, GRAY_MID),
     ]
-    if detail:
-        detail_font = Font(ROBOTO, 20)
-        detail = _truncate(draw, " ".join(detail.split()), detail_font, max_width)
-        lines.append((detail, detail_font, GRAY_MID))
+    # The lines stacked and centered on the screen.
     boxes = [draw.textbbox((0, 0), text, font=font) for text, font, _ in lines]
     gap = 36
     y = (height - sum(box[3] - box[1] for box in boxes) - gap * (len(lines) - 1)) / 2
@@ -152,10 +146,8 @@ def render_error(
         draw_centered_text(draw, width / 2, y - box[1], text, font, fill)
         y += box[3] - box[1] + gap
 
-    moment = moment or datetime.now(timezone.utc)
-    footer = Font(ROBOTO, 16)
-    stamp = f"{moment:%Y-%m-%d %H:%M} UTC"
-    draw_centered_text(draw, width / 2, height - 60, stamp, footer, GRAY_MID)
+    stamp = f"{datetime.now(timezone.utc):%Y-%m-%d %H:%M} UTC"
+    draw_centered_text(draw, width / 2, height - 60, stamp, Font(ROBOTO, 16), GRAY_MID)
     return draw.picture()
 
 
@@ -170,7 +162,7 @@ def _framebuffer_canvas(size: tuple[int, int], orientation: str) -> Canvas:
     return Canvas(layout_width, layout_height, scale=(width / layout_width, height / layout_height))
 
 
-def precipitation_runs(codes: list[int]) -> list[tuple[str, int, int]]:
+def _precipitation_runs(codes: list[int]) -> list[tuple[str, int, int]]:
     """Return (kind, start, end) for each run of consecutive codes of the same precipitation."""
     runs, start = [], 0
     for kind, group in groupby(codes, key=precipitation_kind):
@@ -181,7 +173,7 @@ def precipitation_runs(codes: list[int]) -> list[tuple[str, int, int]]:
     return runs
 
 
-def legend_kinds(codes: list[int]) -> list[str]:
+def _legend_kinds(codes: list[int]) -> list[str]:
     """Precipitation kinds among codes, in legend order."""
     present = {precipitation_kind(code) for code in codes}
     return [kind for kind in LEGEND_KINDS if kind in present]
@@ -410,14 +402,14 @@ class _Dashboard:
         points = [(left + f * (right - left), y_of(h.temperature)) for f, h in samples]
         draw.polygon([(left, bottom), *points, (right, bottom)], fill=GRAY_PALE)
         # Segment k (point k to k+1) takes the weather of its starting hour.
-        runs = precipitation_runs([h.weather_code for _, h in samples[:-1]])
+        runs = _precipitation_runs([h.weather_code for _, h in samples[:-1]])
         self._pattern_under_curve(points, runs, (left, top, right, bottom))
-        draw.line(points, fill=INK, width=4, joint="curve")
+        draw.line(points, fill=INK, width=4)
 
         for (x, y), (_, entry) in list(zip(points, samples))[::3]:
             self._chart_tick(x, y, f"{entry.hour:02d}:00", right, bottom)
 
-        kinds = legend_kinds([entry.weather_code for entry in forecast.hours])
+        kinds = _legend_kinds([entry.weather_code for entry in forecast.hours])
         if kinds:
             self._legend(kinds, (left + right) / 2, bottom + 44)
         return bottom

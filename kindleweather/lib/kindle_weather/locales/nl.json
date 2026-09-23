@@ -17,11 +17,7 @@
     "storm": "Onweer",
     "snow": "Sneeuw",
     "updated": "Bijgewerkt op {}",
-    "variable": "Wisselvallig",
-    "kual_start": "Weerstation starten",
-    "kual_diagnostic": "Diagnose",
-    "starting": "Weerstation wordt gestart...",
-    "low_battery": "Batterij bijna leeg"
+    "variable": "Wisselvallig"
   },
   "weather": {
     "0": "Onbewolkt",

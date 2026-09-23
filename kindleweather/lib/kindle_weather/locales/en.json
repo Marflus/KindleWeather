@@ -17,21 +17,7 @@
     "storm": "Storm",
     "snow": "Snow",
     "updated": "Updated {}",
-    "variable": "Variable weather",
-    "kual_start": "Start weather station",
-    "kual_diagnostic": "Diagnostic",
-    "starting": "Starting the weather station...",
-    "error": "Error",
-    "error_unreachable": "Weather service unreachable",
-    "error_service": "Weather service error",
-    "error_location": "Location not found, check the configuration",
-    "error_data": "Invalid weather data",
-    "error_config": "Invalid configuration",
-    "error_render": "Dashboard rendering failed",
-    "error_wifi": "No Wi-Fi connection",
-    "error_python": "Python 3 is missing, install it with MRPI",
-    "error_retry": "Next attempt in one hour",
-    "low_battery": "Low battery"
+    "variable": "Variable weather"
   },
   "weather": {
     "0": "Clear sky",

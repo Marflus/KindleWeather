@@ -1,0 +1,12 @@
+{
+  "items": [
+    {
+      "name": "KindleWeather",
+      "priority": 1,
+      "items": [
+        { "name": "Start weather station", "priority": 1, "action": "sh bin/start.sh" },
+        { "name": "Diagnostic", "priority": 2, "action": "sh bin/diagnose.sh" }
+      ]
+    }
+  ]
+}

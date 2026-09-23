@@ -20,11 +20,10 @@ from kindle_weather.graphics import (
     draw_wind,
 )
 
-DETAIL_ICONS = ("sunrise", "sunset", "humidity", "wind")
 FONT_DIR = Path(__file__).parent / "icon_fonts"
 DEFAULT_ICON_SET = "classic"
 
-# A WMO weather code, or one of DETAIL_ICONS.
+# A WMO weather code, or a detail icon: "sunrise", "sunset", "humidity" or "wind".
 Icon = Union[int, str]
 Box = Tuple[float, float, float, float]
 

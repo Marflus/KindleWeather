@@ -17,11 +17,7 @@
     "storm": "Orage",
     "snow": "Neige",
     "updated": "Mis à jour le {}",
-    "variable": "Temps variable",
-    "kual_start": "Démarrer la station météo",
-    "kual_diagnostic": "Diagnostic",
-    "starting": "Démarrage de la station météo...",
-    "low_battery": "Batterie faible"
+    "variable": "Temps variable"
   },
   "weather": {
     "0": "Ciel dégagé",

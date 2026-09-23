@@ -1,10 +1,10 @@
 """Grayscale drawing with cairo and FreeType, called through ctypes.
 
 The Kindle ships both libraries for its own interface, so the dashboard is
-drawn on the Kindle with Python's standard library alone. The drawing methods
-follow Pillow's ImageDraw: coordinates are (x, y) pairs or flat lists, gray
-levels go from 0 (black) to 255 (white), and text is placed by the top-left
-corner of its line.
+drawn on the Kindle with Python's standard library alone: no Pillow to
+install. The drawing methods follow Pillow's ImageDraw: coordinates are (x, y)
+pairs or flat lists, gray levels go from 0 (black) to 255 (white), and text is
+placed by the top-left corner of its line.
 """
 
 from __future__ import annotations
@@ -141,11 +141,8 @@ def _preload_dependencies(path: str, seen: set[str]) -> None:
 
 
 def _load(name: str, soname: str) -> ctypes.CDLL:
-    # The system's copy first, with its own dependencies, then any other.
-    candidates = [_system_library(soname), soname]
-    for folder in LIBRARY_FOLDERS:
-        candidates += sorted(str(path) for path in Path(folder).glob(f"lib{name}.so*"))
-    candidates.append(ctypes.util.find_library(name))
+    """The library, the system's copy first; find_library covers macOS for the previews."""
+    candidates = [_system_library(soname), soname, ctypes.util.find_library(name)]
     errors = []
     for candidate in dict.fromkeys(filter(None, candidates)):
         if candidate.startswith("/"):
@@ -154,7 +151,7 @@ def _load(name: str, soname: str) -> ctypes.CDLL:
             return ctypes.CDLL(candidate, mode=ctypes.RTLD_GLOBAL)
         except OSError as error:
             errors.append(str(error))
-    # The first errors say why, such as a missing dependency.
+    # The errors say why, such as a missing dependency.
     details = "; ".join(dict.fromkeys(errors)) or "not found"
     raise CanvasError(f"cannot load the {name} library: {details}")
 
@@ -254,10 +251,6 @@ class Picture:
     def __init__(self, width: int, height: int, pixels: bytes):
         self.width, self.height, self.pixels = width, height, pixels
 
-    @property
-    def size(self) -> tuple[int, int]:
-        return self.width, self.height
-
     def rows(self):
         for y in range(self.height):
             yield self.pixels[y * self.width : (y + 1) * self.width]
@@ -274,6 +267,8 @@ class Picture:
                 right = max(right, len(ink))
                 left = min(left, self.width - len(row.lstrip(white)))
         return None if top is None else (left, top, right, bottom)
+
+    # Used by scripts/previews.py.
 
     def crop(self, box: tuple[int, int, int, int]) -> Picture:
         left, top, right, bottom = box
@@ -351,9 +346,8 @@ class Canvas:
 
     # Shapes
 
-    def line(self, xy, fill: int, width: float = 1, joint: str | None = None) -> None:
-        points = _points(xy)
-        self._path(points, close=False)
+    def line(self, xy, fill: int, width: float = 1) -> None:
+        self._path(_points(xy), close=False)
         self._stroke(fill, width)
 
     def polygon(self, xy, fill: int) -> None:
@@ -380,25 +374,19 @@ class Canvas:
             )
             self._stroke(outline, width)
 
-    def ellipse(self, xy, fill: int | None = None, outline: int | None = None, width=1):
+    def ellipse(self, xy, fill: int) -> None:
         (left, top), (right, bottom) = _points(xy)
         cr, libs = self._cr, self._libs
-        for color, inset, filled in ((fill, 0, True), (outline, width / 2, False)):
-            if color is None:
-                continue
-            libs.save(cr)
-            libs.new_path(cr)
-            libs.translate(cr, (left + right) / 2, (top + bottom) / 2)
-            rx, ry = (right - left) / 2 - inset, (bottom - top) / 2 - inset
-            libs.scale(cr, max(rx, 0.01), max(ry, 0.01))
-            libs.arc(cr, 0, 0, 1, 0, 2 * math.pi)
-            # The path keeps its shape once the ellipse scaling is undone.
-            libs.restore(cr)
-            if filled:
-                self._fill(color)
-                libs.fill(cr)
-            else:
-                self._stroke(color, width)
+        libs.save(cr)
+        libs.new_path(cr)
+        # A unit circle, stretched to the box.
+        libs.translate(cr, (left + right) / 2, (top + bottom) / 2)
+        libs.scale(cr, max((right - left) / 2, 0.01), max((bottom - top) / 2, 0.01))
+        libs.arc(cr, 0, 0, 1, 0, 2 * math.pi)
+        # The path keeps its shape once the stretching is undone.
+        libs.restore(cr)
+        self._fill(fill)
+        libs.fill(cr)
 
     def pieslice(self, xy, start: float, end: float, fill: int) -> None:
         """Circular sector; angles in degrees, clockwise from 3 o'clock."""

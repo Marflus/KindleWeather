@@ -1,12 +1,20 @@
-"""Regenerate the images in preview/ from sample data: python scripts/previews.py"""
+"""Regenerate the images in preview/ from sample data: python3 scripts/previews.py
+
+Needs Python 3.9 or newer, with the cairo and FreeType libraries (Linux and
+macOS usually have them).
+"""
 
 from __future__ import annotations
 
 import math
+import sys
 from datetime import datetime
 from pathlib import Path
 
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo  # Python 3.9+: the previews run on a computer.
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "kindleweather" / "lib"))
 
 from kindle_weather.canvas import Canvas, Font, Picture
 from kindle_weather.i18n import LOCALES
@@ -14,7 +22,7 @@ from kindle_weather.icons import ICON_SETS
 from kindle_weather.render import ROBOTO_BOLD, render_dashboard
 from kindle_weather.weather import parse_forecast
 
-PREVIEW_DIR = Path(__file__).parents[1] / "preview"
+PREVIEW_DIR = ROOT / "preview"
 TIMEZONE = "Europe/Warsaw"
 NOW = datetime(2026, 12, 3, 15, 2, tzinfo=ZoneInfo(TIMEZONE))
 # Snow early in the morning, rain around noon, thunderstorm in the evening.

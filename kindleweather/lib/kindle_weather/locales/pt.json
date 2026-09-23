@@ -17,11 +17,7 @@
     "storm": "Trovoada",
     "snow": "Neve",
     "updated": "Atualizado em {}",
-    "variable": "Tempo instável",
-    "kual_start": "Iniciar a estação meteorológica",
-    "kual_diagnostic": "Diagnóstico",
-    "starting": "Iniciando a estação meteorológica...",
-    "low_battery": "Bateria fraca"
+    "variable": "Tempo instável"
   },
   "weather": {
     "0": "Céu limpo",

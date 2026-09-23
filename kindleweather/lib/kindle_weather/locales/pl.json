@@ -17,11 +17,7 @@
     "storm": "Burza",
     "snow": "Śnieg",
     "updated": "Zaktualizowano {}",
-    "variable": "Zmienna pogoda",
-    "kual_start": "Uruchom stację pogodową",
-    "kual_diagnostic": "Diagnostyka",
-    "starting": "Uruchamianie stacji pogodowej...",
-    "low_battery": "Niski poziom baterii"
+    "variable": "Zmienna pogoda"
   },
   "weather": {
     "0": "Bezchmurnie",

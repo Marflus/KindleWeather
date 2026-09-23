@@ -1,4 +1,4 @@
-"""Open-Meteo client: city geocoding and forecast."""
+"""Open-Meteo client: finds the city, then fetches and reads its forecast."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from urllib.parse import urlencode, urlsplit
 
 from kindle_weather import dns
 
-# The Kindle's Python may fail to resolve names by itself.
+# The Kindle's Python may fail to resolve host names by itself.
 dns.install()
 
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
@@ -57,6 +57,7 @@ class ServiceUnreachable(WeatherError):
 
     def __init__(self, message: str, tls: bool = False):
         super().__init__(message)
+        # The secure connection failed, not the network.
         self.tls = tls
 
 
@@ -69,8 +70,6 @@ class Place:
     name: str
     latitude: float
     longitude: float
-    country: str | None = None
-    country_code: str | None = None
 
 
 @dataclass(frozen=True)
@@ -129,15 +128,13 @@ def geocode(city: str, country_code: str | None, language: str) -> Place:
             name=best["name"],
             latitude=best["latitude"],
             longitude=best["longitude"],
-            country=best.get("country"),
-            country_code=best.get("country_code"),
         )
     except (KeyError, IndexError, TypeError) as error:
         raise WeatherError(f"unexpected geocoding data: {error!r}") from error
 
 
-def fetch_forecast(place: Place, temperature_unit: str = "celsius") -> dict:
-    return _get_json(
+def fetch_forecast(place: Place, temperature_unit: str) -> Forecast:
+    raw = _get_json(
         FORECAST_URL,
         {
             "latitude": place.latitude,
@@ -149,9 +146,11 @@ def fetch_forecast(place: Place, temperature_unit: str = "celsius") -> dict:
             "forecast_days": UPCOMING_DAYS + 1,
         },
     )
+    return parse_forecast(raw, place.name)
 
 
 def parse_forecast(raw: dict, place_name: str, now: datetime | None = None) -> Forecast:
+    """The forecast from now on, from Open-Meteo's answer."""
     try:
         return _parse_forecast(raw, place_name, now)
     except (KeyError, IndexError, TypeError, ValueError) as error:

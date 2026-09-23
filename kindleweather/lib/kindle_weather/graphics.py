@@ -1,4 +1,7 @@
-"""Grayscale palette, weather icons and text helpers."""
+"""Gray levels, the drawn icons of the "classic" set, chart patterns and text helpers.
+
+Functions take a Canvas as `draw`, and a center and a radius for the icons.
+"""
 
 from __future__ import annotations
 
@@ -12,10 +15,10 @@ from kindle_weather.weather import (
     THUNDERSTORM_CODES,
 )
 
+# Gray levels, from 0 (black) to 255 (white).
 BLACK, INK = 0, 25
 GRAY_DARK, GRAY_MID = 90, 150
 GRAY_LIGHT, GRAY_PALE = 205, 236
-WHITE = 255
 
 # Lightning bolt of the thunderstorm icon, in icon radii from the icon center.
 BOLT_SHAPE = ((0.1, 0.35), (-0.25, 0.95), (0.05, 0.95), (-0.2, 1.5), (0.4, 0.7), (0.1, 0.7))

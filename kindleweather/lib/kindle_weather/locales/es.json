@@ -17,11 +17,7 @@
     "storm": "Tormenta",
     "snow": "Nieve",
     "updated": "Actualizado el {}",
-    "variable": "Tiempo variable",
-    "kual_start": "Iniciar la estación meteorológica",
-    "kual_diagnostic": "Diagnóstico",
-    "starting": "Iniciando la estación meteorológica...",
-    "low_battery": "Batería baja"
+    "variable": "Tiempo variable"
   },
   "weather": {
     "0": "Cielo despejado",
