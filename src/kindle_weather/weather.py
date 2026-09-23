@@ -50,6 +50,8 @@ class Place:
     name: str
     latitude: float
     longitude: float
+    country: str | None = None
+    country_code: str | None = None
 
 
 @dataclass(frozen=True)
@@ -104,7 +106,13 @@ def geocode(city: str, country_code: str | None, language: str) -> Place:
         raise LocationNotFound(f"city not found: {where}")
     try:
         best = results[0]
-        return Place(name=best["name"], latitude=best["latitude"], longitude=best["longitude"])
+        return Place(
+            name=best["name"],
+            latitude=best["latitude"],
+            longitude=best["longitude"],
+            country=best.get("country"),
+            country_code=best.get("country_code"),
+        )
     except (KeyError, IndexError, TypeError) as error:
         raise WeatherError(f"unexpected geocoding data: {error!r}") from error
 

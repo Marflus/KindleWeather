@@ -24,4 +24,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: shellcheck --shell=sh --severity=warning kindle/extension/bin/*.sh
+      - run: shellcheck --shell=sh --severity=warning src/kindle_weather/kindle_extension/bin/*.sh

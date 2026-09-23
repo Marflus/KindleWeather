@@ -27,7 +27,7 @@ version = { attr = "kindle_weather.__version__" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-kindle_weather = ["locales/*.json", "icon_fonts/*"]
+kindle_weather = ["locales/*.json", "icon_fonts/*", "kindle_extension/**/*"]
 
 [tool.ruff]
 line-length = 100

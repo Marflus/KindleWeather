@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
 from kindle_weather.i18n import LOCALES, Locale
 from kindle_weather.icons import DEFAULT_ICON_SET, ICON_SETS
 
-DEFAULT_CONFIG_PATH = Path("config/config.json")
+# Used in a clone of the repository, as by the GitHub Actions workflow.
+REPOSITORY_CONFIG_PATH = Path("config/config.json")
 ORIENTATIONS = ("portrait", "landscape")
 TEMPERATURE_UNITS = ("celsius", "fahrenheit")
 
@@ -35,11 +37,27 @@ class Config:
     dashboard_url: str
 
 
-def load_config(path: Path = DEFAULT_CONFIG_PATH) -> Config:
+def default_config_path() -> Path:
+    """config/config.json in a clone of the repository, else in the user's settings folder."""
+    if REPOSITORY_CONFIG_PATH.is_file():
+        return REPOSITORY_CONFIG_PATH
+    if os.name == "nt" and os.environ.get("APPDATA"):
+        base = Path(os.environ["APPDATA"])
+    else:
+        base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+    return base / "kindle-weather" / "config.json"
+
+
+def load_config(path: Path) -> Config:
     try:
         raw = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
-        raise ConfigError(f"cannot read {path}: {error}") from error
+        hint = (
+            " (run `kindle-weather init` to create it)"
+            if isinstance(error, FileNotFoundError)
+            else ""
+        )
+        raise ConfigError(f"cannot read {path}: {error}{hint}") from error
     return parse_config(raw)
 
 

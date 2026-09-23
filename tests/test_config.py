@@ -1,8 +1,9 @@
+import os
 from pathlib import Path
 
 import pytest
 
-from kindle_weather.config import ConfigError, load_config, parse_config
+from kindle_weather.config import ConfigError, default_config_path, load_config, parse_config
 
 VALID = {
     "language": "en",
@@ -60,3 +61,18 @@ def test_unreadable_file(tmp_path):
     (tmp_path / "config.json").write_text("{not json")
     with pytest.raises(ConfigError, match="cannot read"):
         load_config(tmp_path / "config.json")
+
+
+def test_default_config_path(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(os, "name", "posix")
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "settings"))
+    assert default_config_path() == tmp_path / "settings" / "kindle-weather" / "config.json"
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "config.json").write_text("{}")
+    assert default_config_path() == Path("config/config.json")
+
+
+def test_missing_file_suggests_init(tmp_path):
+    with pytest.raises(ConfigError, match="kindle-weather init"):
+        load_config(tmp_path / "missing.json")
