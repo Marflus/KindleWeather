@@ -4,6 +4,7 @@ kindleweather/station.log
 kindleweather/station.pid
 kindleweather/diagnostic.txt
 kindleweather/web.pid
+kindleweather/state.json
 kindleweather/*.tmp
 
 __pycache__/

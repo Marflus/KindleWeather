@@ -1,33 +1,32 @@
 # KindleWeather
 
 Turn a jailbroken Kindle into a standalone, battery-powered weather station.
-Every hour, or at the interval you choose, the Kindle wakes up, fetches the forecast from
-[Open-Meteo](https://open-meteo.com/), draws a grayscale dashboard tuned for
-e-ink, displays it and goes back to sleep. No computer, server, account or API
-key is needed.
+Every hour, or at the interval you choose, the Kindle wakes up, fetches the
+forecast from [Open-Meteo](https://open-meteo.com/), draws a grayscale
+dashboard tuned for e-ink, displays it and goes back to sleep. No computer,
+server, account or API key is needed.
 
 <p align="center">
   <img src="preview/classic/portrait.png" alt="Portrait dashboard" height="380">
   <img src="preview/classic/landscape.png" alt="Landscape dashboard" height="380">
 </p>
 <p align="center"><sub>Portrait and landscape layouts, rendered from sample data.</sub></p>
-<p align="center">
-  <img src="preview/dark.png" alt="Dark theme" height="380">
-</p>
-<p align="center"><sub>The dark theme.</sub></p>
 
 ## Features
 
-- Now: weather, temperature, humidity and wind of the current hour, with the day's min, max, sunrise and sunset
-- Sunrise, sunset, humidity, wind, feels-like temperature, UV index, air quality and moon phase, in one grid with an icon each
-- The next 7 days, with their weather icon, max (black) and min (gray) temperatures
-- A precipitation alert for the next 24 hours: snow, thunderstorm or rain
-- A temperature chart and an hourly table for the next 24 hours, with rain, snow and thunderstorm hours shaded
-- Portrait or landscape, light or dark theme, metric or imperial units, 24-hour or 12-hour clock, three [icon sets](#icon-sets), eight [languages](#languages)
-- A refresh interval from 15 minutes to 24 hours, and an optional night pause
-- The time of the next update and the battery level of the Kindle at the bottom
-- Everything set on the Kindle, see [Settings](#settings), and updated from it in one press
-- An [error code](#error-codes) on the screen when something goes wrong, and a low battery warning
+- The weather and temperature of the current hour, with the day's max and min
+- Sunrise and sunset, wind and humidity, feels-like temperature and UV index,
+  air quality and moon phase, each with its icon
+- The next 7 days, with their weather icon, max and min temperatures
+- A precipitation alert, a temperature chart and an hourly table for the next 24 hours
+- Portrait or landscape, light or [dark](preview/dark.png) theme, metric or
+  imperial units, 24-hour or 12-hour clock, three [icon sets](#icon-sets),
+  eight [languages](#languages)
+- A refresh every 15 minutes to 24 hours, with an optional night pause
+- The time of the next update and the battery level at the bottom
+- Everything set on the Kindle, from KUAL or a settings page in its browser,
+  and updated from it in one press
+- An [error code](#error-codes) on the screen when something goes wrong
 
 ## How it works
 
@@ -42,8 +41,8 @@ Kindle, every hour (or 15 minutes to 24 hours)
 KindleWeather is a [KUAL](https://www.mobileread.com/forums/showthread.php?t=203326)
 extension. When started, it stops Amazon's interface and its background
 services, so that nothing draws over the dashboard and the battery lasts. The
-Kindle's real-time clock wakes it up for each refresh, and the e-ink screen keeps the
-image without power in between. The approach comes from
+Kindle's real-time clock wakes it up for each refresh, and the e-ink screen
+keeps the image without power in between. The approach comes from
 [kindle-weatherstation](https://github.com/mattzzw/kindle-weatherstation).
 
 ## Compatibility
@@ -72,9 +71,11 @@ The station wakes up with the clock at `/dev/rtc1`, as on the Paperwhite 2 and
    For a Paperwhite 2 or later, it is the `Update_python3_..._install_pw2_and_up.bin`
    file of the package: copy it to the `mrpackages` folder of the Kindle, then
    run **KUAL > Helper > Install MR Packages**.
-2. **Download KindleWeather**: [KindleWeather-main.zip](https://github.com/Marflus/KindleWeather/archive/refs/heads/main.zip),
+2. **Download KindleWeather**: `kindleweather.zip` from the
+   [latest release](https://github.com/Marflus/KindleWeather/releases/latest),
+   or [the repository](https://github.com/Marflus/KindleWeather/archive/refs/heads/main.zip),
    and extract it.
-3. **Copy the `kindleweather` folder** of the zip into the `extensions` folder
+3. **Copy its `kindleweather` folder** into the `extensions` folder
    of the Kindle, next to `documents`, with the Kindle plugged in over USB.
    KUAL creates `extensions` when it is installed; if it is missing, create it.
 4. **Set your city**: eject the Kindle and unplug it, open
@@ -107,10 +108,10 @@ settings; the result is written at the top of the screen. Close and reopen KUAL
 to see the new menu.
 
 By hand: save your `config.json`, replace the `kindleweather` folder with the
-new one, put your `config.json` back, then restart the Kindle and start the
-station again. With [USBNetwork](https://www.mobileread.com/forums/showthread.php?t=225030)
-and SSH, from the folder holding the new `kindleweather` folder (with the Kindle
-restarted first, since the station turns Wi-Fi off between refreshes):
+new one and put your `config.json` back. With
+[USBNetwork](https://www.mobileread.com/forums/showthread.php?t=225030) and
+SSH, from the folder holding the new `kindleweather` folder, the Kindle
+restarted first (the station turns Wi-Fi off between refreshes):
 
 ```sh
 ssh root@KINDLE_IP "cp /mnt/us/extensions/kindleweather/config.json /mnt/us/config.json.bak && rm -rf /mnt/us/extensions/kindleweather"
@@ -162,7 +163,8 @@ Press **Close the settings page** when done.
 
 The page is served by the Kindle itself, on port 8765 of its Wi-Fi address,
 such as `http://192.168.1.23:8765/`. A phone or a computer on the same Wi-Fi
-can open it too, at the address given at the bottom of the page. It stops after 15 minutes without use.
+can open it too, at the address given at the bottom of the page. It stops
+after 15 minutes without use.
 
 ## Configuration
 
@@ -188,13 +190,13 @@ can also be edited by hand.
 | `location.country_code` | Optional two-letter country code (`"FR"`, `"US"`...) to pick the right city among homonyms. |
 | `location.id` | Optional Open-Meteo identifier of the city, set when it is chosen from the settings: the exact place, whatever its homonyms. |
 | `display.width`, `display.height` | Screen size in pixels, in portrait, see [Compatibility](#compatibility). |
-| `display.orientation` | `"portrait"` (default) or `"landscape"`. In landscape, read the Kindle turned a quarter turn clockwise. |
+| `display.orientation` | `"portrait"` (default) or `"landscape"`, read with the Kindle turned a quarter turn clockwise. |
 | `display.icons` | `"classic"` (default), `"weather-icons"` or `"material"`, see [Icon sets](#icon-sets). |
 | `display.theme` | `"light"` (default), or `"dark"`: white on black. |
 | `units` | `"metric"` (default): °C and km/h, or `"imperial"`: °F and mph. |
 | `clock` | `"24h"` (default) or `"12h"`, with AM and PM. |
-| `refresh_minutes` | Minutes between two refreshes, from 5 to 1440; 60 by default. The menu offers 15 minutes to 24 hours. Frequent refreshes drain the battery faster, and Open-Meteo's forecast changes little within an hour. |
-| `night_pause` | `"off"` (default), or the hours between which the dashboard is not refreshed, in the city's time, such as `"23-6"`: the Kindle sleeps through, and wakes up at 6:00. |
+| `refresh_minutes` | Minutes between two refreshes, from 5 to 1440; 60 by default. Frequent refreshes drain the battery faster, and the forecast changes little within an hour. |
+| `night_pause` | `"off"` (default), or the hours without refresh, in the city's time, such as `"23-6"`: the Kindle sleeps through and wakes up at 6:00. |
 
 Changes made to the file while the station runs apply at the next refresh.
 
@@ -206,7 +208,8 @@ Polish (`pl`). Each language is a file in
 [`kindleweather/lib/kindle_weather/locales`](kindleweather/lib/kindle_weather/locales):
 to add one, copy `en.json`, translate the values, name the file after the
 language code and add it to the language menu in
-[`settings.py`](kindleweather/lib/kindle_weather/settings.py). The KUAL menu and the messages of the station are in English.
+[`settings.py`](kindleweather/lib/kindle_weather/settings.py). The KUAL menu
+and the messages of the station are in English.
 
 ## Icon sets
 
@@ -251,7 +254,8 @@ kindleweather/            the KUAL extension, copied as is to the Kindle
     web.sh                    opens the settings page in the browser
     update.sh                 the Update KindleWeather button
     common.sh                 paths, messages and Python lookup
-  lib/kindle_weather/       Python package drawing the dashboard, standard library only
+  lib/kindle_weather/       Python package, standard library only
+    __init__.py               version
     __main__.py               entry point: draws dashboard.png or reports the error
     config.py                 reads config.json
     schedule.py               when to refresh next, with the night pause

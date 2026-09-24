@@ -16,6 +16,7 @@ python_check() {
 rm -f "$TEST_IMAGE"
 {
     echo "KindleWeather diagnostic, $(date)"
+    echo "version: $(sed -n 's/^__version__ = "\(.*\)"/\1/p' "$EXTENSION_DIR/lib/kindle_weather/__init__.py")"
     echo "folder: $EXTENSION_DIR"
     echo "user: $(id -u), the station needs 0 (root)"
     echo "firmware: $(cat /etc/prettyversion.txt 2>/dev/null)"
@@ -67,7 +68,7 @@ else
     /usr/sbin/eips -c
 fi
 row=1
-grep -E "^(user|python|wifi|drawing|dns|time|result):" "$REPORT" | cut -c 1-60 >"$REPORT.summary"
+grep -E "^(version|user|python|wifi|drawing|dns|time|result):" "$REPORT" | cut -c 1-60 >"$REPORT.summary"
 while IFS= read -r line; do
     /usr/sbin/eips 1 "$row" "$line"
     row=$((row + 1))

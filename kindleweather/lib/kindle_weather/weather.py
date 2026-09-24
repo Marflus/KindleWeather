@@ -102,10 +102,6 @@ class DayForecast:
     temperature_max: float
     temperature_min: float
 
-    @property
-    def temperature_mean(self) -> int:
-        return round((round(self.temperature_max) + round(self.temperature_min)) / 2)
-
 
 @dataclass(frozen=True)
 class Forecast:

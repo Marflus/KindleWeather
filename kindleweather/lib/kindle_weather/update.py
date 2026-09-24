@@ -87,7 +87,16 @@ def main() -> None:
         print(f"Update failed: {error}", file=sys.stderr)
         print("Update failed: check the Wi-Fi connection")
         return
-    print(f"KindleWeather updated ({commit or 'latest version'})")
+    installed = EXTENSION_DIR / "lib" / "kindle_weather" / "__init__.py"
+    version = next(
+        (
+            line.split('"')[1]
+            for line in installed.read_text().splitlines()
+            if "__version__" in line
+        ),
+        "?",
+    )
+    print(f"KindleWeather updated to {version}" + (f" ({commit})" if commit else ""))
 
 
 if __name__ == "__main__":
