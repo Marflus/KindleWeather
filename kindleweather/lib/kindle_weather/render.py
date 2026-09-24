@@ -309,25 +309,27 @@ class _Dashboard:
         center_y = (main_top + main_bottom) / 2
 
         # The weather icon under the city, the temperature and description,
-        # then the day's max and min: one group, centered in the card.
+        # then the day's max and min: one group, centered in the card, spread
+        # halfway between packed together and pushed to the edges.
         place = forecast.place_name.upper()
         place_box = draw.textbbox((0, 0), place, font=fonts["location"])
         icon_column = max(150, place_box[2] - place_box[0])
         max_text = f"Max {self._temperature(forecast.today.temperature_max)}"
         min_text = f"Min {self._temperature(forecast.today.temperature_min)}"
         min_max_width = max(text_width(draw, t, fonts["min_max"]) for t in (max_text, min_text))
-        gap = 56
         # The temperature and description shrink if needed, such as for
         # "-12°C" or a long description.
         temperature = self._temperature(forecast.current.temperature)
         description = self.locale.describe(forecast.current.weather_code)
-        space = right - left - icon_column - min_max_width - 2 * gap
+        space = right - left - icon_column - min_max_width - 2 * 56
         temperature_font = _shrink_to_fit(draw, temperature, fonts["temperature"], space)
         description_font = _shrink_to_fit(draw, description, fonts["description"], space)
         block_width = max(
             text_width(draw, temperature, temperature_font),
             text_width(draw, description, description_font),
         )
+        edge_gap = (right - left - icon_column - block_width - min_max_width) / 2
+        gap = max(56, edge_gap * 0.55)
         group_width = icon_column + gap + block_width + gap + min_max_width
         icon_left = max(left, (left + right - group_width) / 2)
 
