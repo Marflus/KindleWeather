@@ -308,13 +308,32 @@ class _Dashboard:
         left, right = MARGIN + 24, self.width - MARGIN - 24
         center_y = (main_top + main_bottom) / 2
 
-        # The city over the weather icon, on the left.
+        # The weather icon under the city, the temperature and description,
+        # then the day's max and min: one group, centered in the card.
         place = forecast.place_name.upper()
         place_box = draw.textbbox((0, 0), place, font=fonts["location"])
-        place_column = max(150, place_box[2] - place_box[0])
+        icon_column = max(150, place_box[2] - place_box[0])
+        max_text = f"Max {self._temperature(forecast.today.temperature_max)}"
+        min_text = f"Min {self._temperature(forecast.today.temperature_min)}"
+        min_max_width = max(text_width(draw, t, fonts["min_max"]) for t in (max_text, min_text))
+        gap = 56
+        # The temperature and description shrink if needed, such as for
+        # "-12°C" or a long description.
+        temperature = self._temperature(forecast.current.temperature)
+        description = self.locale.describe(forecast.current.weather_code)
+        space = right - left - icon_column - min_max_width - 2 * gap
+        temperature_font = _shrink_to_fit(draw, temperature, fonts["temperature"], space)
+        description_font = _shrink_to_fit(draw, description, fonts["description"], space)
+        block_width = max(
+            text_width(draw, temperature, temperature_font),
+            text_width(draw, description, description_font),
+        )
+        group_width = icon_column + gap + block_width + gap + min_max_width
+        icon_left = max(left, (left + right - group_width) / 2)
+
         draw_centered_text(
             draw,
-            left + place_column / 2,
+            icon_left + icon_column / 2,
             main_top - place_box[1],
             place,
             fonts["location"],
@@ -322,32 +341,15 @@ class _Dashboard:
         )
         icon_top = main_top + place_box[3] - place_box[1] + 12
         self.icons.draw(
-            draw, forecast.current.weather_code, (left, icon_top, left + place_column, main_bottom)
+            draw,
+            forecast.current.weather_code,
+            (icon_left, icon_top, icon_left + icon_column, main_bottom),
         )
-
-        # The day's max and min, on the right.
-        max_text = f"Max {self._temperature(forecast.today.temperature_max)}"
-        min_text = f"Min {self._temperature(forecast.today.temperature_min)}"
-        min_max_width = max(text_width(draw, t, fonts["min_max"]) for t in (max_text, min_text))
-        min_max_x = right - min_max_width
-        min_max = [(max_text, fonts["min_max"], INK), (min_text, fonts["min_max"], GRAY_DARK)]
-        self._text_stack(min_max_x, center_y, min_max, 14)
-
-        # The temperature and description, centered between them; both shrink
-        # if needed, such as for "-12°C" or a long description.
-        temperature = self._temperature(forecast.current.temperature)
-        description = self.locale.describe(forecast.current.weather_code)
-        space_left, space_right = left + place_column + 30, min_max_x - 30
-        space = space_right - space_left
-        temperature_font = _shrink_to_fit(draw, temperature, fonts["temperature"], space)
-        description_font = _shrink_to_fit(draw, description, fonts["description"], space)
-        block_width = max(
-            text_width(draw, temperature, temperature_font),
-            text_width(draw, description, description_font),
-        )
-        block_x = (space_left + space_right - block_width) / 2
+        block_x = icon_left + icon_column + gap
         main = [(temperature, temperature_font, INK), (description, description_font, INK)]
         self._text_stack(block_x, center_y, main, 18)
+        min_max = [(max_text, fonts["min_max"], INK), (min_text, fonts["min_max"], GRAY_DARK)]
+        self._text_stack(block_x + block_width + gap, center_y, min_max, 14)
 
         draw.line([(left, main_bottom + 6), (right, main_bottom + 6)], fill=GRAY_LIGHT, width=2)
         self._details_grid(left, right, grid_top)
@@ -372,27 +374,20 @@ class _Dashboard:
         # inverts the picture. Half a cycle later, the shadow has the lit
         # part's shape.
         moon_icon = (phase + 4) % 8 if self.dark != self.icons.moon_draws_lit else phase
+        sunrise = ("sunrise", labels["sunrise"], self._clock_time(forecast.sunrise))
+        sunset = ("sunset", labels["sunset"], self._clock_time(forecast.sunset))
+        wind = ("wind", labels["wind"], f"{round(current.wind_speed)} {forecast.wind_unit}")
+        humidity = ("humidity", labels["humidity"], f"{round(current.humidity)} %")
+        feels_like = ("feels_like", labels["feels_like"], self._temperature(current.feels_like))
+        uv_level = "—" if uv is None else f"{round(uv)} · {locale.uv_levels[_level(uv, UV_LEVELS)]}"
+        air_level = "—" if air is None else f"{air} · {locale.air_levels[_level(air, AIR_LEVELS)]}"
+        # Read by column: the sun, wind and humidity, temperature and UV, air and moon.
         rows = (
+            (sunrise, wind, feels_like, ("air", labels["air"], air_level)),
             (
-                ("sunrise", labels["sunrise"], self._clock_time(forecast.sunrise)),
-                ("sunset", labels["sunset"], self._clock_time(forecast.sunset)),
-                ("humidity", labels["humidity"], f"{round(current.humidity)} %"),
-                ("wind", labels["wind"], f"{round(current.wind_speed)} {forecast.wind_unit}"),
-            ),
-            (
-                ("feels_like", labels["feels_like"], self._temperature(current.feels_like)),
-                (
-                    "uv",
-                    labels["uv"],
-                    "—"
-                    if uv is None
-                    else f"{round(uv)} · {locale.uv_levels[_level(uv, UV_LEVELS)]}",
-                ),
-                (
-                    "air",
-                    labels["air"],
-                    "—" if air is None else f"{air} · {locale.air_levels[_level(air, AIR_LEVELS)]}",
-                ),
+                sunset,
+                humidity,
+                ("uv", labels["uv"], uv_level),
                 (f"moon{moon_icon}", labels["moon"], locale.moon_phases[phase]),
             ),
         )
