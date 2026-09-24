@@ -19,8 +19,8 @@ key is needed.
 ## Features
 
 - Now: weather, temperature, humidity and wind of the current hour, with the day's min, max, sunrise and sunset
-- Feels-like temperature, UV index, air quality and moon phase, each with its icon
-- The next 7 days, with their weather icon, max and min temperatures
+- Sunrise, sunset, humidity, wind, feels-like temperature, UV index, air quality and moon phase, in one grid with an icon each
+- The next 7 days, with their weather icon, max (black) and min (gray) temperatures
 - A precipitation alert for the next 24 hours: snow, thunderstorm or rain
 - A temperature chart and an hourly table for the next 24 hours, with rain, snow and thunderstorm hours shaded
 - Portrait or landscape, light or dark theme, metric or imperial units, 24-hour or 12-hour clock, three [icon sets](#icon-sets), eight [languages](#languages)

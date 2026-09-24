@@ -48,13 +48,12 @@ FONT_SPECS = {
     "panel_label": (ROBOTO, 20),
     "panel_value": (ROBOTO_BOLD, 24),
     "day": (ROBOTO_BOLD, 22),
-    "day_temperature": (ROBOTO_BOLD, 30),
+    "day_temperature": (ROBOTO_BOLD, 28),
     "banner": (ROBOTO_BOLD, 24),
     "axis": (ROBOTO, 18),
     "row": (ROBOTO_BOLD, 26),
     "row_small": (ROBOTO, 19),
     "footer": (ROBOTO, 16),
-    "day_min": (ROBOTO, 24),
 }
 
 # Upper bounds of the UV index levels (low, moderate, high, very high; then
@@ -80,9 +79,9 @@ class Layout:
 
     size: tuple[int, int]
     top: int
-    card_height: int
-    panel_width: int
-    details_height: int
+    # Today's card: the current weather, then two rows of details.
+    main_height: int
+    detail_row_height: int
     days_height: int
     chart_height: int
     table_columns: int
@@ -95,11 +94,10 @@ LAYOUTS = {
     "portrait": Layout(
         size=(1072, 1448),
         top=36,
-        card_height=270,
-        panel_width=300,
-        details_height=84,
+        main_height=160,
+        detail_row_height=62,
         days_height=150,
-        chart_height=200,
+        chart_height=190,
         table_columns=2,
         row_height=62,
         column_gap=40,
@@ -108,11 +106,10 @@ LAYOUTS = {
     "landscape": Layout(
         size=(1448, 1072),
         top=28,
-        card_height=250,
-        panel_width=520,
-        details_height=76,
+        main_height=140,
+        detail_row_height=56,
         days_height=130,
-        chart_height=90,
+        chart_height=80,
         table_columns=3,
         row_height=48,
         column_gap=24,
@@ -277,7 +274,6 @@ class _Dashboard:
 
     def render(self, battery: int | None) -> Picture:
         y = self._summary(self.layout.top)
-        y = self._details_strip(y + 14)
         if self.forecast.upcoming_days:
             y = self._upcoming_days(y + 14)
         y = self._precipitation_banner(y + 14)
@@ -297,52 +293,51 @@ class _Dashboard:
         self.draw.line([(MARGIN, y), (self.width - MARGIN, y)], fill=GRAY_LIGHT, width=2)
 
     def _summary(self, top: int) -> int:
-        """Today's card: date on top; city and the current weather, temperature, the day's
-        min and max; details panel."""
-        draw, fonts, forecast = self.draw, self.fonts, self.forecast
-        bottom = top + self.layout.card_height
-        panel_width, padding = self.layout.panel_width, 24
+        """Today's card: the date; the current weather with the day's max and min;
+        then two rows of details, from sunrise to the moon phase."""
+        draw, fonts, forecast, layout = self.draw, self.fonts, self.forecast, self.layout
+        main_top = top + 70
+        main_bottom = main_top + layout.main_height
+        grid_top = main_bottom + 16
+        bottom = grid_top + 2 * layout.detail_row_height + 12
         draw.rounded_rectangle(
             [MARGIN, top, self.width - MARGIN, bottom], radius=22, fill=GRAY_PALE
         )
         date = self.locale.format_long_date(forecast.observed_at)
         draw_centered_text(draw, self.width // 2, top + 20, date, fonts["date"], INK)
+        left, right = MARGIN + 24, self.width - MARGIN - 24
+        center_y = (main_top + main_bottom) / 2
 
-        body_top, body_bottom = top + 70, bottom - 18
-        center_y = (body_top + body_bottom) // 2
-        divider_x = self.width - MARGIN - panel_width - 2 * padding
-        draw.line([(divider_x, body_top), (divider_x, body_bottom)], fill=GRAY_LIGHT, width=2)
-        left, right = MARGIN + padding, divider_x - padding
-
+        # The city over the weather icon, on the left.
         place = forecast.place_name.upper()
         place_box = draw.textbbox((0, 0), place, font=fonts["location"])
-        place_column = max(130, place_box[2] - place_box[0])
+        place_column = max(150, place_box[2] - place_box[0])
         draw_centered_text(
             draw,
             left + place_column / 2,
-            body_top - place_box[1],
+            main_top - place_box[1],
             place,
             fonts["location"],
             GRAY_DARK,
         )
-        icon_top = body_top + place_box[3] - place_box[1] + 12
+        icon_top = main_top + place_box[3] - place_box[1] + 12
         self.icons.draw(
-            draw, forecast.current.weather_code, (left, icon_top, left + place_column, body_bottom)
+            draw, forecast.current.weather_code, (left, icon_top, left + place_column, main_bottom)
         )
 
-        unit = forecast.temperature_unit
-        max_text = f"Max {round(forecast.today.temperature_max)}{unit}"
-        min_text = f"Min {round(forecast.today.temperature_min)}{unit}"
+        # The day's max and min, on the right.
+        max_text = f"Max {self._temperature(forecast.today.temperature_max)}"
+        min_text = f"Min {self._temperature(forecast.today.temperature_min)}"
         min_max_width = max(text_width(draw, t, fonts["min_max"]) for t in (max_text, min_text))
         min_max_x = right - min_max_width
         min_max = [(max_text, fonts["min_max"], INK), (min_text, fonts["min_max"], GRAY_DARK)]
         self._text_stack(min_max_x, center_y, min_max, 14)
 
-        # Temperature and description, centered between the city column and min/max.
-        temperature = f"{round(forecast.current.temperature)}{unit}"
+        # The temperature and description, centered between them; both shrink
+        # if needed, such as for "-12°C" or a long description.
+        temperature = self._temperature(forecast.current.temperature)
         description = self.locale.describe(forecast.current.weather_code)
         space_left, space_right = left + place_column + 30, min_max_x - 30
-        # Both shrink if needed, such as for "-12°C" or a long description.
         space = space_right - space_left
         temperature_font = _shrink_to_fit(draw, temperature, fonts["temperature"], space)
         description_font = _shrink_to_fit(draw, description, fonts["description"], space)
@@ -354,7 +349,8 @@ class _Dashboard:
         main = [(temperature, temperature_font, INK), (description, description_font, INK)]
         self._text_stack(block_x, center_y, main, 18)
 
-        self._details_panel(divider_x + padding, center_y, panel_width)
+        draw.line([(left, main_bottom + 6), (right, main_bottom + 6)], fill=GRAY_LIGHT, width=2)
+        self._details_grid(left, right, grid_top)
         return bottom
 
     def _text_stack(self, x: float, center_y: float, lines, gap: int) -> None:
@@ -366,98 +362,82 @@ class _Dashboard:
             self.draw.text((x, y - box[1]), text, font=font, fill=fill)
             y += height + gap
 
-    def _details_panel(self, left: int, center_y: int, width: int) -> None:
-        labels = self.locale.labels
-        # Sunrise and sunset of the day, humidity and wind of the hour in progress.
-        humidity = round(self.forecast.current.humidity)
-        wind = round(self.forecast.current.wind_speed)
-        # Row by row: sunrise and humidity, then sunset and wind.
-        cells = (
-            (labels["sunrise"], self._clock_time(self.forecast.sunrise), "sunrise"),
-            (labels["humidity"], f"{humidity} %", "humidity"),
-            (labels["sunset"], self._clock_time(self.forecast.sunset), "sunset"),
-            (labels["wind"], f"{wind} {self.forecast.wind_unit}", "wind"),
-        )
-        cell_height, icon_size, inset = 64, 34, 14
-        top = center_y - (cell_height + 50) // 2
-        # Fixed grid so icons and labels stay aligned across rows of different text widths.
-        for i, (label, value, kind) in enumerate(cells):
-            row, column = divmod(i, 2)
-            cell_left = left + column * (width // 2)
-            y = top + row * cell_height
-            icon_left, icon_top = cell_left + inset, y + 20 - icon_size // 2
-            self.icons.draw(
-                self.draw, kind, (icon_left, icon_top, icon_left + icon_size, icon_top + icon_size)
-            )
-            text_x = icon_left + icon_size + 10
-            self.draw.text((text_x, y + 2), label, font=self.fonts["panel_label"], fill=GRAY_DARK)
-            self.draw.text((text_x, y + 24), value, font=self.fonts["panel_value"], fill=INK)
-
-    def _details_strip(self, top: int) -> int:
-        """Feels like, UV index, air quality and moon phase, each with its icon."""
+    def _details_grid(self, left: float, right: float, top: float) -> None:
+        """Two rows of four details, each an icon over its label and value."""
         forecast, labels, locale = self.forecast, self.locale.labels, self.locale
-        height = self.layout.details_height
-        self.draw.rounded_rectangle(
-            [MARGIN, top, self.width - MARGIN, top + height], radius=16, outline=GRAY_LIGHT, width=2
-        )
-        uv = forecast.uv_index
-        air = forecast.air_quality
+        current = forecast.current
+        uv, air = forecast.uv_index, forecast.air_quality
         phase = round(moon_phase(forecast.observed_at.date()) * 8) % 8
         # The moon's lit part must end up light: black before the dark theme
         # inverts the picture. Half a cycle later, the shadow has the lit
         # part's shape.
         moon_icon = (phase + 4) % 8 if self.dark != self.icons.moon_draws_lit else phase
-        cells = (
-            ("feels_like", labels["feels_like"], self._temperature(forecast.current.feels_like)),
+        rows = (
             (
-                "uv",
-                labels["uv"],
-                "—" if uv is None else f"{round(uv)} · {locale.uv_levels[_level(uv, UV_LEVELS)]}",
+                ("sunrise", labels["sunrise"], self._clock_time(forecast.sunrise)),
+                ("sunset", labels["sunset"], self._clock_time(forecast.sunset)),
+                ("humidity", labels["humidity"], f"{round(current.humidity)} %"),
+                ("wind", labels["wind"], f"{round(current.wind_speed)} {forecast.wind_unit}"),
             ),
             (
-                "air",
-                labels["air"],
-                "—" if air is None else f"{air} · {locale.air_levels[_level(air, AIR_LEVELS)]}",
+                ("feels_like", labels["feels_like"], self._temperature(current.feels_like)),
+                (
+                    "uv",
+                    labels["uv"],
+                    "—"
+                    if uv is None
+                    else f"{round(uv)} · {locale.uv_levels[_level(uv, UV_LEVELS)]}",
+                ),
+                (
+                    "air",
+                    labels["air"],
+                    "—" if air is None else f"{air} · {locale.air_levels[_level(air, AIR_LEVELS)]}",
+                ),
+                (f"moon{moon_icon}", labels["moon"], locale.moon_phases[phase]),
             ),
-            (f"moon{moon_icon}", labels["moon"], locale.moon_phases[phase]),
         )
-        # Each cell as wide as its text needs, plus an equal share of the rest:
-        # a long moon phase name gets the room a short temperature leaves.
-        icon_size, middle, padding = 40, top + height / 2, 18 + 40 + 12 + 12
+
+        # Columns as wide as their widest cell, plus an equal share of the
+        # rest: the cells line up in both rows, and a long moon phase name
+        # keeps its size.
         label_font, value_font = self.fonts["panel_label"], self.fonts["panel_value"]
-        needs = [
-            padding
-            + max(
+        icon_size, gap, padding = 34, 10, 20
+
+        def need(cell) -> float:
+            _, label, value = cell
+            words = max(
                 text_width(self.draw, label, label_font), text_width(self.draw, value, value_font)
             )
-            for _, label, value in cells
-        ]
-        room = self.width - 2 * MARGIN
-        spare = room - sum(needs)
-        widths = [
-            need + spare / len(cells) if spare > 0 else need * room / sum(needs) for need in needs
-        ]
-        left = MARGIN
-        for i, ((icon, label, value), cell_width) in enumerate(zip(cells, widths)):
-            if i:
+            return icon_size + gap + words + padding
+
+        needs = [max(need(row[column]) for row in rows) for column in range(4)]
+        room, spare = right - left, right - left - sum(needs)
+        widths = [need + spare / 4 if spare > 0 else need * room / sum(needs) for need in needs]
+        row_height = self.layout.detail_row_height
+        x = left
+        for column, width in enumerate(widths):
+            if column:
                 self.draw.line(
-                    [(left, top + 14), (left, top + height - 14)], fill=GRAY_LIGHT, width=2
+                    [(x - padding / 2, top + 4), (x - padding / 2, top + 2 * row_height - 4)],
+                    fill=GRAY_LIGHT,
+                    width=2,
                 )
-            icon_left = left + 18
-            self.icons.draw(
-                self.draw,
-                icon,
-                (icon_left, middle - icon_size / 2, icon_left + icon_size, middle + icon_size / 2),
-            )
-            text_x = icon_left + icon_size + 12
-            space = left + cell_width - 12 - text_x
-            fitted_label = _shrink_to_fit(self.draw, label, label_font, space)
-            fitted_value = _shrink_to_fit(self.draw, value, value_font, space)
-            # Fixed lines, as in the details panel, so that the cells line up.
-            self.draw.text((text_x, middle - 25), label, font=fitted_label, fill=GRAY_DARK)
-            self.draw.text((text_x, middle - 2), value, font=fitted_value, fill=INK)
-            left += cell_width
-        return top + height
+            for row_index, row in enumerate(rows):
+                icon, label, value = row[column]
+                middle = top + row_index * row_height + row_height / 2
+                self.icons.draw(
+                    self.draw,
+                    icon,
+                    (x, middle - icon_size / 2, x + icon_size, middle + icon_size / 2),
+                )
+                text_x = x + icon_size + gap
+                space = x + width - padding - text_x
+                fitted_label = _shrink_to_fit(self.draw, label, label_font, space)
+                fitted_value = _shrink_to_fit(self.draw, value, value_font, space)
+                # Fixed lines, so that the cells line up.
+                self.draw.text((text_x, middle - 24), label, font=fitted_label, fill=GRAY_DARK)
+                self.draw.text((text_x, middle - 2), value, font=fitted_value, fill=INK)
+            x += width
 
     def _temperature(self, value: float) -> str:
         return f"{round(value)}{self.forecast.temperature_unit}"
@@ -477,13 +457,13 @@ class _Dashboard:
             )
             label = self.locale.format_short_date(day.date)
             draw_centered_text(self.draw, center_x, top + 12, label, date_font, INK)
-            # The max in bold black, the min lighter, side by side.
+            # The max in black and the min in gray, of the same size, side by side.
             high, low = (
                 self._temperature(day.temperature_max),
                 self._temperature(day.temperature_min),
             )
-            space = right - left - 16
-            high_font, low_font = self.fonts["day_temperature"], self.fonts["day_min"]
+            space = right - left - 28
+            high_font = low_font = self.fonts["day_temperature"]
             while (
                 text_width(self.draw, high, high_font) + 8 + text_width(self.draw, low, low_font)
                 > space

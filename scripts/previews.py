@@ -29,8 +29,8 @@ NOW = datetime(2026, 12, 3, 15, 2, tzinfo=ZoneInfo(TIMEZONE))
 # Snow early in the morning, rain around noon, thunderstorm in the evening.
 HOURLY_CODES = [3, 3, 71, 73, 73, 71, 3, 2, 2, 1, 3, 61, 63, 63, 80, 3, 3, 95, 95, 96, 61, 3, 2, 2]
 DAYS = range(3, 11)
-# Rows of the portrait dashboard shown in the comparison: today, details, next days.
-COMPARISON_ROWS = (16, 578)
+# Rows of the portrait dashboard shown in the comparison: today and the next days.
+COMPARISON_ROWS = (16, 592)
 
 
 def sample_forecast():
