@@ -17,8 +17,16 @@
     "storm": "Burza",
     "snow": "Śnieg",
     "updated": "Zaktualizowano {}",
-    "variable": "Zmienna pogoda"
+    "variable": "Zmienna pogoda",
+    "feels_like": "Odczuwalna",
+    "uv": "Indeks UV",
+    "air": "Jakość powietrza",
+    "moon": "Księżyc",
+    "next_update": "następna aktualizacja {}"
   },
+  "uv_levels": ["Niski", "Umiarkowany", "Wysoki", "Bardzo wysoki", "Ekstremalny"],
+  "air_levels": ["Dobra", "Umiarkowana", "Średnia", "Zła", "Bardzo zła", "Skrajnie zła"],
+  "moon_phases": ["Nów", "Przybywający sierp", "Pierwsza kwadra", "Przybywający garb", "Pełnia", "Ubywający garb", "Ostatnia kwadra", "Ubywający sierp"],
   "weather": {
     "0": "Bezchmurnie",
     "1": "Przeważnie słonecznie",

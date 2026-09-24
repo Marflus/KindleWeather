@@ -17,8 +17,16 @@
     "storm": "Temporale",
     "snow": "Neve",
     "updated": "Aggiornato il {}",
-    "variable": "Tempo variabile"
+    "variable": "Tempo variabile",
+    "feels_like": "Percepita",
+    "uv": "Indice UV",
+    "air": "Qualità dell'aria",
+    "moon": "Luna",
+    "next_update": "prossimo aggiornamento {}"
   },
+  "uv_levels": ["Basso", "Moderato", "Alto", "Molto alto", "Estremo"],
+  "air_levels": ["Buona", "Discreta", "Moderata", "Scadente", "Pessima", "Molto pessima"],
+  "moon_phases": ["Luna nuova", "Luna crescente", "Primo quarto", "Gibbosa crescente", "Luna piena", "Gibbosa calante", "Ultimo quarto", "Luna calante"],
   "weather": {
     "0": "Cielo sereno",
     "1": "Prevalentemente soleggiato",

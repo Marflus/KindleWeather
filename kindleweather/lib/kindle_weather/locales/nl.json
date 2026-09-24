@@ -17,8 +17,16 @@
     "storm": "Onweer",
     "snow": "Sneeuw",
     "updated": "Bijgewerkt op {}",
-    "variable": "Wisselvallig"
+    "variable": "Wisselvallig",
+    "feels_like": "Gevoelstemp.",
+    "uv": "UV-index",
+    "air": "Luchtkwaliteit",
+    "moon": "Maan",
+    "next_update": "volgende update {}"
   },
+  "uv_levels": ["Laag", "Matig", "Hoog", "Zeer hoog", "Extreem"],
+  "air_levels": ["Goed", "Redelijk", "Matig", "Slecht", "Zeer slecht", "Extreem slecht"],
+  "moon_phases": ["Nieuwe maan", "Wassende sikkel", "Eerste kwartier", "Wassende maan", "Volle maan", "Afnemende maan", "Laatste kwartier", "Afnemende sikkel"],
   "weather": {
     "0": "Onbewolkt",
     "1": "Overwegend zonnig",

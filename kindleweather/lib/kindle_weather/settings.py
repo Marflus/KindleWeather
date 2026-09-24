@@ -17,12 +17,10 @@ import sys
 import unicodedata
 from pathlib import Path
 
-from kindle_weather.config import Config, load_config
+from kindle_weather.config import CONFIG_PATH, EXTENSION_DIR, Config, load_config
 from kindle_weather.location import detect_place
 from kindle_weather.weather import Place
 
-EXTENSION_DIR = Path(__file__).resolve().parents[2]
-CONFIG_PATH = EXTENSION_DIR / "config.json"
 MENU_PATH = EXTENSION_DIR / "menu.json"
 
 # For each setting: its menu label, its keys in config.json, and its values with
@@ -52,10 +50,15 @@ SETTINGS = {
         ("display", "icons"),
         {"classic": "Classic", "weather-icons": "Weather Icons", "material": "Material"},
     ),
-    "temperature": (
-        "Temperature",
-        ("temperature_unit",),
-        {"celsius": "Celsius", "fahrenheit": "Fahrenheit"},
+    "theme": (
+        "Theme",
+        ("display", "theme"),
+        {"light": "Light", "dark": "Dark"},
+    ),
+    "units": (
+        "Units",
+        ("units",),
+        {"metric": "Metric (C, km/h)", "imperial": "Imperial (F, mph)"},
     ),
     "clock": (
         "Clock",
@@ -76,6 +79,18 @@ SETTINGS = {
             1440: "Every 24 hours",
         },
     ),
+    "night": (
+        "Night pause",
+        ("night_pause",),
+        {
+            "off": "Off",
+            "22-6": "22:00 to 6:00",
+            "23-6": "23:00 to 6:00",
+            "23-7": "23:00 to 7:00",
+            "0-6": "0:00 to 6:00",
+            "0-7": "0:00 to 7:00",
+        },
+    ),
 }
 
 
@@ -85,9 +100,11 @@ def current_values(config: Config) -> dict:
         "language": config.locale.code,
         "orientation": config.orientation,
         "icons": config.icon_set,
-        "temperature": config.temperature_unit,
+        "theme": config.theme,
+        "units": config.units,
         "clock": config.clock,
         "refresh": config.refresh_minutes,
+        "night": "-".join(map(str, config.night_pause)) if config.night_pause else "off",
     }
 
 
@@ -180,6 +197,14 @@ def write_menu() -> None:
         {"name": "Start weather station", "priority": 1, "action": "sh bin/start.sh"},
         {"name": "Settings", "priority": 2, "items": settings},
         {"name": "Diagnostic", "priority": 3, "action": "sh bin/diagnose.sh"},
+        {
+            "name": "Update KindleWeather",
+            "priority": 4,
+            "action": "sh bin/update.sh",
+            "internal": "status Updating KindleWeather...",
+            "status": False,
+            "exitmenu": False,
+        },
     ]
     menu = {"items": [{"name": "KindleWeather", "priority": 1, "items": items}]}
     _write(MENU_PATH, json.dumps(menu, indent=2) + "\n")

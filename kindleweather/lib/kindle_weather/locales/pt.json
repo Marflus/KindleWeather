@@ -17,8 +17,16 @@
     "storm": "Trovoada",
     "snow": "Neve",
     "updated": "Atualizado em {}",
-    "variable": "Tempo instável"
+    "variable": "Tempo instável",
+    "feels_like": "Sensação",
+    "uv": "Índice UV",
+    "air": "Qualidade do ar",
+    "moon": "Lua",
+    "next_update": "próxima atualização {}"
   },
+  "uv_levels": ["Baixo", "Moderado", "Alto", "Muito alto", "Extremo"],
+  "air_levels": ["Boa", "Razoável", "Moderada", "Ruim", "Muito ruim", "Péssima"],
+  "moon_phases": ["Lua nova", "Lua crescente", "Quarto crescente", "Gibosa crescente", "Lua cheia", "Gibosa minguante", "Quarto minguante", "Lua minguante"],
   "weather": {
     "0": "Céu limpo",
     "1": "Predominantemente ensolarado",

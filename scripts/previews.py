@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import math
 import sys
-from datetime import datetime
+from dataclasses import replace
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from zoneinfo import ZoneInfo  # Python 3.9+: the previews run on a computer.
@@ -28,8 +29,8 @@ NOW = datetime(2026, 12, 3, 15, 2, tzinfo=ZoneInfo(TIMEZONE))
 # Snow early in the morning, rain around noon, thunderstorm in the evening.
 HOURLY_CODES = [3, 3, 71, 73, 73, 71, 3, 2, 2, 1, 3, 61, 63, 63, 80, 3, 3, 95, 95, 96, 61, 3, 2, 2]
 DAYS = range(3, 11)
-# Rows of the portrait dashboard shown in the comparison: today, next days, alert.
-COMPARISON_ROWS = (16, 546)
+# Rows of the portrait dashboard shown in the comparison: today, details, next days.
+COMPARISON_ROWS = (16, 578)
 
 
 def sample_forecast():
@@ -44,33 +45,41 @@ def sample_forecast():
             "temperature_2m_min": [-1.4, -2.0, -4.2, -1.1, 2.3, 3.0, -3.5, -1.0],
             "sunrise": [f"2026-12-{day:02d}T07:31" for day in DAYS],
             "sunset": [f"2026-12-{day:02d}T15:26" for day in DAYS],
+            "uv_index_max": [1.2, 0.9, 1.4, 1.1, 0.8, 1.0, 0.7, 0.9],
         },
-        "hourly_units": {"temperature_2m": "°C"},
+        "hourly_units": {"temperature_2m": "°C", "wind_speed_10m": "km/h"},
         "hourly": {
             "time": hours,
             "temperature_2m": [
                 2.4 + 3.8 * math.sin((i % 24 - 8) * math.pi / 12) for i in range(len(hours))
+            ],
+            "apparent_temperature": [
+                -1.1 + 3.5 * math.sin((i % 24 - 8) * math.pi / 12) for i in range(len(hours))
             ],
             "weather_code": HOURLY_CODES * 2,
             "relative_humidity_2m": [78 + i % 17 for i in range(len(hours))],
             "wind_speed_10m": [9 + (i * 5) % 14 for i in range(len(hours))],
         },
     }
-    return parse_forecast(raw, "Warsaw", now=NOW)
+    return replace(parse_forecast(raw, "Warsaw", now=NOW), air_quality=34)
 
 
 def main() -> None:
     forecast, english = sample_forecast(), LOCALES["en"]
+    options = {"next_update": NOW + timedelta(hours=1), "battery": 72}
     portraits = {}
     for name in ICON_SETS:
         folder = PREVIEW_DIR / name
         folder.mkdir(parents=True, exist_ok=True)
-        portraits[name] = render_dashboard(forecast, english, icon_set=name)
+        portraits[name] = render_dashboard(forecast, english, icon_set=name, **options)
         portraits[name].save(folder / "portrait.png")
-        landscape = render_dashboard(forecast, english, orientation="landscape", icon_set=name)
+        landscape = render_dashboard(
+            forecast, english, orientation="landscape", icon_set=name, **options
+        )
         # Saved upright, as read on the Kindle turned a quarter turn.
         landscape.rotated(clockwise=True).save(folder / "landscape.png")
     comparison(portraits).save(PREVIEW_DIR / "icon-sets.png")
+    render_dashboard(forecast, english, theme="dark", **options).save(PREVIEW_DIR / "dark.png")
 
 
 def comparison(portraits: dict[str, Picture]) -> Picture:

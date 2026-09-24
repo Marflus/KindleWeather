@@ -28,6 +28,9 @@ _ANTIALIAS_GRAY = 2
 _CHANNEL = 0 if sys.byteorder == "little" else 3
 
 
+_INVERT = bytes(range(255, -1, -1))
+
+
 class CanvasError(RuntimeError):
     pass
 
@@ -268,6 +271,10 @@ class Picture:
                 left = min(left, self.width - len(row.lstrip(white)))
         return None if top is None else (left, top, right, bottom)
 
+    def inverted(self) -> Picture:
+        """White on black, for the dark theme."""
+        return Picture(self.width, self.height, self.pixels.translate(_INVERT))
+
     # Used by scripts/previews.py.
 
     def crop(self, box: tuple[int, int, int, int]) -> Picture:
@@ -374,8 +381,19 @@ class Canvas:
             )
             self._stroke(outline, width)
 
-    def ellipse(self, xy, fill: int) -> None:
+    def ellipse(self, xy, fill: int | None = None, outline: int | None = None, width=1):
         (left, top), (right, bottom) = _points(xy)
+        if fill is not None:
+            self._ellipse_path(left, top, right, bottom)
+            self._fill(fill)
+            self._libs.fill(self._cr)
+        if outline is not None:
+            # Like Pillow, the outline is drawn inside the box.
+            inset = width / 2
+            self._ellipse_path(left + inset, top + inset, right - inset, bottom - inset)
+            self._stroke(outline, width)
+
+    def _ellipse_path(self, left, top, right, bottom) -> None:
         cr, libs = self._cr, self._libs
         libs.save(cr)
         libs.new_path(cr)
@@ -385,8 +403,6 @@ class Canvas:
         libs.arc(cr, 0, 0, 1, 0, 2 * math.pi)
         # The path keeps its shape once the stretching is undone.
         libs.restore(cr)
-        self._fill(fill)
-        libs.fill(cr)
 
     def pieslice(self, xy, start: float, end: float, fill: int) -> None:
         """Circular sector; angles in degrees, clockwise from 3 o'clock."""

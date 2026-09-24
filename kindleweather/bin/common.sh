@@ -34,6 +34,13 @@ find_python() {
     done
 }
 
+# Writes two lines at the top of the screen, over KUAL, for the buttons that
+# keep it open. Spaces erase the end of a longer previous line.
+say() {
+    /usr/sbin/eips 1 1 "$1                                        "
+    /usr/sbin/eips 1 2 "$2                                        "
+}
+
 # Runs a command in the background, in a session of its own, so that it
 # outlives KUAL: KUAL may signal what it started as it closes.
 detach() {

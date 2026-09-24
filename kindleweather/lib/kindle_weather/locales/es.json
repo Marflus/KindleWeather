@@ -17,8 +17,16 @@
     "storm": "Tormenta",
     "snow": "Nieve",
     "updated": "Actualizado el {}",
-    "variable": "Tiempo variable"
+    "variable": "Tiempo variable",
+    "feels_like": "Sensación",
+    "uv": "Índice UV",
+    "air": "Calidad del aire",
+    "moon": "Luna",
+    "next_update": "próxima actualización {}"
   },
+  "uv_levels": ["Bajo", "Moderado", "Alto", "Muy alto", "Extremo"],
+  "air_levels": ["Buena", "Razonable", "Regular", "Mala", "Muy mala", "Extremadamente mala"],
+  "moon_phases": ["Luna nueva", "Luna creciente", "Cuarto creciente", "Gibosa creciente", "Luna llena", "Gibosa menguante", "Cuarto menguante", "Luna menguante"],
   "weather": {
     "0": "Cielo despejado",
     "1": "Mayormente soleado",

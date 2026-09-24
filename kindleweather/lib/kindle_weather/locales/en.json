@@ -17,8 +17,16 @@
     "storm": "Storm",
     "snow": "Snow",
     "updated": "Updated {}",
-    "variable": "Variable weather"
+    "variable": "Variable weather",
+    "feels_like": "Feels like",
+    "uv": "UV index",
+    "air": "Air quality",
+    "moon": "Moon",
+    "next_update": "next update {}"
   },
+  "uv_levels": ["Low", "Moderate", "High", "Very high", "Extreme"],
+  "air_levels": ["Good", "Fair", "Moderate", "Poor", "Very poor", "Extremely poor"],
+  "moon_phases": ["New moon", "Waxing crescent", "First quarter", "Waxing gibbous", "Full moon", "Waning gibbous", "Last quarter", "Waning crescent"],
   "weather": {
     "0": "Clear sky",
     "1": "Mostly sunny",

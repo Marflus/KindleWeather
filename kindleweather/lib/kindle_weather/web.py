@@ -20,11 +20,9 @@ from contextlib import suppress
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, urlsplit
 
-from kindle_weather.config import load_config
+from kindle_weather.config import CONFIG_PATH, EXTENSION_DIR, load_config
 from kindle_weather.location import detect_place
 from kindle_weather.settings import (
-    CONFIG_PATH,
-    EXTENSION_DIR,
     SETTINGS,
     change,
     current_values,

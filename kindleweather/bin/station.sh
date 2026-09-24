@@ -85,26 +85,29 @@ draw() {
         error="$PYTHON_ERROR"
         return
     fi
-    error=$(kindle_weather --output "$IMAGE")
+    battery=$(lipc-get-prop com.lab126.powerd battLevel 2>/dev/null)
+    set -- --output "$IMAGE"
+    case "$battery" in *[!0-9]* | "") ;; *) set -- "$@" --battery "$battery" ;; esac
+    error=$(kindle_weather "$@")
     case "$error" in
         "Error E1:"*)
             # Open-Meteo is unreachable: ask for an address again, then retry once.
             log "network: $(ifconfig wlan0 2>&1 | grep 'inet '), $(tr '\n' ' ' </etc/resolv.conf)"
             udhcpc -i wlan0 -n -q >/dev/null 2>&1
-            error=$(kindle_weather --output "$IMAGE")
+            error=$(kindle_weather "$@")
             ;;
     esac
 }
 
-# Seconds until the next refresh: refresh_minutes in config.json, read at every
-# refresh so that a change applies without restarting; one hour by default.
+# Seconds until the next refresh, from refresh_minutes and night_pause in
+# config.json (see kindle_weather/schedule.py), read at every refresh so that
+# a change applies without restarting; one hour without Python.
 refresh_seconds() {
-    minutes=$(sed -n 's/.*"refresh_minutes": *\([0-9][0-9]*\).*/\1/p' "$CONFIG")
-    if [ -n "$minutes" ] && [ "$minutes" -ge 5 ]; then
-        echo $((minutes * 60))
-    else
-        echo 3600
-    fi
+    seconds=$([ -n "$PYTHON" ] && PYTHONPATH="$EXTENSION_DIR/lib" "$PYTHON" -m kindle_weather.schedule)
+    case "$seconds" in
+        *[!0-9]* | "") echo 3600 ;;
+        *) echo "$seconds" ;;
+    esac
 }
 
 battery_warning() {

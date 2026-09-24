@@ -9,9 +9,14 @@ from pathlib import Path
 from kindle_weather.i18n import LOCALES, Locale
 from kindle_weather.icons import DEFAULT_ICON_SET, ICON_SETS
 
+# The kindleweather folder, holding config.json: lib/kindle_weather/ is two levels down.
+EXTENSION_DIR = Path(__file__).resolve().parents[2]
+CONFIG_PATH = EXTENSION_DIR / "config.json"
+
 ORIENTATIONS = ("portrait", "landscape")
-TEMPERATURE_UNITS = ("celsius", "fahrenheit")
+UNITS = ("metric", "imperial")
 CLOCKS = ("24h", "12h")
+THEMES = ("light", "dark")
 
 
 class ConfigError(ValueError):
@@ -31,11 +36,17 @@ class Config:
     display_size: tuple[int, int]
     orientation: str
     icon_set: str
-    temperature_unit: str
+    # "light", or "dark": white on black.
+    theme: str
+    # "metric" (°C, km/h) or "imperial" (°F, mph).
+    units: str
     # "24h" or "12h", with AM and PM.
     clock: str
-    # Minutes between two refreshes of the dashboard, read by bin/station.sh too.
+    # Minutes between two refreshes of the dashboard.
     refresh_minutes: int
+    # Hours from and to which the dashboard is not refreshed, such as (23, 6),
+    # in the city's time; None to refresh around the clock.
+    night_pause: tuple[int, int] | None
 
 
 def load_config(path: Path) -> Config:
@@ -76,11 +87,13 @@ def load_config(path: Path) -> Config:
     icon_set = display.get("icons", DEFAULT_ICON_SET)
     _require(icon_set in ICON_SETS, f"display.icons must be one of {tuple(ICON_SETS)}")
 
-    temperature_unit = raw.get("temperature_unit", "celsius")
-    _require(
-        temperature_unit in TEMPERATURE_UNITS,
-        f"temperature_unit must be one of {TEMPERATURE_UNITS}",
-    )
+    theme = display.get("theme", "light")
+    _require(theme in THEMES, f"display.theme must be one of {THEMES}")
+
+    # Configurations from before "units" had "temperature_unit".
+    default_units = "imperial" if raw.get("temperature_unit") == "fahrenheit" else "metric"
+    units = raw.get("units", default_units)
+    _require(units in UNITS, f"units must be one of {UNITS}")
 
     clock = raw.get("clock", "24h")
     _require(clock in CLOCKS, f"clock must be one of {CLOCKS}")
@@ -91,6 +104,12 @@ def load_config(path: Path) -> Config:
         "refresh_minutes must be a number of minutes, from 5 to 1440",
     )
 
+    night_pause = raw.get("night_pause", "off")
+    _require(
+        night_pause == "off" or _parse_hours(night_pause) is not None,
+        'night_pause must be "off" or two hours, such as "23-6"',
+    )
+
     return Config(
         locale=LOCALES[language],
         city=city.strip(),
@@ -99,10 +118,23 @@ def load_config(path: Path) -> Config:
         display_size=(width, height),
         orientation=orientation,
         icon_set=icon_set,
-        temperature_unit=temperature_unit,
+        theme=theme,
+        units=units,
         clock=clock,
         refresh_minutes=refresh_minutes,
+        night_pause=None if night_pause == "off" else _parse_hours(night_pause),
     )
+
+
+def _parse_hours(text: object) -> tuple[int, int] | None:
+    """ "23-6" -> (23, 6), or None if text is not two different hours."""
+    try:
+        start, end = (int(hour) for hour in str(text).split("-"))
+    except ValueError:
+        return None
+    if 0 <= start <= 23 and 0 <= end <= 23 and start != end:
+        return start, end
+    return None
 
 
 def _require(condition: object, message: str) -> None:

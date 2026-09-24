@@ -20,6 +20,11 @@ class Locale:
     timestamp: str
     labels: dict[str, str]
     weather: dict[int, str]
+    # Levels of the UV index and of the air quality index, from the lowest;
+    # moon phases from the new moon.
+    uv_levels: tuple[str, ...]
+    air_levels: tuple[str, ...]
+    moon_phases: tuple[str, ...]
 
     def format_long_date(self, moment: datetime) -> str:
         return self.long_date.format(
@@ -51,6 +56,9 @@ def _load(path: Path) -> Locale:
         timestamp=data["timestamp"],
         labels=data["labels"],
         weather={int(code): text for code, text in data["weather"].items()},
+        uv_levels=tuple(data["uv_levels"]),
+        air_levels=tuple(data["air_levels"]),
+        moon_phases=tuple(data["moon_phases"]),
     )
 
 

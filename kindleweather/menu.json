@@ -155,22 +155,44 @@
               ]
             },
             {
-              "name": "Temperature: Celsius",
+              "name": "Theme: Light",
               "priority": 5,
               "items": [
                 {
-                  "name": "Celsius",
+                  "name": "Light",
                   "priority": 1,
-                  "action": "sh bin/set.sh temperature celsius",
-                  "internal": "status Temperature: Celsius, saved",
+                  "action": "sh bin/set.sh theme light",
+                  "internal": "status Theme: Light, saved",
                   "status": false,
                   "exitmenu": false
                 },
                 {
-                  "name": "Fahrenheit",
+                  "name": "Dark",
                   "priority": 2,
-                  "action": "sh bin/set.sh temperature fahrenheit",
-                  "internal": "status Temperature: Fahrenheit, saved",
+                  "action": "sh bin/set.sh theme dark",
+                  "internal": "status Theme: Dark, saved",
+                  "status": false,
+                  "exitmenu": false
+                }
+              ]
+            },
+            {
+              "name": "Units: Metric (C, km/h)",
+              "priority": 6,
+              "items": [
+                {
+                  "name": "Metric (C, km/h)",
+                  "priority": 1,
+                  "action": "sh bin/set.sh units metric",
+                  "internal": "status Units: Metric (C, km/h), saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "Imperial (F, mph)",
+                  "priority": 2,
+                  "action": "sh bin/set.sh units imperial",
+                  "internal": "status Units: Imperial (F, mph), saved",
                   "status": false,
                   "exitmenu": false
                 }
@@ -178,7 +200,7 @@
             },
             {
               "name": "Clock: 24-hour",
-              "priority": 6,
+              "priority": 7,
               "items": [
                 {
                   "name": "24-hour",
@@ -200,7 +222,7 @@
             },
             {
               "name": "Refresh: Every hour",
-              "priority": 7,
+              "priority": 8,
               "items": [
                 {
                   "name": "Every 15 minutes",
@@ -269,8 +291,62 @@
               ]
             },
             {
+              "name": "Night pause: Off",
+              "priority": 9,
+              "items": [
+                {
+                  "name": "Off",
+                  "priority": 1,
+                  "action": "sh bin/set.sh night off",
+                  "internal": "status Night pause: Off, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "22:00 to 6:00",
+                  "priority": 2,
+                  "action": "sh bin/set.sh night 22-6",
+                  "internal": "status Night pause: 22:00 to 6:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "23:00 to 6:00",
+                  "priority": 3,
+                  "action": "sh bin/set.sh night 23-6",
+                  "internal": "status Night pause: 23:00 to 6:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "23:00 to 7:00",
+                  "priority": 4,
+                  "action": "sh bin/set.sh night 23-7",
+                  "internal": "status Night pause: 23:00 to 7:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "0:00 to 6:00",
+                  "priority": 5,
+                  "action": "sh bin/set.sh night 0-6",
+                  "internal": "status Night pause: 0:00 to 6:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "0:00 to 7:00",
+                  "priority": 6,
+                  "action": "sh bin/set.sh night 0-7",
+                  "internal": "status Night pause: 0:00 to 7:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                }
+              ]
+            },
+            {
               "name": "All settings in the browser",
-              "priority": 8,
+              "priority": 10,
               "action": "sh bin/web.sh"
             }
           ]
@@ -279,6 +355,14 @@
           "name": "Diagnostic",
           "priority": 3,
           "action": "sh bin/diagnose.sh"
+        },
+        {
+          "name": "Update KindleWeather",
+          "priority": 4,
+          "action": "sh bin/update.sh",
+          "internal": "status Updating KindleWeather...",
+          "status": false,
+          "exitmenu": false
         }
       ]
     }

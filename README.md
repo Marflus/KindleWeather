@@ -11,14 +11,22 @@ key is needed.
   <img src="preview/classic/landscape.png" alt="Landscape dashboard" height="380">
 </p>
 <p align="center"><sub>Portrait and landscape layouts, rendered from sample data.</sub></p>
+<p align="center">
+  <img src="preview/dark.png" alt="Dark theme" height="380">
+</p>
+<p align="center"><sub>The dark theme.</sub></p>
 
 ## Features
 
 - Now: weather, temperature, humidity and wind of the current hour, with the day's min, max, sunrise and sunset
-- The next 7 days, with their weather icon and mean temperature
+- Feels-like temperature, UV index, air quality and moon phase, each with its icon
+- The next 7 days, with their weather icon, max and min temperatures
 - A precipitation alert for the next 24 hours: snow, thunderstorm or rain
 - A temperature chart and an hourly table for the next 24 hours, with rain, snow and thunderstorm hours shaded
-- Portrait or landscape, Celsius or Fahrenheit, 24-hour or 12-hour clock, three [icon sets](#icon-sets), eight [languages](#languages), all set on the Kindle, see [Settings](#settings)
+- Portrait or landscape, light or dark theme, metric or imperial units, 24-hour or 12-hour clock, three [icon sets](#icon-sets), eight [languages](#languages)
+- A refresh interval from 15 minutes to 24 hours, and an optional night pause
+- The time of the next update and the battery level of the Kindle at the bottom
+- Everything set on the Kindle, see [Settings](#settings), and updated from it in one press
 - An [error code](#error-codes) on the screen when something goes wrong, and a low battery warning
 
 ## How it works
@@ -93,11 +101,14 @@ interface, sums up on the screen, and writes the details to
 
 ### Updating
 
-Save your `config.json`, replace the `kindleweather` folder with the new one,
-put your `config.json` back, then restart the Kindle and start the station
-again.
+With Wi-Fi on, press **KUAL > KindleWeather > Update KindleWeather**. The
+Kindle downloads the latest version from GitHub and installs it, keeping your
+settings; the result is written at the top of the screen. Close and reopen KUAL
+to see the new menu.
 
-With [USBNetwork](https://www.mobileread.com/forums/showthread.php?t=225030)
+By hand: save your `config.json`, replace the `kindleweather` folder with the
+new one, put your `config.json` back, then restart the Kindle and start the
+station again. With [USBNetwork](https://www.mobileread.com/forums/showthread.php?t=225030)
 and SSH, from the folder holding the new `kindleweather` folder (with the Kindle
 restarted first, since the station turns Wi-Fi off between refreshes):
 
@@ -121,11 +132,14 @@ KindleWeather
     Language: English       > English, Francais, Deutsch, Espanol...
     Orientation: Portrait   > Portrait, Landscape
     Icons: Classic          > Classic, Weather Icons, Material
-    Temperature: Celsius    > Celsius, Fahrenheit
+    Theme: Light            > Light, Dark
+    Units: Metric (C, km/h) > Metric (C, km/h), Imperial (F, mph)
     Clock: 24-hour          > 24-hour, 12-hour (AM/PM)
     Refresh: Every hour     > Every 15 minutes, Every 30 minutes, Every hour... Every 24 hours
+    Night pause: Off        > Off, 22:00 to 6:00, 23:00 to 6:00, 23:00 to 7:00, 0:00 to 6:00...
     All settings in the browser
   Diagnostic
+  Update KindleWeather
 ```
 
 Pressing a value saves it, and KUAL's status line confirms it, such as
@@ -159,10 +173,11 @@ can also be edited by hand.
 {
   "language": "en",
   "location": { "city": "Lyon", "country_code": "FR" },
-  "display": { "width": 1072, "height": 1448, "orientation": "portrait", "icons": "classic" },
-  "temperature_unit": "celsius",
+  "display": { "width": 1072, "height": 1448, "orientation": "portrait", "icons": "classic", "theme": "light" },
+  "units": "metric",
   "clock": "24h",
-  "refresh_minutes": 60
+  "refresh_minutes": 60,
+  "night_pause": "off"
 }
 ```
 
@@ -175,9 +190,11 @@ can also be edited by hand.
 | `display.width`, `display.height` | Screen size in pixels, in portrait, see [Compatibility](#compatibility). |
 | `display.orientation` | `"portrait"` (default) or `"landscape"`. In landscape, read the Kindle turned a quarter turn clockwise. |
 | `display.icons` | `"classic"` (default), `"weather-icons"` or `"material"`, see [Icon sets](#icon-sets). |
-| `temperature_unit` | `"celsius"` (default) or `"fahrenheit"`. |
+| `display.theme` | `"light"` (default), or `"dark"`: white on black. |
+| `units` | `"metric"` (default): °C and km/h, or `"imperial"`: °F and mph. |
 | `clock` | `"24h"` (default) or `"12h"`, with AM and PM. |
 | `refresh_minutes` | Minutes between two refreshes, from 5 to 1440; 60 by default. The menu offers 15 minutes to 24 hours. Frequent refreshes drain the battery faster, and Open-Meteo's forecast changes little within an hour. |
+| `night_pause` | `"off"` (default), or the hours between which the dashboard is not refreshed, in the city's time, such as `"23-6"`: the Kindle sleeps through, and wakes up at 6:00. |
 
 Changes made to the file while the station runs apply at the next refresh.
 
@@ -232,19 +249,22 @@ kindleweather/            the KUAL extension, copied as is to the Kindle
     diagnose.sh               the Diagnostic action
     set.sh, city.sh           the settings buttons, and Detect automatically
     web.sh                    opens the settings page in the browser
+    update.sh                 the Update KindleWeather button
     common.sh                 paths, messages and Python lookup
   lib/kindle_weather/       Python package drawing the dashboard, standard library only
     __main__.py               entry point: draws dashboard.png or reports the error
     config.py                 reads config.json
+    schedule.py               when to refresh next, with the night pause
     settings.py               KUAL menu and settings buttons
     web.py                    the settings page
     location.py               finds the city of the internet connection
-    weather.py, dns.py        Open-Meteo requests
+    update.py                 downloads and installs the latest version
+    weather.py, dns.py        Open-Meteo requests: forecast, air quality; moon phase
     render.py                 dashboard layout
     graphics.py, icons.py     drawn icons and icon sets (icon_fonts/)
     canvas.py                 drawing with the Kindle's cairo and FreeType, through ctypes
     errors.py, i18n.py        error codes, languages (locales/)
-preview/                  dashboard previews, one folder per icon set
+preview/                  dashboard previews, one folder per icon set, and dark.png
 scripts/previews.py       regenerates preview/
 ```
 
@@ -268,7 +288,9 @@ python3 scripts/previews.py                                                    #
   [Matthew Petroff's Kindle weather display](https://mpetroff.net/2012/09/kindle-weather-display/)
   and [kindle-kt3_weatherdisplay_battery-optimized](https://github.com/nicoh88/kindle-kt3_weatherdisplay_battery-optimized)
   by nicoh88.
-- Weather data by [Open-Meteo](https://open-meteo.com/), under CC BY 4.0.
+- Weather and air quality data by [Open-Meteo](https://open-meteo.com/), under
+  CC BY 4.0; the air quality comes from the Copernicus Atmosphere Monitoring
+  Service (CAMS).
 - [Roboto](https://github.com/googlefonts/roboto) font by Google, under the Apache License 2.0.
 - [Weather Icons](https://github.com/erikflowers/weather-icons) by Erik Flowers, under the SIL Open Font License 1.1.
 - [Material Design Icons](https://github.com/Templarian/MaterialDesign) by Pictogrammers, under the Apache License 2.0.

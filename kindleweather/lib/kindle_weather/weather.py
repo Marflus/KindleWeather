@@ -6,7 +6,7 @@ import json
 import ssl
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta, timezone
 from urllib.parse import urlencode, urlsplit
 
@@ -17,6 +17,7 @@ dns.install()
 
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 PLACE_URL = "https://geocoding-api.open-meteo.com/v1/get"
+AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 REQUEST_TIMEOUT = 20
 HEADERS = {"User-Agent": "KindleWeather"}
@@ -87,6 +88,8 @@ class Place:
 class HourlyForecast:
     hour: int
     temperature: float
+    # Apparent temperature, with wind and humidity.
+    feels_like: float
     weather_code: int
     humidity: int
     wind_speed: float
@@ -108,7 +111,9 @@ class DayForecast:
 class Forecast:
     place_name: str
     observed_at: datetime
+    # As Open-Meteo writes them: "°C" or "°F", "km/h" or "mph".
     temperature_unit: str
+    wind_unit: str
     today: DayForecast
     sunrise: str | None
     sunset: str | None
@@ -117,6 +122,10 @@ class Forecast:
     # The hour right after that window, which closes the temperature curve.
     window_end: HourlyForecast | None
     upcoming_days: list[DayForecast]
+    # Highest UV index of the day.
+    uv_index: float | None = None
+    # European air quality index of the hour, from 0 (good) up; None if unknown.
+    air_quality: int | None = None
 
     @property
     def current(self) -> HourlyForecast:
@@ -167,20 +176,45 @@ def _place(result: dict) -> Place:
         raise WeatherError(f"unexpected geocoding data: {error!r}") from error
 
 
-def fetch_forecast(place: Place, temperature_unit: str) -> Forecast:
+def fetch_forecast(place: Place, units: str) -> Forecast:
+    """The forecast of place, in "metric" (°C, km/h) or "imperial" (°F, mph) units."""
+    imperial = units == "imperial"
     raw = get_json(
         FORECAST_URL,
         {
             "latitude": place.latitude,
             "longitude": place.longitude,
-            "daily": "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset",
-            "hourly": "temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m",
-            "temperature_unit": temperature_unit,
+            "daily": "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,"
+            "uv_index_max",
+            "hourly": "temperature_2m,apparent_temperature,weather_code,relative_humidity_2m,"
+            "wind_speed_10m",
+            "temperature_unit": "fahrenheit" if imperial else "celsius",
+            "wind_speed_unit": "mph" if imperial else "kmh",
             "timezone": "auto",
             "forecast_days": UPCOMING_DAYS + 1,
         },
     )
-    return parse_forecast(raw, place.name)
+    forecast = parse_forecast(raw, place.name)
+    return replace(forecast, air_quality=fetch_air_quality(place))
+
+
+def fetch_air_quality(place: Place) -> int | None:
+    """The current European air quality index, or None: the dashboard does without."""
+    try:
+        answer = get_json(
+            AIR_QUALITY_URL,
+            {"latitude": place.latitude, "longitude": place.longitude, "current": "european_aqi"},
+        )
+        return round(answer["current"]["european_aqi"])
+    except (WeatherError, KeyError, TypeError, ValueError):
+        return None
+
+
+def moon_phase(day: date) -> float:
+    """Age of the moon on day, as a fraction of its cycle: 0 new, 0.5 full."""
+    # Days since a new moon on 2000-01-06 at 18:14 UTC, over the mean lunar month.
+    days = (day - date(2000, 1, 6)).days + 0.5 - 18.23 / 24
+    return days / 29.530588853 % 1
 
 
 def parse_forecast(raw: dict, place_name: str, now: datetime | None = None) -> Forecast:
@@ -200,6 +234,7 @@ def _parse_forecast(raw: dict, place_name: str, now: datetime | None) -> Forecas
         return HourlyForecast(
             hour=int(hourly["time"][index][11:13]),
             temperature=hourly["temperature_2m"][index],
+            feels_like=hourly["apparent_temperature"][index],
             weather_code=hourly["weather_code"][index],
             humidity=hourly["relative_humidity_2m"][index],
             wind_speed=hourly["wind_speed_10m"][index],
@@ -226,12 +261,15 @@ def _parse_forecast(raw: dict, place_name: str, now: datetime | None) -> Forecas
         place_name=place_name,
         observed_at=now,
         temperature_unit=raw["hourly_units"]["temperature_2m"],
+        # Open-Meteo writes miles per hour "mp/h".
+        wind_unit=raw["hourly_units"]["wind_speed_10m"].replace("mp/h", "mph"),
         today=day_entry(today),
         sunrise=_clock_time(daily["sunrise"][today]),
         sunset=_clock_time(daily["sunset"][today]),
         hours=[hour_entry(i) for i in range(start, min(end, len(hourly["time"])))],
         window_end=hour_entry(end) if end < len(hourly["time"]) else None,
         upcoming_days=[day_entry(i) for i in range(today + 1, last_day + 1)],
+        uv_index=daily.get("uv_index_max", [None] * (today + 1))[today],
     )
 
 

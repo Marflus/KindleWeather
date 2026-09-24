@@ -16,6 +16,7 @@ from kindle_weather.graphics import (
     GRAY_PALE,
     INK,
     draw_asterisk,
+    draw_battery,
     draw_bolt,
     draw_centered_text,
     draw_diagonal_hatch,
@@ -23,11 +24,12 @@ from kindle_weather.graphics import (
     text_width,
 )
 from kindle_weather.i18n import Locale
-from kindle_weather.icons import DEFAULT_ICON_SET, ICON_SETS
+from kindle_weather.icons import DEFAULT_ICON_SET, ICON_SETS, IconSet
 from kindle_weather.weather import (
     PRECIPITATION_KINDS,
     WINDOW_HOURS,
     Forecast,
+    moon_phase,
     precipitation_kind,
 )
 
@@ -52,7 +54,14 @@ FONT_SPECS = {
     "row": (ROBOTO_BOLD, 26),
     "row_small": (ROBOTO, 19),
     "footer": (ROBOTO, 16),
+    "day_min": (ROBOTO, 24),
 }
+
+# Upper bounds of the UV index levels (low, moderate, high, very high; then
+# extreme), and of the European air quality index levels (good, fair,
+# moderate, poor, very poor; then extremely poor).
+UV_LEVELS = (3, 6, 8, 11)
+AIR_LEVELS = (20, 40, 60, 80, 100)
 
 # Left to right order of the chart legend.
 LEGEND_KINDS = ("rain", "snow", "storm")
@@ -73,6 +82,7 @@ class Layout:
     top: int
     card_height: int
     panel_width: int
+    details_height: int
     days_height: int
     chart_height: int
     table_columns: int
@@ -87,10 +97,11 @@ LAYOUTS = {
         top=36,
         card_height=270,
         panel_width=300,
+        details_height=84,
         days_height=150,
-        chart_height=270,
+        chart_height=200,
         table_columns=2,
-        row_height=66,
+        row_height=62,
         column_gap=40,
         footer_gap=44,
     ),
@@ -99,12 +110,13 @@ LAYOUTS = {
         top=28,
         card_height=250,
         panel_width=520,
+        details_height=76,
         days_height=130,
-        chart_height=130,
+        chart_height=90,
         table_columns=3,
-        row_height=52,
+        row_height=48,
         column_gap=24,
-        footer_gap=34,
+        footer_gap=26,
     ),
 }
 
@@ -112,14 +124,28 @@ LAYOUTS = {
 def render_dashboard(
     forecast: Forecast,
     locale: Locale,
+    *,
     size: tuple[int, int] = SCREEN_SIZE,
     orientation: str = "portrait",
     icon_set: str = DEFAULT_ICON_SET,
     clock: str = "24h",
+    theme: str = "light",
+    next_update: datetime | None = None,
+    battery: int | None = None,
 ) -> Picture:
     """Render for a portrait framebuffer of `size`; landscape output is rotated to fit it."""
     canvas = _framebuffer_canvas(size, orientation)
-    return _Dashboard(forecast, locale, LAYOUTS[orientation], icon_set, clock, canvas).render()
+    dashboard = _Dashboard(
+        forecast,
+        locale,
+        LAYOUTS[orientation],
+        ICON_SETS[icon_set],
+        canvas,
+        clock,
+        next_update,
+        dark=theme == "dark",
+    )
+    return _themed(dashboard.render(battery), theme)
 
 
 def render_error(
@@ -127,6 +153,7 @@ def render_error(
     detail: str,
     size: tuple[int, int] = SCREEN_SIZE,
     orientation: str = "portrait",
+    theme: str = "light",
 ) -> Picture:
     """Full-screen error, in English, shown when there is no dashboard to keep."""
     width, height = LAYOUTS[orientation].size
@@ -149,7 +176,17 @@ def render_error(
 
     stamp = f"{datetime.now(timezone.utc):%Y-%m-%d %H:%M} UTC"
     draw_centered_text(draw, width / 2, height - 60, stamp, Font(ROBOTO, 16), GRAY_MID)
-    return draw.picture()
+    return _themed(draw.picture(), theme)
+
+
+def _themed(picture: Picture, theme: str) -> Picture:
+    """The dark theme is the light one inverted: white on black, grays swapped."""
+    return picture.inverted() if theme == "dark" else picture
+
+
+def _level(value: float, bounds: tuple[int, ...]) -> int:
+    """Index of the level of value, given the upper bound of each level but the last."""
+    return next((i for i, bound in enumerate(bounds) if value < bound), len(bounds))
 
 
 def _framebuffer_canvas(size: tuple[int, int], orientation: str) -> Canvas:
@@ -221,27 +258,32 @@ class _Dashboard:
         forecast: Forecast,
         locale: Locale,
         layout: Layout,
-        icon_set: str,
-        clock: str,
+        icons: IconSet,
         canvas: Canvas,
+        clock: str,
+        next_update: datetime | None,
+        dark: bool,
     ):
         self.forecast = forecast
         self.locale = locale
         self.layout = layout
-        self.icons = ICON_SETS[icon_set]
+        self.icons = icons
         self.clock = clock
+        self.next_update = next_update
+        self.dark = dark
         self.width, self.height = layout.size
         self.draw = canvas
         self.fonts = {name: Font(path, size) for name, (path, size) in FONT_SPECS.items()}
 
-    def render(self) -> Picture:
+    def render(self, battery: int | None) -> Picture:
         y = self._summary(self.layout.top)
+        y = self._details_strip(y + 14)
         if self.forecast.upcoming_days:
             y = self._upcoming_days(y + 14)
         y = self._precipitation_banner(y + 14)
         y = self._temperature_chart(y + 22)
         y = self._hourly_table(y + 80)
-        self._footer(y + self.layout.footer_gap)
+        self._footer(y + self.layout.footer_gap, battery)
         return self.draw.picture()
 
     def _clock_time(self, text: str | None) -> str:
@@ -334,7 +376,7 @@ class _Dashboard:
             (labels["sunrise"], self._clock_time(self.forecast.sunrise), "sunrise"),
             (labels["humidity"], f"{humidity} %", "humidity"),
             (labels["sunset"], self._clock_time(self.forecast.sunset), "sunset"),
-            (labels["wind"], f"{wind} km/h", "wind"),
+            (labels["wind"], f"{wind} {self.forecast.wind_unit}", "wind"),
         )
         cell_height, icon_size, inset = 64, 34, 14
         top = center_y - (cell_height + 50) // 2
@@ -351,12 +393,81 @@ class _Dashboard:
             self.draw.text((text_x, y + 2), label, font=self.fonts["panel_label"], fill=GRAY_DARK)
             self.draw.text((text_x, y + 24), value, font=self.fonts["panel_value"], fill=INK)
 
+    def _details_strip(self, top: int) -> int:
+        """Feels like, UV index, air quality and moon phase, each with its icon."""
+        forecast, labels, locale = self.forecast, self.locale.labels, self.locale
+        height = self.layout.details_height
+        self.draw.rounded_rectangle(
+            [MARGIN, top, self.width - MARGIN, top + height], radius=16, outline=GRAY_LIGHT, width=2
+        )
+        uv = forecast.uv_index
+        air = forecast.air_quality
+        phase = round(moon_phase(forecast.observed_at.date()) * 8) % 8
+        # The moon's lit part must end up light: black before the dark theme
+        # inverts the picture. Half a cycle later, the shadow has the lit
+        # part's shape.
+        moon_icon = (phase + 4) % 8 if self.dark != self.icons.moon_draws_lit else phase
+        cells = (
+            ("feels_like", labels["feels_like"], self._temperature(forecast.current.feels_like)),
+            (
+                "uv",
+                labels["uv"],
+                "—" if uv is None else f"{round(uv)} · {locale.uv_levels[_level(uv, UV_LEVELS)]}",
+            ),
+            (
+                "air",
+                labels["air"],
+                "—" if air is None else f"{air} · {locale.air_levels[_level(air, AIR_LEVELS)]}",
+            ),
+            (f"moon{moon_icon}", labels["moon"], locale.moon_phases[phase]),
+        )
+        # Each cell as wide as its text needs, plus an equal share of the rest:
+        # a long moon phase name gets the room a short temperature leaves.
+        icon_size, middle, padding = 40, top + height / 2, 18 + 40 + 12 + 12
+        label_font, value_font = self.fonts["panel_label"], self.fonts["panel_value"]
+        needs = [
+            padding
+            + max(
+                text_width(self.draw, label, label_font), text_width(self.draw, value, value_font)
+            )
+            for _, label, value in cells
+        ]
+        room = self.width - 2 * MARGIN
+        spare = room - sum(needs)
+        widths = [
+            need + spare / len(cells) if spare > 0 else need * room / sum(needs) for need in needs
+        ]
+        left = MARGIN
+        for i, ((icon, label, value), cell_width) in enumerate(zip(cells, widths)):
+            if i:
+                self.draw.line(
+                    [(left, top + 14), (left, top + height - 14)], fill=GRAY_LIGHT, width=2
+                )
+            icon_left = left + 18
+            self.icons.draw(
+                self.draw,
+                icon,
+                (icon_left, middle - icon_size / 2, icon_left + icon_size, middle + icon_size / 2),
+            )
+            text_x = icon_left + icon_size + 12
+            space = left + cell_width - 12 - text_x
+            fitted_label = _shrink_to_fit(self.draw, label, label_font, space)
+            fitted_value = _shrink_to_fit(self.draw, value, value_font, space)
+            # Fixed lines, as in the details panel, so that the cells line up.
+            self.draw.text((text_x, middle - 25), label, font=fitted_label, fill=GRAY_DARK)
+            self.draw.text((text_x, middle - 2), value, font=fitted_value, fill=INK)
+            left += cell_width
+        return top + height
+
+    def _temperature(self, value: float) -> str:
+        return f"{round(value)}{self.forecast.temperature_unit}"
+
     def _upcoming_days(self, top: int) -> int:
-        """One box per upcoming day: short date, weather icon, mean temperature."""
+        """One box per upcoming day: short date, weather icon, max and min temperatures."""
         days = self.forecast.upcoming_days
         height, gap = self.layout.days_height, 12
         width = (self.width - 2 * MARGIN - (len(days) - 1) * gap) / len(days)
-        date_font, temperature_font = self.fonts["day"], self.fonts["day_temperature"]
+        date_font = self.fonts["day"]
         for i, day in enumerate(days):
             left = round(MARGIN + i * (width + gap))
             right, bottom = round(left + width), top + height
@@ -366,17 +477,41 @@ class _Dashboard:
             )
             label = self.locale.format_short_date(day.date)
             draw_centered_text(self.draw, center_x, top + 12, label, date_font, INK)
-            temperature = f"{day.temperature_mean}{self.forecast.temperature_unit}"
-            temperature_box = self.draw.textbbox((0, 0), temperature, font=temperature_font)
-            temperature_y = bottom - 12 - temperature_box[3]
-            draw_centered_text(
-                self.draw, center_x, temperature_y, temperature, temperature_font, INK
+            # The max in bold black, the min lighter, side by side.
+            high, low = (
+                self._temperature(day.temperature_max),
+                self._temperature(day.temperature_min),
+            )
+            space = right - left - 16
+            high_font, low_font = self.fonts["day_temperature"], self.fonts["day_min"]
+            while (
+                text_width(self.draw, high, high_font) + 8 + text_width(self.draw, low, low_font)
+                > space
+                and high_font.size > 14
+            ):
+                high_font, low_font = (
+                    high_font.variant(high_font.size - 1),
+                    low_font.variant(low_font.size - 1),
+                )
+            high_width = text_width(self.draw, high, high_font)
+            pair_left = center_x - (high_width + 8 + text_width(self.draw, low, low_font)) / 2
+            high_box = self.draw.textbbox((0, 0), high, font=high_font)
+            baseline = bottom - 14
+            self.draw.text(
+                (pair_left - high_box[0], baseline - high_box[3]), high, font=high_font, fill=INK
+            )
+            low_box = self.draw.textbbox((0, 0), low, font=low_font)
+            self.draw.text(
+                (pair_left + high_width + 8 - low_box[0], baseline - low_box[3]),
+                low,
+                font=low_font,
+                fill=GRAY_MID,
             )
             icon_box = (
                 left + 18,
                 top + 46,
                 right - 18,
-                temperature_y + temperature_box[1] - 10,
+                baseline - (high_box[3] - high_box[1]) - 10,
             )
             self.icons.draw(self.draw, day.weather_code, icon_box)
         return top + height
@@ -557,7 +692,7 @@ class _Dashboard:
                 )
                 draw.text(
                     (wind_x + 30, middle - 10),
-                    f"{round(entry.wind_speed)} km/h",
+                    f"{round(entry.wind_speed)} {self.forecast.wind_unit}",
                     font=fonts["row_small"],
                     fill=GRAY_DARK,
                 )
@@ -572,8 +707,37 @@ class _Dashboard:
             )
         return bottom
 
-    def _footer(self, y: int) -> None:
+    def _footer(self, y: int, battery: int | None) -> None:
+        """When updated and when next, and the battery of the Kindle, on one line."""
+        font = self.fonts["footer"]
         moment = self.forecast.observed_at
-        time = _time_text(moment.hour, moment.minute, self.clock)
-        text = self.locale.format_updated_at(moment, time)
-        draw_centered_text(self.draw, self.width // 2, y, text, self.fonts["footer"], GRAY_MID)
+        parts = [
+            self.locale.format_updated_at(
+                moment, _time_text(moment.hour, moment.minute, self.clock)
+            )
+        ]
+        if self.next_update:
+            upcoming = self.next_update
+            parts.append(
+                self.locale.labels["next_update"].format(
+                    _time_text(upcoming.hour, upcoming.minute, self.clock)
+                )
+            )
+        text = "  ·  ".join(parts)
+        battery_text = f"{battery} %" if battery is not None else ""
+        icon_width, icon_height, gap = 26, 13, 6
+        extra = (
+            (24 + icon_width + gap + text_width(self.draw, battery_text, font))
+            if battery_text
+            else 0
+        )
+        left = self.width / 2 - (text_width(self.draw, text, font) + extra) / 2
+        box = self.draw.textbbox((0, 0), text, font=font)
+        self.draw.text((left - box[0], y), text, font=font, fill=GRAY_MID)
+        if battery_text:
+            x = left + box[2] - box[0] + 24
+            middle = y + (box[1] + box[3]) / 2
+            draw_battery(
+                self.draw, x, middle - icon_height / 2, icon_width, icon_height, battery, GRAY_MID
+            )
+            self.draw.text((x + icon_width + gap, y), battery_text, font=font, fill=GRAY_MID)

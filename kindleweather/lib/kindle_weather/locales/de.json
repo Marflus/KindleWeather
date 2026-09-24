@@ -17,8 +17,16 @@
     "storm": "Gewitter",
     "snow": "Schnee",
     "updated": "Aktualisiert am {}",
-    "variable": "Wechselhaft"
+    "variable": "Wechselhaft",
+    "feels_like": "Gefühlt",
+    "uv": "UV-Index",
+    "air": "Luftqualität",
+    "moon": "Mond",
+    "next_update": "nächste Aktualisierung {}"
   },
+  "uv_levels": ["Niedrig", "Mäßig", "Hoch", "Sehr hoch", "Extrem"],
+  "air_levels": ["Gut", "Ausreichend", "Mäßig", "Schlecht", "Sehr schlecht", "Extrem schlecht"],
+  "moon_phases": ["Neumond", "Zunehmende Sichel", "Erstes Viertel", "Zunehmender Mond", "Vollmond", "Abnehmender Mond", "Letztes Viertel", "Abnehmende Sichel"],
   "weather": {
     "0": "Klarer Himmel",
     "1": "Überwiegend sonnig",

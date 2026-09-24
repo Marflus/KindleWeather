@@ -19,6 +19,7 @@ from kindle_weather.weather import (
 BLACK, INK = 0, 25
 GRAY_DARK, GRAY_MID = 90, 150
 GRAY_LIGHT, GRAY_PALE = 205, 236
+WHITE = 255
 
 # Lightning bolt of the thunderstorm icon, in icon radii from the icon center.
 BOLT_SHAPE = ((0.1, 0.35), (-0.25, 0.95), (0.05, 0.95), (-0.2, 1.5), (0.4, 0.7), (0.1, 0.7))
@@ -177,3 +178,87 @@ def draw_bolt(draw, x, y, height, fill=GRAY_DARK) -> None:
 
 def _three_columns(cx: float, r: float) -> tuple[float, float, float]:
     return (cx - r * 0.5, cx, cx + r * 0.5)
+
+
+def draw_thermometer(draw, cx, cy, r, fill=INK) -> None:
+    stem = r * 0.28
+    draw.rounded_rectangle(
+        [cx - stem, cy - r * 1.3, cx + stem, cy + r * 0.5], radius=stem, fill=fill
+    )
+    draw.ellipse([cx - r * 0.55, cy + r * 0.1, cx + r * 0.55, cy + r * 1.2], fill=fill)
+    # The mercury column, in white inside the tube.
+    draw.line([cx, cy - r * 1.0, cx, cy + r * 0.6], fill=WHITE, width=max(2, round(r * 0.18)))
+
+
+def draw_uv(draw, cx, cy, r, fill=INK) -> None:
+    """A sun with long rays."""
+    width = max(2, round(r * 0.14))
+    for i in range(12):
+        angle = i * math.pi / 6
+        cos, sin = math.cos(angle), math.sin(angle)
+        length = 1.9 if i % 2 == 0 else 1.55
+        draw.line(
+            [cx + cos * r, cy + sin * r, cx + cos * r * length, cy + sin * r * length],
+            fill=fill,
+            width=width,
+        )
+    draw.ellipse([cx - r * 0.75, cy - r * 0.75, cx + r * 0.75, cy + r * 0.75], fill=fill)
+
+
+def draw_leaf(draw, cx, cy, r, fill=INK) -> None:
+    """A leaf pointing up and right, with its vein in white."""
+    points = []
+    for step in range(21):
+        t = step / 20
+        along, across = (t - 0.5) * 2.6 * r, math.sin(math.pi * t) * 0.8 * r
+        points.append((along, across))
+    outline = points + [(x, -y) for x, y in reversed(points)]
+    # Turned 45 degrees.
+    turn = math.radians(-45)
+    cos, sin = math.cos(turn), math.sin(turn)
+    draw.polygon([(cx + x * cos - y * sin, cy + x * sin + y * cos) for x, y in outline], fill=fill)
+    tip, base = (1.3 * r, 0), (-1.75 * r, 0)
+    draw.line(
+        [(cx + x * cos - y * sin, cy + x * sin + y * cos) for x, y in (base, tip)],
+        fill=WHITE,
+        width=max(2, round(r * 0.1)),
+    )
+    draw.line(
+        [
+            (cx + x * cos - y * sin, cy + x * sin + y * cos)
+            for x, y in ((-1.75 * r, 0), (-2.2 * r, 0))
+        ],
+        fill=fill,
+        width=max(2, round(r * 0.14)),
+    )
+
+
+def draw_moon(draw, cx, cy, r, phase: float, fill=INK) -> None:
+    """The moon at phase (0 new, 0.5 full): shadow in fill, lit part in white,
+    as seen from the northern hemisphere."""
+    box = [cx - r, cy - r, cx + r, cy + r]
+    draw.ellipse(box, fill=fill)
+    # The terminator is a half ellipse; its width follows the lit fraction.
+    terminator = abs(math.cos(2 * math.pi * phase)) * r
+    lit_right = phase < 0.5
+    draw.pieslice(box, -90 if lit_right else 90, 90 if lit_right else 270, fill=WHITE)
+    crescent = phase < 0.25 or phase > 0.75
+    draw.ellipse(
+        [cx - terminator, cy - r, cx + terminator, cy + r], fill=fill if crescent else WHITE
+    )
+    draw.ellipse(box, outline=fill, width=max(2, round(r * 0.12)))
+
+
+def draw_battery(draw, left, top, width, height, level: int, fill=INK) -> None:
+    """A battery lying down, filled to level percent."""
+    nub = max(2, round(width * 0.08))
+    line = max(1, round(height * 0.12))
+    body_right = left + width - nub
+    draw.rectangle([left, top, body_right, top + height], outline=fill, width=line)
+    draw.rectangle([body_right, top + height * 0.3, left + width, top + height * 0.7], fill=fill)
+    inset = line * 2
+    charge = (body_right - left - 2 * inset) * max(0, min(level, 100)) / 100
+    if charge > 0:
+        draw.rectangle(
+            [left + inset, top + inset, left + inset + charge, top + height - inset], fill=fill
+        )

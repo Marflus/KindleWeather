@@ -3,12 +3,6 @@
 # internet connection. Detecting takes too long for KUAL to reload the menu
 # with the result, so it is written over KUAL, at the top of the screen.
 . "$(dirname "$0")/common.sh"
-say() {
-    # Spaces erase the end of a longer previous line.
-    /usr/sbin/eips 1 1 "$1                                        "
-    /usr/sbin/eips 1 2 "$2                                        "
-}
-
 say "Detecting the city..." ""
 PYTHON=$(find_python)
 if [ -z "$PYTHON" ]; then

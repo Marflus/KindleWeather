@@ -15,7 +15,11 @@ from kindle_weather.canvas import Canvas, Font
 from kindle_weather.graphics import (
     INK,
     draw_droplet,
+    draw_leaf,
+    draw_moon,
     draw_sun_horizon,
+    draw_thermometer,
+    draw_uv,
     draw_weather_icon,
     draw_wind,
 )
@@ -23,12 +27,16 @@ from kindle_weather.graphics import (
 FONT_DIR = Path(__file__).parent / "icon_fonts"
 DEFAULT_ICON_SET = "classic"
 
-# A WMO weather code, or a detail icon: "sunrise", "sunset", "humidity" or "wind".
+# A WMO weather code, or a detail icon: "sunrise", "sunset", "humidity", "wind",
+# "feels_like", "uv", "air", or "moon0" to "moon7" for the phases from the new moon.
 Icon = Union[int, str]
 Box = Tuple[float, float, float, float]
 
 
 class IconSet(ABC):
+    # Whether the moon icons draw the lit part of the moon in ink, rather than its shadow.
+    moon_draws_lit = False
+
     def __init__(self) -> None:
         self._bounds_cache: dict[tuple[Icon, float], Box] = {}
 
@@ -83,6 +91,14 @@ class DrawnIcons(IconSet):
             draw_wind(draw, x, y, r, fill=fill)
         elif icon in ("sunrise", "sunset"):
             draw_sun_horizon(draw, x, y, r, rising=icon == "sunrise", fill=fill)
+        elif icon == "feels_like":
+            draw_thermometer(draw, x, y, r, fill=fill)
+        elif icon == "uv":
+            draw_uv(draw, x, y, r, fill=fill)
+        elif icon == "air":
+            draw_leaf(draw, x, y, r, fill=fill)
+        elif isinstance(icon, str) and icon.startswith("moon"):
+            draw_moon(draw, x, y, r, int(icon[4:]) / 8, fill=fill)
         elif isinstance(icon, int):
             draw_weather_icon(draw, icon, x, y, r)
         else:
@@ -92,8 +108,15 @@ class DrawnIcons(IconSet):
 class FontIcons(IconSet):
     """Glyphs of an icon font, in a single shade."""
 
-    def __init__(self, font_file: str, weather: dict[int, int], details: dict[str, int]):
+    def __init__(
+        self,
+        font_file: str,
+        weather: dict[int, int],
+        details: dict[str, int],
+        moon_draws_lit: bool = False,
+    ):
         super().__init__()
+        self.moon_draws_lit = moon_draws_lit
         self.font_path = str(FONT_DIR / font_file)
         self.weather = weather
         self.details = details
@@ -107,6 +130,11 @@ class FontIcons(IconSet):
 
     def _paint(self, draw, icon: Icon, x: float, y: float, size: float, fill: int) -> None:
         draw.text((x, y), self._glyph(icon), font=Font(self.font_path, size), fill=fill)
+
+
+def _moons(*glyphs: int) -> dict[str, int]:
+    """The glyphs of the eight moon phases, from the new moon, as "moon0" to "moon7"."""
+    return {f"moon{phase}": glyph for phase, glyph in enumerate(glyphs)}
 
 
 def _by_code(groups: dict[tuple[int, ...], int]) -> dict[int, int]:
@@ -133,7 +161,17 @@ WEATHER_ICONS = FontIcons(
             (96,): 0xF015,  # hail
         }
     ),
-    details={"sunrise": 0xF051, "sunset": 0xF052, "humidity": 0xF07A, "wind": 0xF050},
+    details={
+        "sunrise": 0xF051,
+        "sunset": 0xF052,
+        "humidity": 0xF07A,
+        "wind": 0xF050,
+        "feels_like": 0xF055,  # thermometer
+        "uv": 0xF072,  # hot
+        "air": 0xF074,  # smog
+        # moon-alt-*: new, waxing crescent, first quarter... waning crescent.
+        **_moons(0xF0EB, 0xF0D2, 0xF0D6, 0xF0D9, 0xF0DD, 0xF0E0, 0xF0E4, 0xF0E7),
+    },
 )
 
 # Material Design Icons 7.4.47 by Pictogrammers (Apache 2.0), subset to these glyphs.
@@ -155,7 +193,18 @@ MATERIAL_ICONS = FontIcons(
             (99,): 0xF067E,  # weather-lightning-rainy
         }
     ),
-    details={"sunrise": 0xF059C, "sunset": 0xF059B, "humidity": 0xF058E, "wind": 0xF059D},
+    details={
+        "sunrise": 0xF059C,
+        "sunset": 0xF059B,
+        "humidity": 0xF058E,
+        "wind": 0xF059D,
+        "feels_like": 0xF050F,  # thermometer
+        "uv": 0xF17FF,  # sun-wireless-outline
+        "air": 0xF032A,  # leaf
+        # moon-new, moon-waxing-crescent, moon-first-quarter... moon-waning-crescent.
+        **_moons(0xF0F64, 0xF0F67, 0xF0F61, 0xF0F68, 0xF0F62, 0xF0F66, 0xF0F63, 0xF0F65),
+    },
+    moon_draws_lit=True,
 )
 
 ICON_SETS: dict[str, IconSet] = {
