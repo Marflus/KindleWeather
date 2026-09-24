@@ -22,6 +22,13 @@ from kindle_weather.location import detect_place
 from kindle_weather.weather import Place
 
 MENU_PATH = EXTENSION_DIR / "menu.json"
+# web.sh writes the address of the settings page at the top of the screen.
+SETTINGS_PAGE = {
+    "action": "sh bin/web.sh",
+    "internal": "status Starting the settings page...",
+    "status": False,
+    "exitmenu": False,
+}
 
 # For each setting: its menu label, its keys in config.json, and its values with
 # their menu labels. KUAL only displays ASCII reliably.
@@ -79,18 +86,9 @@ SETTINGS = {
             1440: "Every 24 hours",
         },
     ),
-    "night": (
-        "Night pause",
-        ("night_pause",),
-        {
-            "off": "Off",
-            "22-6": "22:00 to 6:00",
-            "23-6": "23:00 to 6:00",
-            "23-7": "23:00 to 7:00",
-            "0-6": "0:00 to 6:00",
-            "0-7": "0:00 to 7:00",
-        },
-    ),
+    "night": ("Night pause", ("night_pause", "enabled"), {False: "Off", True: "On"}),
+    "night_from": ("Pause from", ("night_pause", "from"), {h: f"{h}:00" for h in range(24)}),
+    "night_to": ("Pause until", ("night_pause", "to"), {h: f"{h}:00" for h in range(24)}),
 }
 
 
@@ -104,7 +102,9 @@ def current_values(config: Config) -> dict:
         "units": config.units,
         "clock": config.clock,
         "refresh": config.refresh_minutes,
-        "night": "-".join(map(str, config.night_pause)) if config.night_pause else "off",
+        "night": config.night_pause_enabled,
+        "night_from": config.night_pause_hours[0],
+        "night_to": config.night_pause_hours[1],
     }
 
 
@@ -117,6 +117,11 @@ def change(setting: str, value: str) -> None:
         raise ValueError(f"{setting} must be one of {tuple(values)}")
     value = matches[0]
     raw = _read_config()
+    if not isinstance(raw.get("night_pause"), dict):
+        # Older versions wrote "off" or "23-6".
+        config = load_config(CONFIG_PATH)
+        start, end = config.night_pause_hours
+        raw["night_pause"] = {"enabled": config.night_pause_enabled, "from": start, "to": end}
     *parents, key = keys
     section = raw
     for parent in parents:
@@ -164,7 +169,7 @@ def write_menu() -> None:
                     "status": False,
                     "exitmenu": False,
                 },
-                {"name": "Search in the browser", "priority": 2, "action": "sh bin/web.sh"},
+                {"name": "Search on the settings page", "priority": 2, **SETTINGS_PAGE},
             ],
         }
     ]
@@ -187,11 +192,7 @@ def write_menu() -> None:
         name = values.get(value, f"Every {value} minutes" if isinstance(value, int) else value)
         settings.append({"name": f"{title}: {name}", "priority": priority, "items": choices})
     settings.append(
-        {
-            "name": "All settings in the browser",
-            "priority": len(settings) + 1,
-            "action": "sh bin/web.sh",
-        }
+        {"name": "Settings page (phone)", "priority": len(settings) + 1, **SETTINGS_PAGE}
     )
     items = [
         {"name": "Start weather station", "priority": 1, "action": "sh bin/start.sh"},

@@ -1,3 +1,3 @@
 """Weather dashboard for jailbroken Kindles, drawn on the Kindle itself."""
 
-__version__ = "3.0.0"
+__version__ = "3.1.0"

@@ -24,8 +24,8 @@ server, account or API key is needed.
   eight [languages](#languages)
 - A refresh every 15 minutes to 24 hours, with an optional night pause
 - The time of the next update and the battery level at the bottom
-- Everything set on the Kindle, from KUAL or a settings page in its browser,
-  and updated from it in one press
+- Everything set from KUAL on the Kindle, or from a settings page on a phone,
+  and updated from the Kindle in one press
 - An [error code](#error-codes) on the screen when something goes wrong
 
 ## How it works
@@ -80,8 +80,8 @@ The station wakes up with the clock at `/dev/rtc1`, as on the Paperwhite 2 and
    KUAL creates `extensions` when it is installed; if it is missing, create it.
 4. **Set your city**: eject the Kindle and unplug it, open
    **KUAL > KindleWeather > Settings > City**, then press
-   **Detect automatically**, or **Search in the browser** to type its name
-   (see [Settings](#settings)).
+   **Detect automatically**, or **Search on the settings page** to type its
+   name on a phone (see [Settings](#settings)).
 5. **Start the station**: press **KUAL > KindleWeather > Start weather
    station**. KUAL closes, the screen shows "Starting the weather station..."
    and the dashboard appears within a minute.
@@ -129,7 +129,7 @@ Change the settings before starting the station: KUAL is closed while it runs.
 KindleWeather
   Start weather station
   Settings
-    City: Lyon, FR          > Detect automatically, Search in the browser
+    City: Lyon, FR          > Detect automatically, Search on the settings page
     Language: English       > English, Francais, Deutsch, Espanol...
     Orientation: Portrait   > Portrait, Landscape
     Icons: Classic          > Classic, Weather Icons, Material
@@ -137,8 +137,10 @@ KindleWeather
     Units: Metric (C, km/h) > Metric (C, km/h), Imperial (F, mph)
     Clock: 24-hour          > 24-hour, 12-hour (AM/PM)
     Refresh: Every hour     > Every 15 minutes, Every 30 minutes, Every hour... Every 24 hours
-    Night pause: Off        > Off, 22:00 to 6:00, 23:00 to 6:00, 23:00 to 7:00, 0:00 to 6:00...
-    All settings in the browser
+    Night pause: Off        > Off, On
+    Pause from: 23:00       > 0:00 to 23:00
+    Pause until: 6:00       > 0:00 to 23:00
+    Settings page (phone)
   Diagnostic
   Update KindleWeather
 ```
@@ -153,18 +155,15 @@ KUAL back to its first page).
 the nearest large city. The result is written at the top of the screen; the
 menu shows it the next time KUAL opens.
 
-### From the browser
+### From a phone
 
-**Search in the browser** and **All settings in the browser** open a settings
-page in the Kindle's browser. Type the name of the city with the Kindle's
-keyboard, press **Search**, then choose it among the cities of that name,
-listed with their region and country. The other settings are on the same page.
-Press **Close the settings page** when done.
-
-The page is served by the Kindle itself, on port 8765 of its Wi-Fi address,
-such as `http://192.168.1.23:8765/`. A phone or a computer on the same Wi-Fi
-can open it too, at the address given at the bottom of the page. It stops
-after 15 minutes without use.
+**Settings page (phone)** and **Search on the settings page** start a settings
+page served by the Kindle, and write its address at the top of the screen,
+such as `http://192.168.1.23:8765`. Open it on a phone or a computer on the
+same Wi-Fi: search the city by name and choose it among the cities of that
+name, listed with their region and country, and change every other setting.
+Press **Close the settings page** when done; it also stops after 15 minutes
+without use. The Kindle's own browser does not load the page.
 
 ## Configuration
 
@@ -179,7 +178,7 @@ can also be edited by hand.
   "units": "metric",
   "clock": "24h",
   "refresh_minutes": 60,
-  "night_pause": "off"
+  "night_pause": { "enabled": false, "from": 23, "to": 6 }
 }
 ```
 
@@ -196,7 +195,7 @@ can also be edited by hand.
 | `units` | `"metric"` (default): °C and km/h, or `"imperial"`: °F and mph. |
 | `clock` | `"24h"` (default) or `"12h"`, with AM and PM. |
 | `refresh_minutes` | Minutes between two refreshes, from 5 to 1440; 60 by default. Frequent refreshes drain the battery faster, and the forecast changes little within an hour. |
-| `night_pause` | `"off"` (default), or the hours without refresh, in the city's time, such as `"23-6"`: the Kindle sleeps through and wakes up at 6:00. |
+| `night_pause` | Hours without refresh, in the city's time: with `"enabled": true, "from": 23, "to": 6`, the Kindle sleeps through the night and wakes up at 6:00. Off by default. |
 
 Changes made to the file while the station runs apply at the next refresh.
 
@@ -251,7 +250,7 @@ kindleweather/            the KUAL extension, copied as is to the Kindle
     station.sh                the refresh loop: Wi-Fi, drawing, display, suspend
     diagnose.sh               the Diagnostic action
     set.sh, city.sh           the settings buttons, and Detect automatically
-    web.sh                    opens the settings page in the browser
+    web.sh                    starts the settings page and shows its address
     update.sh                 the Update KindleWeather button
     common.sh                 paths, messages and Python lookup
   lib/kindle_weather/       Python package, standard library only
@@ -260,7 +259,7 @@ kindleweather/            the KUAL extension, copied as is to the Kindle
     config.py                 reads config.json
     schedule.py               when to refresh next, with the night pause
     settings.py               KUAL menu and settings buttons
-    web.py                    the settings page
+    web.py                    the settings page, for a phone
     location.py               finds the city of the internet connection
     update.py                 downloads and installs the latest version
     weather.py, dns.py        Open-Meteo requests: forecast, air quality; moon phase

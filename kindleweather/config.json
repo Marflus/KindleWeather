@@ -14,5 +14,9 @@
   "units": "metric",
   "clock": "24h",
   "refresh_minutes": 60,
-  "night_pause": "off"
+  "night_pause": {
+    "enabled": false,
+    "from": 23,
+    "to": 6
+  }
 }

@@ -44,9 +44,16 @@ class Config:
     clock: str
     # Minutes between two refreshes of the dashboard.
     refresh_minutes: int
-    # Hours from and to which the dashboard is not refreshed, such as (23, 6),
-    # in the city's time; None to refresh around the clock.
-    night_pause: tuple[int, int] | None
+    # Whether the dashboard pauses at night, and the hours from and to which it
+    # does, such as (23, 6), in the city's time. The hours are kept when off.
+    night_pause_enabled: bool
+    night_pause_hours: tuple[int, int]
+
+    @property
+    def night_pause(self) -> tuple[int, int] | None:
+        """The hours of the night pause, or None to refresh around the clock."""
+        start, end = self.night_pause_hours
+        return self.night_pause_hours if self.night_pause_enabled and start != end else None
 
 
 def load_config(path: Path) -> Config:
@@ -104,11 +111,7 @@ def load_config(path: Path) -> Config:
         "refresh_minutes must be a number of minutes, from 5 to 1440",
     )
 
-    night_pause = raw.get("night_pause", "off")
-    _require(
-        night_pause == "off" or _parse_hours(night_pause) is not None,
-        'night_pause must be "off" or two hours, such as "23-6"',
-    )
+    night_pause_enabled, night_pause_hours = _night_pause(raw.get("night_pause"))
 
     return Config(
         locale=LOCALES[language],
@@ -122,19 +125,34 @@ def load_config(path: Path) -> Config:
         units=units,
         clock=clock,
         refresh_minutes=refresh_minutes,
-        night_pause=None if night_pause == "off" else _parse_hours(night_pause),
+        night_pause_enabled=night_pause_enabled,
+        night_pause_hours=night_pause_hours,
     )
 
 
-def _parse_hours(text: object) -> tuple[int, int] | None:
-    """ "23-6" -> (23, 6), or None if text is not two different hours."""
-    try:
-        start, end = (int(hour) for hour in str(text).split("-"))
-    except ValueError:
-        return None
-    if 0 <= start <= 23 and 0 <= end <= 23 and start != end:
-        return start, end
-    return None
+DEFAULT_NIGHT_PAUSE = (23, 6)
+
+
+def _night_pause(value: object) -> tuple[bool, tuple[int, int]]:
+    """night_pause: {"enabled": true, "from": 23, "to": 6}; "off" and "23-6" are
+    the forms of older versions."""
+    if value is None or value == "off":
+        return False, DEFAULT_NIGHT_PAUSE
+    if isinstance(value, str):
+        try:
+            start, end = (int(hour) for hour in value.split("-"))
+        except ValueError:
+            raise ConfigError('night_pause must be "off" or two hours, such as "23-6"') from None
+        value = {"enabled": True, "from": start, "to": end}
+    _require(isinstance(value, dict), "night_pause must be an object")
+    enabled = value.get("enabled", True)
+    start, end = value.get("from", DEFAULT_NIGHT_PAUSE[0]), value.get("to", DEFAULT_NIGHT_PAUSE[1])
+    _require(isinstance(enabled, bool), "night_pause.enabled must be true or false")
+    _require(
+        all(isinstance(hour, int) and 0 <= hour <= 23 for hour in (start, end)),
+        "night_pause.from and night_pause.to must be hours, from 0 to 23",
+    )
+    return enabled, (start, end)
 
 
 def _require(condition: object, message: str) -> None:

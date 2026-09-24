@@ -26,9 +26,12 @@
                   "exitmenu": false
                 },
                 {
-                  "name": "Search in the browser",
+                  "name": "Search on the settings page",
                   "priority": 2,
-                  "action": "sh bin/web.sh"
+                  "action": "sh bin/web.sh",
+                  "internal": "status Starting the settings page...",
+                  "status": false,
+                  "exitmenu": false
                 }
               ]
             },
@@ -297,57 +300,424 @@
                 {
                   "name": "Off",
                   "priority": 1,
-                  "action": "sh bin/set.sh night off",
+                  "action": "sh bin/set.sh night False",
                   "internal": "status Night pause: Off, saved",
                   "status": false,
                   "exitmenu": false
                 },
                 {
-                  "name": "22:00 to 6:00",
+                  "name": "On",
                   "priority": 2,
-                  "action": "sh bin/set.sh night 22-6",
-                  "internal": "status Night pause: 22:00 to 6:00, saved",
-                  "status": false,
-                  "exitmenu": false
-                },
-                {
-                  "name": "23:00 to 6:00",
-                  "priority": 3,
-                  "action": "sh bin/set.sh night 23-6",
-                  "internal": "status Night pause: 23:00 to 6:00, saved",
-                  "status": false,
-                  "exitmenu": false
-                },
-                {
-                  "name": "23:00 to 7:00",
-                  "priority": 4,
-                  "action": "sh bin/set.sh night 23-7",
-                  "internal": "status Night pause: 23:00 to 7:00, saved",
-                  "status": false,
-                  "exitmenu": false
-                },
-                {
-                  "name": "0:00 to 6:00",
-                  "priority": 5,
-                  "action": "sh bin/set.sh night 0-6",
-                  "internal": "status Night pause: 0:00 to 6:00, saved",
-                  "status": false,
-                  "exitmenu": false
-                },
-                {
-                  "name": "0:00 to 7:00",
-                  "priority": 6,
-                  "action": "sh bin/set.sh night 0-7",
-                  "internal": "status Night pause: 0:00 to 7:00, saved",
+                  "action": "sh bin/set.sh night True",
+                  "internal": "status Night pause: On, saved",
                   "status": false,
                   "exitmenu": false
                 }
               ]
             },
             {
-              "name": "All settings in the browser",
+              "name": "Pause from: 23:00",
               "priority": 10,
-              "action": "sh bin/web.sh"
+              "items": [
+                {
+                  "name": "0:00",
+                  "priority": 1,
+                  "action": "sh bin/set.sh night_from 0",
+                  "internal": "status Pause from: 0:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "1:00",
+                  "priority": 2,
+                  "action": "sh bin/set.sh night_from 1",
+                  "internal": "status Pause from: 1:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "2:00",
+                  "priority": 3,
+                  "action": "sh bin/set.sh night_from 2",
+                  "internal": "status Pause from: 2:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "3:00",
+                  "priority": 4,
+                  "action": "sh bin/set.sh night_from 3",
+                  "internal": "status Pause from: 3:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "4:00",
+                  "priority": 5,
+                  "action": "sh bin/set.sh night_from 4",
+                  "internal": "status Pause from: 4:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "5:00",
+                  "priority": 6,
+                  "action": "sh bin/set.sh night_from 5",
+                  "internal": "status Pause from: 5:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "6:00",
+                  "priority": 7,
+                  "action": "sh bin/set.sh night_from 6",
+                  "internal": "status Pause from: 6:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "7:00",
+                  "priority": 8,
+                  "action": "sh bin/set.sh night_from 7",
+                  "internal": "status Pause from: 7:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "8:00",
+                  "priority": 9,
+                  "action": "sh bin/set.sh night_from 8",
+                  "internal": "status Pause from: 8:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "9:00",
+                  "priority": 10,
+                  "action": "sh bin/set.sh night_from 9",
+                  "internal": "status Pause from: 9:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "10:00",
+                  "priority": 11,
+                  "action": "sh bin/set.sh night_from 10",
+                  "internal": "status Pause from: 10:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "11:00",
+                  "priority": 12,
+                  "action": "sh bin/set.sh night_from 11",
+                  "internal": "status Pause from: 11:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "12:00",
+                  "priority": 13,
+                  "action": "sh bin/set.sh night_from 12",
+                  "internal": "status Pause from: 12:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "13:00",
+                  "priority": 14,
+                  "action": "sh bin/set.sh night_from 13",
+                  "internal": "status Pause from: 13:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "14:00",
+                  "priority": 15,
+                  "action": "sh bin/set.sh night_from 14",
+                  "internal": "status Pause from: 14:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "15:00",
+                  "priority": 16,
+                  "action": "sh bin/set.sh night_from 15",
+                  "internal": "status Pause from: 15:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "16:00",
+                  "priority": 17,
+                  "action": "sh bin/set.sh night_from 16",
+                  "internal": "status Pause from: 16:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "17:00",
+                  "priority": 18,
+                  "action": "sh bin/set.sh night_from 17",
+                  "internal": "status Pause from: 17:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "18:00",
+                  "priority": 19,
+                  "action": "sh bin/set.sh night_from 18",
+                  "internal": "status Pause from: 18:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "19:00",
+                  "priority": 20,
+                  "action": "sh bin/set.sh night_from 19",
+                  "internal": "status Pause from: 19:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "20:00",
+                  "priority": 21,
+                  "action": "sh bin/set.sh night_from 20",
+                  "internal": "status Pause from: 20:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "21:00",
+                  "priority": 22,
+                  "action": "sh bin/set.sh night_from 21",
+                  "internal": "status Pause from: 21:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "22:00",
+                  "priority": 23,
+                  "action": "sh bin/set.sh night_from 22",
+                  "internal": "status Pause from: 22:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "23:00",
+                  "priority": 24,
+                  "action": "sh bin/set.sh night_from 23",
+                  "internal": "status Pause from: 23:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                }
+              ]
+            },
+            {
+              "name": "Pause until: 6:00",
+              "priority": 11,
+              "items": [
+                {
+                  "name": "0:00",
+                  "priority": 1,
+                  "action": "sh bin/set.sh night_to 0",
+                  "internal": "status Pause until: 0:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "1:00",
+                  "priority": 2,
+                  "action": "sh bin/set.sh night_to 1",
+                  "internal": "status Pause until: 1:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "2:00",
+                  "priority": 3,
+                  "action": "sh bin/set.sh night_to 2",
+                  "internal": "status Pause until: 2:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "3:00",
+                  "priority": 4,
+                  "action": "sh bin/set.sh night_to 3",
+                  "internal": "status Pause until: 3:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "4:00",
+                  "priority": 5,
+                  "action": "sh bin/set.sh night_to 4",
+                  "internal": "status Pause until: 4:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "5:00",
+                  "priority": 6,
+                  "action": "sh bin/set.sh night_to 5",
+                  "internal": "status Pause until: 5:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "6:00",
+                  "priority": 7,
+                  "action": "sh bin/set.sh night_to 6",
+                  "internal": "status Pause until: 6:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "7:00",
+                  "priority": 8,
+                  "action": "sh bin/set.sh night_to 7",
+                  "internal": "status Pause until: 7:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "8:00",
+                  "priority": 9,
+                  "action": "sh bin/set.sh night_to 8",
+                  "internal": "status Pause until: 8:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "9:00",
+                  "priority": 10,
+                  "action": "sh bin/set.sh night_to 9",
+                  "internal": "status Pause until: 9:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "10:00",
+                  "priority": 11,
+                  "action": "sh bin/set.sh night_to 10",
+                  "internal": "status Pause until: 10:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "11:00",
+                  "priority": 12,
+                  "action": "sh bin/set.sh night_to 11",
+                  "internal": "status Pause until: 11:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "12:00",
+                  "priority": 13,
+                  "action": "sh bin/set.sh night_to 12",
+                  "internal": "status Pause until: 12:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "13:00",
+                  "priority": 14,
+                  "action": "sh bin/set.sh night_to 13",
+                  "internal": "status Pause until: 13:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "14:00",
+                  "priority": 15,
+                  "action": "sh bin/set.sh night_to 14",
+                  "internal": "status Pause until: 14:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "15:00",
+                  "priority": 16,
+                  "action": "sh bin/set.sh night_to 15",
+                  "internal": "status Pause until: 15:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "16:00",
+                  "priority": 17,
+                  "action": "sh bin/set.sh night_to 16",
+                  "internal": "status Pause until: 16:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "17:00",
+                  "priority": 18,
+                  "action": "sh bin/set.sh night_to 17",
+                  "internal": "status Pause until: 17:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "18:00",
+                  "priority": 19,
+                  "action": "sh bin/set.sh night_to 18",
+                  "internal": "status Pause until: 18:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "19:00",
+                  "priority": 20,
+                  "action": "sh bin/set.sh night_to 19",
+                  "internal": "status Pause until: 19:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "20:00",
+                  "priority": 21,
+                  "action": "sh bin/set.sh night_to 20",
+                  "internal": "status Pause until: 20:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "21:00",
+                  "priority": 22,
+                  "action": "sh bin/set.sh night_to 21",
+                  "internal": "status Pause until: 21:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "22:00",
+                  "priority": 23,
+                  "action": "sh bin/set.sh night_to 22",
+                  "internal": "status Pause until: 22:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                },
+                {
+                  "name": "23:00",
+                  "priority": 24,
+                  "action": "sh bin/set.sh night_to 23",
+                  "internal": "status Pause until: 23:00, saved",
+                  "status": false,
+                  "exitmenu": false
+                }
+              ]
+            },
+            {
+              "name": "Settings page (phone)",
+              "priority": 12,
+              "action": "sh bin/web.sh",
+              "internal": "status Starting the settings page...",
+              "status": false,
+              "exitmenu": false
             }
           ]
         },

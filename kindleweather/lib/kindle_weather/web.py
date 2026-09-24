@@ -1,9 +1,9 @@
 """The settings page, served by the Kindle: python3 -m kindle_weather.web
 
-bin/web.sh opens it in the Kindle's browser; a phone or a computer on the same
-Wi-Fi can open it too. The page is plain HTML forms, without JavaScript, for
-the Kindle's basic browser. The server stops with the "Close" button, or after
-15 minutes without a request.
+bin/web.sh starts it and writes its address on the screen, to open on a phone
+or a computer on the same Wi-Fi: the Kindle's own browser does not load it.
+Plain HTML forms, without JavaScript. The server stops with the "Close"
+button, or after 15 minutes without a request; the Kindle stays awake until then.
 """
 
 from __future__ import annotations
@@ -16,10 +16,12 @@ import subprocess
 import sys
 import threading
 import time
+import traceback
 from contextlib import suppress
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, urlsplit
 
+from kindle_weather import __version__
 from kindle_weather.config import CONFIG_PATH, EXTENSION_DIR, load_config
 from kindle_weather.location import detect_place
 from kindle_weather.settings import (
@@ -35,7 +37,6 @@ PORT = 8765
 IDLE_SECONDS = 15 * 60
 # Written while the server runs, for bin/web.sh.
 PID_FILE = EXTENSION_DIR / "web.pid"
-# Lets a phone on the same Wi-Fi reach the page through the Kindle's firewall.
 FIREWALL_RULE = ["INPUT", "-p", "tcp", "--dport", str(PORT), "-j", "ACCEPT"]
 
 STYLE = """
@@ -47,6 +48,7 @@ button { font-size: 24px; padding: 10px 18px; margin: 6px 6px 6px 0;
          background: #fff; border: 2px solid #000; border-radius: 8px; }
 label { display: inline-block; padding: 8px 24px 8px 0; }
 input[type=radio] { width: 24px; height: 24px; vertical-align: middle; }
+select { font-size: 24px; padding: 6px; border: 2px solid #000; background: #fff; }
 .message { border: 3px solid #000; padding: 12px; }
 .note { color: #444; font-size: 20px; }
 """
@@ -63,6 +65,23 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         self.server.last_request = time.time()
+        self._safely(self._get)
+
+    def do_POST(self) -> None:
+        self.server.last_request = time.time()
+        with CHANGES:
+            self._safely(self._post)
+
+    def _safely(self, handle) -> None:
+        """Handle the request, or show what went wrong rather than drop the connection."""
+        try:
+            handle()
+        except Exception as error:
+            traceback.print_exc()
+            with suppress(Exception):
+                self._page(message=f"Something went wrong: {error}")
+
+    def _get(self) -> None:
         url = urlsplit(self.path)
         query = parse_qs(url.query)
         if url.path == "/":
@@ -71,11 +90,6 @@ class Handler(BaseHTTPRequestHandler):
             self._search(query.get("city", [""])[0].strip())
         else:
             self.send_error(404)
-
-    def do_POST(self) -> None:
-        self.server.last_request = time.time()
-        with CHANGES:
-            self._post()
 
     def _post(self) -> None:
         length = int(self.headers.get("Content-Length") or 0)
@@ -89,7 +103,7 @@ class Handler(BaseHTTPRequestHandler):
                 if setting in form:
                     change(setting, form[setting])
             write_menu()
-            self._redirect("Settings saved.")
+            self._redirect("Settings saved. The dashboard uses them from its next update.")
         elif path == "/city":
             self._choose_city(int(form["id"]))
         elif path == "/detect":
@@ -153,22 +167,11 @@ class Handler(BaseHTTPRequestHandler):
         current = current_values(config)
         city = f"{config.city}, {config.country_code}" if config.country_code else config.city
         settings = "".join(
-            f"<p><b>{title}</b><br>"
-            + "".join(
-                f'<label><input type="radio" name="{setting}" value="{value}"'
-                f"{' checked' if value == current[setting] else ''}> {name}</label>"
-                for value, name in values.items()
-            )
-            + "</p>"
+            f"<p><b>{title}</b><br>{_choices(setting, values, current[setting])}</p>"
             for setting, (title, _, values) in SETTINGS.items()
         )
         address = _address()
-        phone = (
-            f'<p class="note">From a phone or a computer on the same Wi-Fi: '
-            f"http://{address}:{PORT}</p>"
-            if address
-            else ""
-        )
+        footer = f"KindleWeather {__version__}" + (f" · http://{address}:{PORT}" if address else "")
         self._send(
             "<h1>KindleWeather settings</h1>"
             + (f'<p class="message">{html.escape(message)}</p>' if message else "")
@@ -183,7 +186,7 @@ class Handler(BaseHTTPRequestHandler):
             + "<button>Save</button></form>"
             + '<h2>Done</h2><form action="/close" method="post">'
             + "<button>Close the settings page</button></form>"
-            + phone
+            + f'<p class="note">{footer}</p>'
         )
 
     def _send(self, body: str) -> None:
@@ -206,6 +209,21 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
 
+def _choices(setting: str, values: dict, current) -> str:
+    """Radio buttons for a few values, a drop-down list for many, such as hours."""
+    if len(values) > 8:
+        options = "".join(
+            f'<option value="{value}"{" selected" if value == current else ""}>{name}</option>'
+            for value, name in values.items()
+        )
+        return f'<select name="{setting}">{options}</select>'
+    return "".join(
+        f'<label><input type="radio" name="{setting}" value="{value}"'
+        f"{' checked' if value == current else ''}> {name}</label>"
+        for value, name in values.items()
+    )
+
+
 def _language() -> str:
     return load_config(CONFIG_PATH).locale.code
 
@@ -220,15 +238,17 @@ def _address() -> str | None:
         return None
 
 
-def _firewall(action: str) -> None:
-    # No iptables on a computer.
+def _kindle(*command: str) -> None:
+    """Run a Kindle command, which a computer does not have."""
     with suppress(OSError):
-        subprocess.run(
-            ["iptables", action, *FIREWALL_RULE],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
+        subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+
+
+def _open(opened: bool) -> None:
+    """Let a phone on the same Wi-Fi through the Kindle's firewall, and keep the
+    Kindle awake, while the page is open."""
+    _kindle("iptables", "-I" if opened else "-D", *FIREWALL_RULE)
+    _kindle("lipc-set-prop", "com.lab126.powerd", "preventScreenSaver", "1" if opened else "0")
 
 
 def main() -> None:
@@ -240,13 +260,13 @@ def main() -> None:
     # Stopped by web.sh when a new page opens: clean up as when closed.
     signal.signal(signal.SIGTERM, lambda *_: sys.exit())
     PID_FILE.write_text(str(os.getpid()))
-    _firewall("-I")
+    _open(True)
     print(f"settings page at http://127.0.0.1:{PORT}/", flush=True)
     try:
         while not server.done and time.time() - server.last_request < IDLE_SECONDS:
             server.handle_request()
     finally:
-        _firewall("-D")
+        _open(False)
         PID_FILE.unlink(missing_ok=True)
         print("settings page closed", flush=True)
 
