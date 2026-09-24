@@ -18,5 +18,9 @@ case "$result" in
         PYTHONPATH="$EXTENSION_DIR/lib" "$PYTHON" -m kindle_weather.settings >>"$LOG" 2>&1
         say "$result" "Close and reopen KUAL to see the new menu."
         ;;
-    *) say "${result:-Update failed, see station.log}" "" ;;
+    *)
+        # The reason is long: its first 60 characters on each of two lines.
+        reason=${result:-Update failed, see station.log}
+        say "$(echo "$reason" | cut -c 1-60)" "$(echo "$reason" | cut -c 61-120)"
+        ;;
 esac

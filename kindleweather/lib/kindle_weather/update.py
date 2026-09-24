@@ -30,23 +30,58 @@ class UpdateError(RuntimeError):
     pass
 
 
+# Certificate bundles of the Kindle and of common systems, for a Python
+# package that brings none of its own.
+SYSTEM_CERTIFICATES = (
+    "/etc/ssl/certs/ca-certificates.crt",
+    "/etc/ssl/cert.pem",
+    "/etc/pki/tls/certs/ca-bundle.crt",
+    "/etc/ssl/ca-bundle.pem",
+)
+
+
 def download() -> bytes:
+    request = urllib.request.Request(ARCHIVE_URL, headers={"User-Agent": "KindleWeather"})
     try:
-        request = urllib.request.Request(ARCHIVE_URL, headers={"User-Agent": "KindleWeather"})
-        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+        with urllib.request.urlopen(request, timeout=TIMEOUT, context=_tls()) as response:
             return response.read()
+    except urllib.error.HTTPError as error:
+        if error.code == 404:
+            # GitHub hides private repositories.
+            raise UpdateError("GitHub does not find the repository: is it public?") from error
+        raise UpdateError(f"GitHub answered: HTTP {error.code} {error.reason}") from error
     except (urllib.error.URLError, OSError) as error:
-        if not isinstance(getattr(error, "reason", error), ssl.SSLError):
-            raise UpdateError(f"GitHub cannot be reached: {error}") from error
-    # Python's certificates may be too old for GitHub: the Kindle's curl may do.
+        reason = getattr(error, "reason", error)
+        if not isinstance(reason, ssl.SSLError):
+            raise UpdateError(f"GitHub cannot be reached: {reason}") from error
+        python_error = reason
+    # The Kindle's curl may have the certificates Python lacks.
     try:
-        return subprocess.run(
+        result = subprocess.run(
             ["curl", "-fsSL", "--max-time", str(TIMEOUT), ARCHIVE_URL],
             capture_output=True,
-            check=True,
-        ).stdout
-    except (OSError, subprocess.CalledProcessError) as error:
-        raise UpdateError(f"no secure connection to GitHub: {error}") from error
+            check=False,
+        )
+    except OSError:
+        raise UpdateError(f"no secure connection to GitHub: {python_error}") from None
+    if result.returncode:
+        curl_error = result.stderr.decode(errors="replace").strip() or f"curl {result.returncode}"
+        raise UpdateError(f"no secure connection to GitHub: {python_error}; {curl_error}")
+    return result.stdout
+
+
+def _tls() -> ssl.SSLContext:
+    """Python's own certificates, or else the system's."""
+    context = ssl.create_default_context()
+    if not context.cert_store_stats()["x509_ca"]:
+        for path in SYSTEM_CERTIFICATES:
+            if os.path.exists(path):
+                context.load_verify_locations(cafile=path)
+                break
+        else:
+            if os.path.isdir("/etc/ssl/certs"):
+                context.load_verify_locations(capath="/etc/ssl/certs")
+    return context
 
 
 def install(archive: zipfile.ZipFile, target: Path) -> None:
@@ -84,8 +119,9 @@ def main() -> None:
             commit = archive.comment.decode(errors="replace")[:7]
             install(archive, EXTENSION_DIR)
     except (UpdateError, zipfile.BadZipFile, OSError) as error:
+        # The whole reason goes to the log, its start on the screen.
         print(f"Update failed: {error}", file=sys.stderr)
-        print("Update failed: check the Wi-Fi connection")
+        print(f"Update failed: {str(error)[:120]}")
         return
     installed = EXTENSION_DIR / "lib" / "kindle_weather" / "__init__.py"
     version = next(

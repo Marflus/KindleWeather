@@ -104,7 +104,8 @@ interface, sums up on the screen, and writes the details to
 
 With Wi-Fi on, press **KUAL > KindleWeather > Update KindleWeather**. The
 Kindle downloads the latest version from GitHub and installs it, keeping your
-settings; the result is written at the top of the screen. Close and reopen KUAL
+settings; the result, or the reason of a failure, is written at the top of the
+screen. Close and reopen KUAL
 to see the new menu.
 
 By hand: save your `config.json`, replace the `kindleweather` folder with the
