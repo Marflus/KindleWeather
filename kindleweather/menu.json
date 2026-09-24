@@ -14,7 +14,7 @@
           "priority": 2,
           "items": [
             {
-              "name": "City: Warsaw, PL",
+              "name": "City: London, GB",
               "priority": 1,
               "items": [
                 {
@@ -33,7 +33,7 @@
               ]
             },
             {
-              "name": "Language: Francais",
+              "name": "Language: English",
               "priority": 2,
               "items": [
                 {

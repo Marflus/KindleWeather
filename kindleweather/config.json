@@ -1,8 +1,8 @@
 {
-  "language": "fr",
+  "language": "en",
   "location": {
-    "city": "Warsaw",
-    "country_code": "PL"
+    "city": "London",
+    "country_code": "GB"
   },
   "display": {
     "width": 1072,
