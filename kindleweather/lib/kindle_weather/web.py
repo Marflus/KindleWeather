@@ -35,6 +35,9 @@ from kindle_weather.weather import Place, WeatherError, geocode, search_places
 
 PORT = 8765
 IDLE_SECONDS = 15 * 60
+# Far more than the forms on this page ever send; caps how much a request
+# claiming a huge Content-Length can make the Kindle read into memory.
+MAX_FORM_BYTES = 8192
 # Written while the server runs, for bin/web.sh.
 PID_FILE = EXTENSION_DIR / "web.pid"
 FIREWALL_RULE = ["INPUT", "-p", "tcp", "--dport", str(PORT), "-j", "ACCEPT"]
@@ -93,6 +96,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def _post(self) -> None:
         length = int(self.headers.get("Content-Length") or 0)
+        # The forms this page sends are a few hundred bytes; refuse anything
+        # else outright, rather than read an arbitrary amount into memory.
+        if not 0 <= length <= MAX_FORM_BYTES:
+            self.send_error(413)
+            return
         form = {
             key: values[0]
             for key, values in parse_qs(self.rfile.read(length).decode("utf-8")).items()
@@ -134,7 +142,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         results = "".join(
             '<form action="/city" method="post">'
-            f'<input type="hidden" name="id" value="{place.id}">'
+            f'<input type="hidden" name="id" value="{html.escape(str(place.id))}">'
             f"<button>{html.escape(place.full_name)}</button></form>"
             for place in places
             if place.id is not None
@@ -248,7 +256,12 @@ def _open(opened: bool) -> None:
     """Let a phone on the same Wi-Fi through the Kindle's firewall, and keep the
     Kindle awake, while the page is open."""
     _kindle("iptables", "-I" if opened else "-D", *FIREWALL_RULE)
-    _kindle("lipc-set-prop", "com.lab126.powerd", "preventScreenSaver", "1" if opened else "0")
+    _kindle(
+        "lipc-set-prop",
+        "com.lab126.powerd",
+        "preventScreenSaver",
+        "1" if opened else "0",
+    )
 
 
 def main() -> None:

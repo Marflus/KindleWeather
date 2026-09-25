@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import ssl
 import urllib.error
 import urllib.request
@@ -18,6 +19,16 @@ dns.install()
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 PLACE_URL = "https://geocoding-api.open-meteo.com/v1/get"
 AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
+
+# Certificate bundles of the Kindle and of common systems, extended trust for a
+# Python package that brings too few (or none) of its own; requests still need
+# a valid certificate for the host, never falling back to a plain connection.
+SYSTEM_CERTIFICATES = (
+    "/etc/ssl/certs/ca-certificates.crt",
+    "/etc/ssl/cert.pem",
+    "/etc/pki/tls/certs/ca-bundle.crt",
+    "/etc/ssl/ca-bundle.pem",
+)
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 REQUEST_TIMEOUT = 20
 HEADERS = {"User-Agent": "KindleWeather"}
@@ -56,11 +67,6 @@ class LocationNotFound(WeatherError):
 
 class ServiceUnreachable(WeatherError):
     """No answer from Open-Meteo: network error or timeout."""
-
-    def __init__(self, message: str, tls: bool = False):
-        super().__init__(message)
-        # The secure connection failed, not the network.
-        self.tls = tls
 
 
 class ServiceError(WeatherError):
@@ -159,16 +165,19 @@ def search_places(
 
 def _place(result: dict) -> Place:
     try:
+        place_id = result.get("id")
         return Place(
-            name=result["name"],
+            name=str(result["name"]),
             latitude=result["latitude"],
             longitude=result["longitude"],
-            id=result.get("id"),
+            # An int, checked rather than trusted: it ends up in a URL and,
+            # on the settings page, in HTML.
+            id=int(place_id) if place_id is not None else None,
             country_code=result.get("country_code"),
             region=result.get("admin1"),
             country=result.get("country"),
         )
-    except (KeyError, TypeError) as error:
+    except (KeyError, TypeError, ValueError) as error:
         raise WeatherError(f"unexpected geocoding data: {error!r}") from error
 
 
@@ -199,7 +208,11 @@ def fetch_air_quality(place: Place) -> int | None:
     try:
         answer = get_json(
             AIR_QUALITY_URL,
-            {"latitude": place.latitude, "longitude": place.longitude, "current": "european_aqi"},
+            {
+                "latitude": place.latitude,
+                "longitude": place.longitude,
+                "current": "european_aqi",
+            },
         )
         return round(answer["current"]["european_aqi"])
     except (WeatherError, KeyError, TypeError, ValueError):
@@ -273,29 +286,37 @@ def _clock_time(iso_datetime: str | None) -> str | None:
     return iso_datetime[11:16] if iso_datetime else None
 
 
+def tls_context() -> ssl.SSLContext:
+    """A context requiring a valid certificate, trusting the system's bundle
+    too when Python's own is missing or incomplete."""
+    context = ssl.create_default_context()
+    if not context.cert_store_stats()["x509_ca"]:
+        for path in SYSTEM_CERTIFICATES:
+            if os.path.exists(path):
+                context.load_verify_locations(cafile=path)
+                break
+        else:
+            if os.path.isdir("/etc/ssl/certs"):
+                context.load_verify_locations(capath="/etc/ssl/certs")
+    return context
+
+
 def get_json(url: str, params: dict) -> dict:
-    query = urlencode(params)
-    try:
-        return _request(f"{url}?{query}")
-    except ServiceUnreachable as error:
-        if not error.tls:
-            raise
-    # The Kindle's certificates may be too old for the server's: fall back to HTTP.
-    return _request(f"http://{url.split('://', 1)[1]}?{query}")
+    return _request(f"{url}?{urlencode(params)}")
 
 
 def _request(url: str) -> dict:
     host = urlsplit(url).hostname
     request = urllib.request.Request(url, headers=HEADERS)
     try:
-        with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT) as response:
+        with urllib.request.urlopen(
+            request, timeout=REQUEST_TIMEOUT, context=tls_context()
+        ) as response:
             body = response.read()
     except urllib.error.HTTPError as error:
         raise ServiceError(_http_error_message(error)) from error
     except (urllib.error.URLError, OSError) as error:
-        reason = getattr(error, "reason", error)
-        tls = isinstance(reason, ssl.SSLError)
-        raise ServiceUnreachable(f"{host}: {reason}", tls=tls) from error
+        raise ServiceUnreachable(f"{host}: {getattr(error, 'reason', error)}") from error
     try:
         return json.loads(body)
     except ValueError as error:

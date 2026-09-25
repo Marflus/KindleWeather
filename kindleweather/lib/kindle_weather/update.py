@@ -19,6 +19,7 @@ import zipfile
 from pathlib import Path
 
 from kindle_weather.config import EXTENSION_DIR
+from kindle_weather.weather import tls_context
 
 ARCHIVE_URL = "https://codeload.github.com/Marflus/KindleWeather/zip/refs/heads/main"
 # Files of the installed folder that the update keeps.
@@ -30,20 +31,10 @@ class UpdateError(RuntimeError):
     pass
 
 
-# Certificate bundles of the Kindle and of common systems, for a Python
-# package that brings none of its own.
-SYSTEM_CERTIFICATES = (
-    "/etc/ssl/certs/ca-certificates.crt",
-    "/etc/ssl/cert.pem",
-    "/etc/pki/tls/certs/ca-bundle.crt",
-    "/etc/ssl/ca-bundle.pem",
-)
-
-
 def download() -> bytes:
     request = urllib.request.Request(ARCHIVE_URL, headers={"User-Agent": "KindleWeather"})
     try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT, context=_tls()) as response:
+        with urllib.request.urlopen(request, timeout=TIMEOUT, context=tls_context()) as response:
             return response.read()
     except urllib.error.HTTPError as error:
         if error.code == 404:
@@ -70,20 +61,6 @@ def download() -> bytes:
     return result.stdout
 
 
-def _tls() -> ssl.SSLContext:
-    """Python's own certificates, or else the system's."""
-    context = ssl.create_default_context()
-    if not context.cert_store_stats()["x509_ca"]:
-        for path in SYSTEM_CERTIFICATES:
-            if os.path.exists(path):
-                context.load_verify_locations(cafile=path)
-                break
-        else:
-            if os.path.isdir("/etc/ssl/certs"):
-                context.load_verify_locations(capath="/etc/ssl/certs")
-    return context
-
-
 def install(archive: zipfile.ZipFile, target: Path) -> None:
     """Replace the target folder with the kindleweather folder of archive."""
     # Entries are named "KindleWeather-main/kindleweather/...".
@@ -96,8 +73,13 @@ def install(archive: zipfile.ZipFile, target: Path) -> None:
     old = target.with_name(target.name + ".old")
     shutil.rmtree(new, ignore_errors=True)
     shutil.rmtree(old, ignore_errors=True)
+    new_root = new.resolve()
     for name in names:
-        path = new / name[len(prefix) :]
+        path = (new / name[len(prefix) :]).resolve()
+        # Refuse an entry such as "../../etc/passwd" that would write outside
+        # the extracted folder ("zip slip"), whatever wrote the archive.
+        if path != new_root and new_root not in path.parents:
+            raise UpdateError(f"unsafe entry in the download: {name}")
         if name.endswith("/"):
             path.mkdir(parents=True, exist_ok=True)
         else:
