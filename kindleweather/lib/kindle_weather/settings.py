@@ -179,10 +179,15 @@ def write_menu() -> None:
                 "name": name,
                 "priority": index,
                 "action": f"sh bin/set.sh {setting} {value}",
-                # Stay in the submenu, with the change in the status line
-                # ("status": false keeps KUAL from writing the command there).
+                # Stay in the submenu: exitmenu:false. "checked" ticks this
+                # button right away, for feedback the press worked; a value
+                # picked earlier in the same viewing session may stay ticked
+                # too, until the submenu is left and reopened, when its title
+                # (below) reflects only the saved value. status:false keeps
+                # KUAL from also echoing the raw command in the status line.
                 "internal": f"status {title}: {name}, saved",
                 "status": False,
+                "checked": True,
                 "exitmenu": False,
             }
             for index, (value, name) in enumerate(values.items(), start=1)

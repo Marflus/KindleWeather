@@ -16,11 +16,19 @@ if [ -z "$address" ]; then
     exit 1
 fi
 
-# Replace a page left open.
-if [ -f "$WEB_PID" ]; then
-    kill "$(cat "$WEB_PID")" 2>/dev/null
-    sleep 1
-fi
+# Kill any settings page left running: by its pid file, and by scanning /proc
+# in case that file was lost, such as by an update replacing this folder while
+# the page was open. Two servers cannot both listen on the same port.
+[ -f "$WEB_PID" ] && kill "$(cat "$WEB_PID")" 2>/dev/null
+for proc in /proc/[0-9]*; do
+    pid=${proc#/proc/}
+    if tr '\0' ' ' <"$proc/cmdline" 2>/dev/null | grep -q "kindle_weather.web"; then
+        kill "$pid" 2>/dev/null
+    fi
+done
+rm -f "$WEB_PID"
+sleep 1
+
 log "opening the settings page at http://$address:8765"
 detach env PYTHONPATH="$EXTENSION_DIR/lib" "$PYTHON" -m kindle_weather.web
 tries=0
@@ -28,4 +36,8 @@ while [ ! -f "$WEB_PID" ] && [ "$tries" -lt 20 ]; do
     sleep 1
     tries=$((tries + 1))
 done
-say "Settings page: http://$address:8765" "Open it on a phone or computer on the same Wi-Fi."
+if [ -f "$WEB_PID" ]; then
+    say "Settings page: http://$address:8765" "Open it on a phone or computer on the same Wi-Fi."
+else
+    say "The settings page did not start." "$(tail -n 1 "$LOG")"
+fi

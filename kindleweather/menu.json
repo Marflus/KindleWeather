@@ -45,6 +45,7 @@
                   "action": "sh bin/set.sh language en",
                   "internal": "status Language: English, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -53,6 +54,7 @@
                   "action": "sh bin/set.sh language fr",
                   "internal": "status Language: Francais, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -61,6 +63,7 @@
                   "action": "sh bin/set.sh language de",
                   "internal": "status Language: Deutsch, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -69,6 +72,7 @@
                   "action": "sh bin/set.sh language es",
                   "internal": "status Language: Espanol, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -77,6 +81,7 @@
                   "action": "sh bin/set.sh language it",
                   "internal": "status Language: Italiano, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -85,6 +90,7 @@
                   "action": "sh bin/set.sh language pt",
                   "internal": "status Language: Portugues, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -93,6 +99,7 @@
                   "action": "sh bin/set.sh language nl",
                   "internal": "status Language: Nederlands, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -101,6 +108,7 @@
                   "action": "sh bin/set.sh language pl",
                   "internal": "status Language: Polski, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 }
               ]
@@ -115,6 +123,7 @@
                   "action": "sh bin/set.sh orientation portrait",
                   "internal": "status Orientation: Portrait, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -123,6 +132,7 @@
                   "action": "sh bin/set.sh orientation landscape",
                   "internal": "status Orientation: Landscape, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 }
               ]
@@ -137,6 +147,7 @@
                   "action": "sh bin/set.sh icons classic",
                   "internal": "status Icons: Classic, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -145,6 +156,7 @@
                   "action": "sh bin/set.sh icons weather-icons",
                   "internal": "status Icons: Weather Icons, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -153,6 +165,7 @@
                   "action": "sh bin/set.sh icons material",
                   "internal": "status Icons: Material, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 }
               ]
@@ -167,6 +180,7 @@
                   "action": "sh bin/set.sh theme light",
                   "internal": "status Theme: Light, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -175,6 +189,7 @@
                   "action": "sh bin/set.sh theme dark",
                   "internal": "status Theme: Dark, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 }
               ]
@@ -189,6 +204,7 @@
                   "action": "sh bin/set.sh units metric",
                   "internal": "status Units: Metric (C, km/h), saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -197,6 +213,7 @@
                   "action": "sh bin/set.sh units imperial",
                   "internal": "status Units: Imperial (F, mph), saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 }
               ]
@@ -211,6 +228,7 @@
                   "action": "sh bin/set.sh clock 24h",
                   "internal": "status Clock: 24-hour, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -219,6 +237,7 @@
                   "action": "sh bin/set.sh clock 12h",
                   "internal": "status Clock: 12-hour (AM/PM), saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 }
               ]
@@ -233,6 +252,7 @@
                   "action": "sh bin/set.sh refresh 15",
                   "internal": "status Refresh: Every 15 minutes, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -241,6 +261,7 @@
                   "action": "sh bin/set.sh refresh 30",
                   "internal": "status Refresh: Every 30 minutes, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -249,6 +270,7 @@
                   "action": "sh bin/set.sh refresh 60",
                   "internal": "status Refresh: Every hour, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -257,6 +279,7 @@
                   "action": "sh bin/set.sh refresh 120",
                   "internal": "status Refresh: Every 2 hours, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -265,6 +288,7 @@
                   "action": "sh bin/set.sh refresh 180",
                   "internal": "status Refresh: Every 3 hours, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -273,6 +297,7 @@
                   "action": "sh bin/set.sh refresh 360",
                   "internal": "status Refresh: Every 6 hours, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -281,6 +306,7 @@
                   "action": "sh bin/set.sh refresh 720",
                   "internal": "status Refresh: Every 12 hours, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -289,6 +315,7 @@
                   "action": "sh bin/set.sh refresh 1440",
                   "internal": "status Refresh: Every 24 hours, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 }
               ]
@@ -303,6 +330,7 @@
                   "action": "sh bin/set.sh night False",
                   "internal": "status Night pause: Off, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -311,6 +339,7 @@
                   "action": "sh bin/set.sh night True",
                   "internal": "status Night pause: On, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 }
               ]
@@ -325,6 +354,7 @@
                   "action": "sh bin/set.sh night_from 0",
                   "internal": "status Pause from: 0:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -333,6 +363,7 @@
                   "action": "sh bin/set.sh night_from 1",
                   "internal": "status Pause from: 1:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -341,6 +372,7 @@
                   "action": "sh bin/set.sh night_from 2",
                   "internal": "status Pause from: 2:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -349,6 +381,7 @@
                   "action": "sh bin/set.sh night_from 3",
                   "internal": "status Pause from: 3:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -357,6 +390,7 @@
                   "action": "sh bin/set.sh night_from 4",
                   "internal": "status Pause from: 4:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -365,6 +399,7 @@
                   "action": "sh bin/set.sh night_from 5",
                   "internal": "status Pause from: 5:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -373,6 +408,7 @@
                   "action": "sh bin/set.sh night_from 6",
                   "internal": "status Pause from: 6:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -381,6 +417,7 @@
                   "action": "sh bin/set.sh night_from 7",
                   "internal": "status Pause from: 7:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -389,6 +426,7 @@
                   "action": "sh bin/set.sh night_from 8",
                   "internal": "status Pause from: 8:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -397,6 +435,7 @@
                   "action": "sh bin/set.sh night_from 9",
                   "internal": "status Pause from: 9:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -405,6 +444,7 @@
                   "action": "sh bin/set.sh night_from 10",
                   "internal": "status Pause from: 10:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -413,6 +453,7 @@
                   "action": "sh bin/set.sh night_from 11",
                   "internal": "status Pause from: 11:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -421,6 +462,7 @@
                   "action": "sh bin/set.sh night_from 12",
                   "internal": "status Pause from: 12:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -429,6 +471,7 @@
                   "action": "sh bin/set.sh night_from 13",
                   "internal": "status Pause from: 13:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -437,6 +480,7 @@
                   "action": "sh bin/set.sh night_from 14",
                   "internal": "status Pause from: 14:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -445,6 +489,7 @@
                   "action": "sh bin/set.sh night_from 15",
                   "internal": "status Pause from: 15:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -453,6 +498,7 @@
                   "action": "sh bin/set.sh night_from 16",
                   "internal": "status Pause from: 16:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -461,6 +507,7 @@
                   "action": "sh bin/set.sh night_from 17",
                   "internal": "status Pause from: 17:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -469,6 +516,7 @@
                   "action": "sh bin/set.sh night_from 18",
                   "internal": "status Pause from: 18:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -477,6 +525,7 @@
                   "action": "sh bin/set.sh night_from 19",
                   "internal": "status Pause from: 19:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -485,6 +534,7 @@
                   "action": "sh bin/set.sh night_from 20",
                   "internal": "status Pause from: 20:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -493,6 +543,7 @@
                   "action": "sh bin/set.sh night_from 21",
                   "internal": "status Pause from: 21:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -501,6 +552,7 @@
                   "action": "sh bin/set.sh night_from 22",
                   "internal": "status Pause from: 22:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -509,6 +561,7 @@
                   "action": "sh bin/set.sh night_from 23",
                   "internal": "status Pause from: 23:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 }
               ]
@@ -523,6 +576,7 @@
                   "action": "sh bin/set.sh night_to 0",
                   "internal": "status Pause until: 0:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -531,6 +585,7 @@
                   "action": "sh bin/set.sh night_to 1",
                   "internal": "status Pause until: 1:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -539,6 +594,7 @@
                   "action": "sh bin/set.sh night_to 2",
                   "internal": "status Pause until: 2:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -547,6 +603,7 @@
                   "action": "sh bin/set.sh night_to 3",
                   "internal": "status Pause until: 3:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -555,6 +612,7 @@
                   "action": "sh bin/set.sh night_to 4",
                   "internal": "status Pause until: 4:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -563,6 +621,7 @@
                   "action": "sh bin/set.sh night_to 5",
                   "internal": "status Pause until: 5:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -571,6 +630,7 @@
                   "action": "sh bin/set.sh night_to 6",
                   "internal": "status Pause until: 6:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -579,6 +639,7 @@
                   "action": "sh bin/set.sh night_to 7",
                   "internal": "status Pause until: 7:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -587,6 +648,7 @@
                   "action": "sh bin/set.sh night_to 8",
                   "internal": "status Pause until: 8:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -595,6 +657,7 @@
                   "action": "sh bin/set.sh night_to 9",
                   "internal": "status Pause until: 9:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -603,6 +666,7 @@
                   "action": "sh bin/set.sh night_to 10",
                   "internal": "status Pause until: 10:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -611,6 +675,7 @@
                   "action": "sh bin/set.sh night_to 11",
                   "internal": "status Pause until: 11:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -619,6 +684,7 @@
                   "action": "sh bin/set.sh night_to 12",
                   "internal": "status Pause until: 12:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -627,6 +693,7 @@
                   "action": "sh bin/set.sh night_to 13",
                   "internal": "status Pause until: 13:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -635,6 +702,7 @@
                   "action": "sh bin/set.sh night_to 14",
                   "internal": "status Pause until: 14:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -643,6 +711,7 @@
                   "action": "sh bin/set.sh night_to 15",
                   "internal": "status Pause until: 15:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -651,6 +720,7 @@
                   "action": "sh bin/set.sh night_to 16",
                   "internal": "status Pause until: 16:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -659,6 +729,7 @@
                   "action": "sh bin/set.sh night_to 17",
                   "internal": "status Pause until: 17:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -667,6 +738,7 @@
                   "action": "sh bin/set.sh night_to 18",
                   "internal": "status Pause until: 18:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -675,6 +747,7 @@
                   "action": "sh bin/set.sh night_to 19",
                   "internal": "status Pause until: 19:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -683,6 +756,7 @@
                   "action": "sh bin/set.sh night_to 20",
                   "internal": "status Pause until: 20:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -691,6 +765,7 @@
                   "action": "sh bin/set.sh night_to 21",
                   "internal": "status Pause until: 21:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -699,6 +774,7 @@
                   "action": "sh bin/set.sh night_to 22",
                   "internal": "status Pause until: 22:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 },
                 {
@@ -707,6 +783,7 @@
                   "action": "sh bin/set.sh night_to 23",
                   "internal": "status Pause until: 23:00, saved",
                   "status": false,
+                  "checked": true,
                   "exitmenu": false
                 }
               ]
