@@ -275,13 +275,6 @@ class Picture:
         """White on black, for the dark theme."""
         return Picture(self.width, self.height, self.pixels.translate(_INVERT))
 
-    # Used by scripts/previews.py.
-
-    def crop(self, box: tuple[int, int, int, int]) -> Picture:
-        left, top, right, bottom = box
-        rows = list(self.rows())[top:bottom]
-        return Picture(right - left, bottom - top, b"".join(row[left:right] for row in rows))
-
     def rotated(self, clockwise: bool) -> Picture:
         """The picture turned a quarter turn."""
         canvas = Canvas(self.width, self.height, quarter_turns=-1 if clockwise else 1)

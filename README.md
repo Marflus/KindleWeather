@@ -6,12 +6,6 @@ forecast from [Open-Meteo](https://open-meteo.com/), draws a grayscale
 dashboard tuned for e-ink, displays it and goes back to sleep. No computer,
 server, account or API key is needed.
 
-<p align="center">
-  <img src="preview/classic/portrait.png" alt="Portrait dashboard" height="380">
-  <img src="preview/classic/landscape.png" alt="Landscape dashboard" height="380">
-</p>
-<p align="center"><sub>Portrait and landscape layouts, rendered from sample data.</sub></p>
-
 ## Features
 
 - The weather and temperature of the current hour, with the day's max and min
@@ -19,9 +13,9 @@ server, account or API key is needed.
   air quality and moon phase, each with its icon
 - The next 7 days, with their weather icon, max and min temperatures
 - A precipitation alert, a temperature chart and an hourly table for the next 24 hours
-- Portrait or landscape, light or [dark](preview/dark.png) theme, metric or
-  imperial units, 24-hour or 12-hour clock, three [icon sets](#icon-sets),
-  eight [languages](#languages)
+- Portrait or landscape, light or dark theme, metric or imperial units,
+  24-hour or 12-hour clock, three [icon sets](#icon-sets), eight
+  [languages](#languages)
 - A refresh every 15 minutes to 24 hours, with an optional night pause
 - The time of the next update and the battery level at the bottom
 - Everything set from KUAL on the Kindle, or from a settings page on a phone,
@@ -217,12 +211,6 @@ and the messages of the station are in English.
 - `weather-icons`: outline icons from [Weather Icons](https://erikflowers.github.io/weather-icons/);
 - `material`: rounded icons from [Material Design Icons](https://pictogrammers.com/library/mdi/).
 
-<p align="center">
-  <img src="preview/icon-sets.png" alt="The top of the dashboard with each icon set" width="640">
-</p>
-
-Full previews of each set, in portrait and landscape, are in [`preview/`](preview).
-
 ## Error codes
 
 Errors are written in English on the top line of the last dashboard, or on a
@@ -268,8 +256,6 @@ kindleweather/            the KUAL extension, copied as is to the Kindle
     graphics.py, icons.py     drawn icons and icon sets (icon_fonts/)
     canvas.py                 drawing with the Kindle's cairo and FreeType, through ctypes
     errors.py, i18n.py        error codes, languages (locales/)
-preview/                  dashboard previews, one folder per icon set, and dark.png
-scripts/previews.py       regenerates preview/
 ```
 
 ## Development
@@ -280,7 +266,6 @@ the standard library. On a computer with the cairo and FreeType libraries
 
 ```sh
 PYTHONPATH=kindleweather/lib python3 -m kindle_weather --output dashboard.png   # uses kindleweather/config.json
-python3 scripts/previews.py                                                    # regenerates preview/
 ```
 
 ## Credits
