@@ -39,12 +39,6 @@ SETTINGS = {
         {
             "en": "English",
             "fr": "Francais",
-            "de": "Deutsch",
-            "es": "Espanol",
-            "it": "Italiano",
-            "pt": "Portugues",
-            "nl": "Nederlands",
-            "pl": "Polski",
         },
     ),
     "orientation": (

@@ -14,7 +14,7 @@ server, account or API key is needed.
 - The next 7 days, with their weather icon, max and min temperatures
 - A precipitation alert, a temperature chart and an hourly table for the next 24 hours
 - Portrait or landscape, light or dark theme, metric or imperial units,
-  24-hour or 12-hour clock, three [icon sets](#icon-sets), eight
+  24-hour or 12-hour clock, three [icon sets](#icon-sets), two
   [languages](#languages)
 - A refresh every 15 minutes to 24 hours, with an optional night pause
 - The time of the next update and the battery level at the bottom
@@ -125,7 +125,7 @@ KindleWeather
   Start weather station
   Settings
     City: Lyon, FR          > Detect automatically, Search on the settings page
-    Language: English       > English, Francais, Deutsch, Espanol...
+    Language: English       > English, Francais
     Orientation: Portrait   > Portrait, Landscape
     Icons: Classic          > Classic, Weather Icons, Material
     Theme: Light            > Light, Dark
@@ -196,9 +196,7 @@ Changes made to the file while the station runs apply at the next refresh.
 
 ## Languages
 
-The dashboard is available in English (`en`), French (`fr`), German (`de`),
-Spanish (`es`), Italian (`it`), Portuguese (`pt`, Brazilian), Dutch (`nl`) and
-Polish (`pl`). Each language is a file in
+The dashboard is available in English (`en`) and French (`fr`). Each language is a file in
 [`kindleweather/lib/kindle_weather/locales`](kindleweather/lib/kindle_weather/locales):
 to add one, copy `en.json`, translate the values, name the file after the
 language code and add it to the language menu in
